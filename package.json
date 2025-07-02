@@ -16,17 +16,20 @@
 	},
 	"devDependencies": {
 		"@internationalized/date": "^3.8.1",
-		"@lucide/svelte": "^0.525.0",
+		"@lucide/svelte": "^0.515.0",
 		"@sveltejs/adapter-node": "^5.2.12",
 		"@sveltejs/kit": "^2.16.0",
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"@tailwindcss/vite": "^4.0.0",
+		"@tanstack/table-core": "^8.21.3",
+		"@types/jszip": "^3.4.0",
 		"@types/node": "^22",
 		"autoprefixer": "^10.4.21",
 		"bits-ui": "^2.8.6",
 		"clsx": "^2.1.1",
 		"drizzle-kit": "^0.30.2",
 		"formsnap": "^2.0.1",
+		"paneforge": "^1.0.0",
 		"postcss": "^8.5.6",
 		"svelte": "^5.0.0",
 		"svelte-check": "^4.0.0",
@@ -44,6 +47,7 @@
 		"@oslojs/crypto": "^1.0.1",
 		"@oslojs/encoding": "^1.1.0",
 		"drizzle-orm": "^0.40.0",
+		"jszip": "^3.10.1",
 		"nanoid": "^5.1.5"
 	}
 }
