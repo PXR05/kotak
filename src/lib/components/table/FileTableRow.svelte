@@ -84,7 +84,7 @@
         {#each row.getVisibleCells() as cell, i}
           <Table.Cell
             class="{cell.column.id !== 'name' ? 'text-muted-foreground' : ''} 
-              {i === 0 ? 'pl-6' : ''}"
+              {i === 0 ? 'pl-6' : ''} border-b"
           >
             <FlexRender
               content={cell.column.columnDef.cell}

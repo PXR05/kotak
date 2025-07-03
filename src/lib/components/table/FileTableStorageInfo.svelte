@@ -12,6 +12,7 @@
     PlusIcon,
     HomeIcon,
     ArrowLeftIcon,
+    SearchIcon,
   } from "@lucide/svelte";
   import { goto } from "$app/navigation";
 
@@ -81,6 +82,10 @@
   </div>
 
   <div class="flex items-center gap-2">
+    <Button variant="outline" size="sm">
+      <SearchIcon class="size-4 mr-2" />
+      Search
+    </Button>
     {#if !uploadDisabled && (onUploadClick || onFolderUploadClick)}
       <DropdownMenu>
         <DropdownMenuTrigger>
