@@ -1,6 +1,6 @@
 <script lang="ts">
-  import * as Button from "$lib/components/ui/button/index.js";
-  import { DownloadIcon, TrashIcon } from "@lucide/svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { DownloadIcon, TrashIcon, XIcon } from "@lucide/svelte";
 
   let {
     selectedCount,
@@ -8,24 +8,38 @@
     isDownloading = false,
     onBulkDownload,
     onBulkDelete,
+    onDeselectAll,
   }: {
     selectedCount: number;
     totalCount: number;
     isDownloading?: boolean;
     onBulkDownload?: () => void;
     onBulkDelete?: () => void;
+    onDeselectAll?: () => void;
   } = $props();
 </script>
 
-<div class="flex items-center justify-between p-4 border-b bg-sidebar-primary/5">
+<div
+  class="flex items-center justify-between p-4 border-b bg-sidebar-primary/5"
+>
   <div class="flex items-center gap-2">
+    <Button
+      variant="ghost"
+      size="sm"
+      onclick={onDeselectAll}
+      title="Deselect all"
+    >
+      <XIcon class="size-4" />
+    </Button>
+
+    <div class="w-px h-4 bg-border"></div>
     <span class="text-sm font-medium">
       {selectedCount} of {totalCount} row(s) selected
     </span>
   </div>
   <div class="flex items-center gap-2">
     {#if onBulkDownload}
-      <Button.Root
+      <Button
         variant="outline"
         size="sm"
         onclick={onBulkDownload}
@@ -33,13 +47,13 @@
       >
         <DownloadIcon class="size-4 mr-2" />
         {isDownloading ? "Creating Zip..." : "Download Selected"}
-      </Button.Root>
+      </Button>
     {/if}
     {#if onBulkDelete}
-      <Button.Root variant="outline" size="sm" onclick={onBulkDelete}>
+      <Button variant="outline" size="sm" onclick={onBulkDelete}>
         <TrashIcon class="size-4 mr-2" />
         Delete Selected
-      </Button.Root>
+      </Button>
     {/if}
   </div>
 </div>

@@ -22,8 +22,27 @@
   import FileTableHeader from "./FileTableHeader.svelte";
   import FileTableRow from "./FileTableRow.svelte";
   import FileTableEmptyState from "./FileTableEmptyState.svelte";
+  import ConfirmationDialog from "./ConfirmationDialog.svelte";
+  import RenameDialog from "./RenameDialog.svelte";
+  import CreateFolderDialog from "./CreateFolderDialog.svelte";
   import { invalidateAll } from "$app/navigation";
   import JSZip from "jszip";
+  import { createFileActionHandler } from "./file-actions.js";
+  import type { ConfirmationConfig } from "./ConfirmationDialog.svelte";
+  import {
+    createConfirmationDialogState,
+    openConfirmationDialog,
+    closeConfirmationDialog,
+    createRenameDialogState,
+    openRenameDialog,
+    closeRenameDialog,
+    createCreateFolderDialogState,
+    openCreateFolderDialog,
+    closeCreateFolderDialog,
+    type ConfirmationDialogState,
+    type RenameDialogState,
+    type CreateFolderDialogState,
+  } from "$lib/dialog-state.js";
 
   let {
     items,
@@ -34,7 +53,8 @@
     onAction,
     onFilesUpload,
     uploadDisabled = false,
-  }: FileTableProps = $props();
+    dialogsOpen = false,
+  }: FileTableProps & { dialogsOpen?: boolean } = $props();
 
   let isDragOver = $state(false);
   let dragCounter = $state(0);
@@ -43,7 +63,13 @@
   let folderInputRef: HTMLInputElement;
   let lastSelectedIndex = $state<number | null>(null);
 
-  // Remove storage statistics since we're replacing with breadcrumbs
+  let confirmationDialog = $state<ConfirmationDialogState>(
+    createConfirmationDialogState()
+  );
+  let renameDialog = $state<RenameDialogState>(createRenameDialogState());
+  let createFolderDialog = $state<CreateFolderDialogState>(
+    createCreateFolderDialogState()
+  );
 
   function handleRowClick(item: FileItem) {
     onItemClick?.(item);
@@ -53,16 +79,61 @@
     onAction?.(action, item);
   }
 
-  // Define columns for the data table
+  const sharedFileActionHandler = createFileActionHandler({
+    onItemClick: handleRowClick,
+    onConfirm: (config: ConfirmationConfig, onConfirm: () => void) => {
+      confirmationDialog = openConfirmationDialog(
+        confirmationDialog,
+        config,
+        onConfirm
+      );
+    },
+    onRename: (
+      item: FileItem,
+      onRename: (newName: string) => Promise<void>
+    ) => {
+      renameDialog = openRenameDialog(renameDialog, item, onRename);
+    },
+  });
+
+  function handleConfirmationConfirm() {
+    confirmationDialog.callback?.();
+    confirmationDialog = closeConfirmationDialog(confirmationDialog);
+  }
+
+  function handleConfirmationCancel() {
+    confirmationDialog = closeConfirmationDialog(confirmationDialog);
+  }
+
+  async function handleRename(newName: string) {
+    try {
+      await renameDialog.callback?.(newName);
+      renameDialog = closeRenameDialog(renameDialog);
+    } catch (error) {}
+  }
+
+  function handleRenameCancel() {
+    renameDialog = closeRenameDialog(renameDialog);
+  }
+
+  async function handleCreateFolder(name: string) {
+    try {
+      await createFolderDialog.callback?.(name);
+      createFolderDialog = closeCreateFolderDialog(createFolderDialog);
+    } catch (error) {}
+  }
+
+  function handleCreateFolderCancel() {
+    createFolderDialog = closeCreateFolderDialog(createFolderDialog);
+  }
+
   const columns = createFileTableColumns(currentUserId, handleAction);
 
   let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 10 });
   let sorting = $state<SortingState>([]);
   let rowSelection = $state<RowSelectionState>({});
 
-  // Clear selection when navigating to a different folder
   $effect(() => {
-    // This effect will run whenever currentFolderId changes
     currentFolderId;
     rowSelection = {};
     lastSelectedIndex = null;
@@ -128,50 +199,39 @@
     try {
       const zip = new JSZip();
 
-      // Add each file to the zip
       await Promise.all(
         fileItems.map(async (item) => {
           try {
             if (!item.storageKey) {
-              console.error(`No storage key for ${item.name}`);
               return;
             }
 
-            // Fetch the file content from your storage API
             const response = await fetch(
               `/api/storage?key=${encodeURIComponent(item.storageKey)}&download=true`
             );
             if (!response.ok) {
-              console.error(
-                `Failed to download ${item.name}:`,
-                response.statusText
-              );
               return;
             }
 
             const blob = await response.blob();
             zip.file(item.name, blob);
           } catch (error) {
-            console.error(`Error downloading ${item.name}:`, error);
+            // Silently skip failed downloads
           }
         })
       );
 
-      // Check if any files were successfully added
       const fileCount = Object.keys(zip.files).length;
       if (fileCount === 0) {
-        console.error("No files were successfully added to the zip");
         return;
       }
 
-      // Generate the zip file
       const zipBlob = await zip.generateAsync({
         type: "blob",
         compression: "DEFLATE",
         compressionOptions: { level: 6 },
       });
 
-      // Create download link
       const url = URL.createObjectURL(zipBlob);
       const link = document.createElement("a");
       link.href = url;
@@ -181,8 +241,6 @@
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Error creating zip file:", error);
-      // Fallback to individual downloads if zip creation fails
       fileItems.forEach((item) => {
         handleAction("download", item);
       });
@@ -194,15 +252,14 @@
       .getFilteredSelectedRowModel()
       .rows.map((row) => row.original);
     if (selected.length === 0) return;
-    // Trigger delete action for all selected items
+
     selected.forEach((item) => {
       handleAction("delete", item);
     });
-    // Clear selection after delete
+
     rowSelection = {};
   }
 
-  // Drag and drop handlers
   function handleDragEnter(e: DragEvent) {
     if (uploadDisabled || !onFilesUpload) return;
 
@@ -221,7 +278,6 @@
     e.preventDefault();
     e.stopPropagation();
 
-    // Show copy cursor
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = "copy";
     }
@@ -281,9 +337,7 @@
       return new Promise<void>((resolve) => {
         fileEntry.file((file) => {
           const relativePath = path ? `${path}/${file.name}` : file.name;
-          if (path) {
-            console.log(`  ${file.name} -> ${relativePath}`);
-          }
+
           uploadableFiles.push({
             file,
             name: file.name,
@@ -297,7 +351,6 @@
     } else if (entry.isDirectory) {
       const dirEntry = entry as FileSystemDirectoryEntry;
       const dirPath = path ? `${path}/${entry.name}` : entry.name;
-      console.log(`Processing folder: ${entry.name}`);
 
       return new Promise<void>((resolve) => {
         const reader = dirEntry.createReader();
@@ -325,17 +378,11 @@
     const target = e.target as HTMLInputElement;
     const files = target.files;
     if (files && files.length > 0 && onFilesUpload) {
-      console.log(`File input: ${files.length} files selected`);
-
       const uploadableFiles: UploadableFile[] = Array.from(files).map(
         (file, index) => {
           // For folder uploads, extract the relative path from webkitRelativePath
           const webkitPath = (file as any).webkitRelativePath;
           const relativePath = webkitPath || file.name;
-
-          if (webkitPath && webkitPath !== file.name) {
-            console.log(`  ${file.name} -> ${webkitPath}`);
-          }
 
           return {
             file,
@@ -348,29 +395,25 @@
         }
       );
       onFilesUpload(uploadableFiles);
-      // Reset the input
       target.value = "";
     }
   }
 
-  // Context menu handlers
   function handleContextMenuAction(action: string, item?: FileItem) {
+    if (
+      item &&
+      (action === "open" ||
+        action === "view" ||
+        action === "download" ||
+        action === "delete" ||
+        action === "rename")
+    ) {
+      const fileAction = action === "view" ? "open" : (action as FileAction);
+      sharedFileActionHandler(fileAction, item);
+      return;
+    }
+
     switch (action) {
-      case "view":
-        if (item) {
-          handleRowClick(item);
-        }
-        break;
-      case "download":
-        if (item) {
-          handleAction("download", item);
-        }
-        break;
-      case "delete":
-        if (item) {
-          handleAction("delete", item);
-        }
-        break;
       case "upload":
         handleUploadClick();
         break;
@@ -382,7 +425,6 @@
         break;
       case "select-all":
         table.toggleAllPageRowsSelected(true);
-        // Set lastSelectedIndex to the last row when selecting all
         const rows = table.getRowModel().rows;
         lastSelectedIndex = rows.length > 0 ? rows.length - 1 : null;
         break;
@@ -391,15 +433,50 @@
         lastSelectedIndex = null;
         break;
       case "create-folder":
-        // TODO: Implement create folder functionality
-        console.log("Create folder action not implemented yet");
+        const performCreateFolder = async (name: string) => {
+          try {
+            const response = await fetch("/api/folders", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                name,
+                parentId: currentFolderId,
+              }),
+            });
+
+            if (response.ok) {
+              await invalidateAll();
+            } else {
+              const errorText = await response.text();
+              throw new Error(`Failed to create folder: ${errorText}`);
+            }
+          } catch (error) {
+            throw error;
+          }
+        };
+
+        createFolderDialog = openCreateFolderDialog(
+          createFolderDialog,
+          performCreateFolder
+        );
         break;
       default:
-        console.log("Unknown action:", action);
+        break;
     }
   }
 
   function handleKeyDown(e: KeyboardEvent) {
+    if (
+      confirmationDialog.open ||
+      renameDialog.open ||
+      createFolderDialog.open ||
+      dialogsOpen
+    ) {
+      return;
+    }
+
     if (e.ctrlKey || e.metaKey) {
       if (e.key === "a") {
         e.preventDefault();
@@ -432,7 +509,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
-  class="relative transition-all duration-100 border rounded-lg w-full h-full overflow-clip"
+  class="flex flex-col relative transition-all duration-100 border rounded-lg w-full h-full overflow-clip"
   ondragenter={handleDragEnter}
   ondragover={handleDragOver}
   ondragleave={handleDragLeave}
@@ -463,7 +540,6 @@
     disabled={uploadDisabled}
   />
 
-  <!-- Navigation breadcrumbs bar (shown when no items selected) -->
   {#if table.getFilteredSelectedRowModel().rows.length === 0}
     <FileTableStorageInfo
       {breadcrumbs}
@@ -473,7 +549,6 @@
     />
   {/if}
 
-  <!-- Bulk actions bar (shown when items selected) -->
   {#if table.getFilteredSelectedRowModel().rows.length > 0}
     <FileTableBulkActions
       selectedCount={table.getFilteredSelectedRowModel().rows.length}
@@ -481,35 +556,56 @@
       {isDownloading}
       onBulkDownload={handleBulkDownload}
       onBulkDelete={handleBulkDelete}
+      onDeselectAll={() => {
+        handleContextMenuAction("deselect-all");
+      }}
     />
   {/if}
 
-  <Table.Root>
+  <Table.Root class="h-full">
     <FileTableHeader
       {table}
       {uploadDisabled}
       onContextMenuAction={handleContextMenuAction}
     />
-    <Table.Body>
-      {#if table.getRowModel().rows?.length}
+    {#if table.getRowModel().rows?.length}
+      <Table.Body class="flex-1">
         {#each table.getRowModel().rows as row}
           <FileTableRow
             {row}
             {table}
             {lastSelectedIndex}
-            onRowClick={handleRowClick}
             onRowDoubleClick={handleRowClick}
             onContextMenuAction={handleContextMenuAction}
             onLastSelectedIndexChange={(index) => (lastSelectedIndex = index)}
           />
         {/each}
-      {:else}
-        <FileTableEmptyState
-          columnsLength={columns.length}
-          {uploadDisabled}
-          onContextMenuAction={handleContextMenuAction}
-        />
-      {/if}
-    </Table.Body>
+      </Table.Body>
+    {/if}
   </Table.Root>
+  <FileTableEmptyState
+    {uploadDisabled}
+    isEmpty={!table.getRowModel().rows?.length}
+    onContextMenuAction={handleContextMenuAction}
+  />
+
+  <ConfirmationDialog
+    open={confirmationDialog.open}
+    config={confirmationDialog.config}
+    onConfirm={handleConfirmationConfirm}
+    onCancel={handleConfirmationCancel}
+  />
+
+  <RenameDialog
+    open={renameDialog.open}
+    item={renameDialog.item}
+    onRename={handleRename}
+    onCancel={handleRenameCancel}
+  />
+
+  <CreateFolderDialog
+    open={createFolderDialog.open}
+    onCreateFolder={handleCreateFolder}
+    onCancel={handleCreateFolderCancel}
+  />
 </div>

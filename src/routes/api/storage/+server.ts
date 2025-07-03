@@ -239,6 +239,80 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   }
 };
 
+export const PATCH: RequestHandler = async ({ request, url, locals }) => {
+  if (!locals.user) {
+    throw error(401, "Unauthorized");
+  }
+
+  const storageKey = url.searchParams.get("key");
+  if (!storageKey) {
+    throw error(400, "Missing storage key");
+  }
+
+  const { name } = await request.json();
+  if (!name || typeof name !== "string") {
+    throw error(400, "Invalid or missing name");
+  }
+
+  const trimmedName = name.trim();
+  if (!trimmedName) {
+    throw error(400, "Name cannot be empty");
+  }
+
+  // Validate name length and characters
+  if (trimmedName.length > 255) {
+    throw error(400, "Name is too long (maximum 255 characters)");
+  }
+
+  // Check for invalid characters
+  const invalidChars = /[<>:"/\\|?*\x00-\x1f]/;
+  if (invalidChars.test(trimmedName)) {
+    throw error(400, "Name contains invalid characters");
+  }
+
+  // Check if file exists and belongs to user
+  const [file] = await db
+    .select()
+    .from(table.file)
+    .where(eq(table.file.storageKey, storageKey));
+
+  if (!file) {
+    throw error(404, "File not found");
+  }
+
+  if (file.ownerId !== locals.user.id) {
+    throw error(403, "Forbidden");
+  }
+
+  // Check if a file with the same name already exists in the same folder
+  const [existingFile] = await db
+    .select()
+    .from(table.file)
+    .where(
+      and(
+        eq(table.file.folderId, file.folderId),
+        eq(table.file.name, trimmedName),
+        eq(table.file.ownerId, locals.user.id)
+      )
+    );
+
+  if (existingFile && existingFile.id !== file.id) {
+    throw error(409, "A file with this name already exists in this folder");
+  }
+
+  // Update the file name
+  const [updatedFile] = await db
+    .update(table.file)
+    .set({
+      name: trimmedName,
+      updatedAt: new Date(),
+    })
+    .where(eq(table.file.id, file.id))
+    .returning();
+
+  return json(updatedFile);
+};
+
 export const DELETE: RequestHandler = async ({ url, locals }) => {
   if (!locals.user) {
     throw error(401, "Unauthorized");

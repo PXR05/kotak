@@ -2,6 +2,9 @@
   import { invalidateAll, goto } from "$app/navigation";
   import FilePreviewDialog from "$lib/components/table/FilePreviewDialog.svelte";
   import FileTable from "$lib/components/table/FileTable.svelte";
+  import ConfirmationDialog from "$lib/components/table/ConfirmationDialog.svelte";
+  import RenameDialog from "$lib/components/table/RenameDialog.svelte";
+  import CreateFolderDialog from "$lib/components/table/CreateFolderDialog.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import {
     Card,
@@ -14,6 +17,22 @@
     FileItem,
     UploadableFile,
   } from "$lib/types/file.js";
+  import { createFileActionHandler } from "$lib/components/table/file-actions.js";
+  import type { ConfirmationConfig } from "$lib/components/table/ConfirmationDialog.svelte";
+  import {
+    createConfirmationDialogState,
+    openConfirmationDialog,
+    closeConfirmationDialog,
+    createRenameDialogState,
+    openRenameDialog,
+    closeRenameDialog,
+    createCreateFolderDialogState,
+    openCreateFolderDialog,
+    closeCreateFolderDialog,
+    type ConfirmationDialogState,
+    type RenameDialogState,
+    type CreateFolderDialogState,
+  } from "$lib/dialog-state.js";
 
   let { data } = $props();
 
@@ -23,10 +42,16 @@
   let previewFile = $state<FileItem | null>(null);
   let previewOpen = $state(false);
 
+  let confirmationDialog = $state<ConfirmationDialogState>(
+    createConfirmationDialogState()
+  );
+  let renameDialog = $state<RenameDialogState>(createRenameDialogState());
+  let createFolderDialog = $state<CreateFolderDialogState>(
+    createCreateFolderDialogState()
+  );
+
   function handleItemClick(item: FileItem) {
     if (item.type === "folder") {
-      console.log("Opening folder:", item.name);
-      // Navigate to the folder
       goto(`/${item.id}`);
     } else {
       previewFile = item;
@@ -34,58 +59,63 @@
     }
   }
 
-  async function handleAction(action: FileAction, item: FileItem) {
-    console.log("Action:", action, "on item:", item.name);
+  const handleAction = createFileActionHandler({
+    onItemClick: handleItemClick,
+    onPreviewOpen: (item: FileItem) => {
+      previewFile = item;
+      previewOpen = true;
+    },
+    onAfterDelete: (item: FileItem) => {
+      items = items.filter((i) => i.id !== item.id);
+      if (previewFile && previewFile.id === item.id) {
+        previewOpen = false;
+        previewFile = null;
+      }
+    },
+    onConfirm: (config: ConfirmationConfig, onConfirm: () => void) => {
+      confirmationDialog = openConfirmationDialog(
+        confirmationDialog,
+        config,
+        onConfirm
+      );
+    },
+    onRename: (
+      item: FileItem,
+      onRename: (newName: string) => Promise<void>
+    ) => {
+      renameDialog = openRenameDialog(renameDialog, item, onRename);
+    },
+  });
 
-    switch (action) {
-      case "open":
-        handleItemClick(item);
-        break;
-      case "download":
-        if (item.type === "file" && item.storageKey) {
-          window.open(
-            `/api/storage?key=${item.storageKey}&download=true`,
-            "_blank"
-          );
-        }
-        break;
-      case "rename":
-        console.log("Renaming:", item.name);
-        // TODO: Implement rename functionality
-        break;
-      case "delete":
-        if (confirm(`Are you sure you want to delete "${item.name}"?`)) {
-          try {
-            if (item.type === "file" && item.storageKey) {
-              const response = await fetch(
-                `/api/storage?key=${item.storageKey}`,
-                {
-                  method: "DELETE",
-                }
-              );
+  function handleConfirmationConfirm() {
+    confirmationDialog.callback?.();
+    confirmationDialog = closeConfirmationDialog(confirmationDialog);
+  }
 
-              if (response.ok) {
-                items = items.filter((i) => i.id !== item.id);
-                await invalidateAll();
-                if (previewFile && previewFile.id === item.id) {
-                  previewOpen = false;
-                  previewFile = null;
-                }
-              } else {
-                console.error("Failed to delete file");
-                alert("Failed to delete file");
-              }
-            } else {
-              // TODO: Implement folder deletion
-              console.log("Folder deletion not implemented yet");
-            }
-          } catch (error) {
-            console.error("Error deleting file:", error);
-            alert("Error deleting file");
-          }
-        }
-        break;
-    }
+  function handleConfirmationCancel() {
+    confirmationDialog = closeConfirmationDialog(confirmationDialog);
+  }
+
+  async function handleRename(newName: string) {
+    try {
+      await renameDialog.callback?.(newName);
+      renameDialog = closeRenameDialog(renameDialog);
+    } catch (error) {}
+  }
+
+  function handleRenameCancel() {
+    renameDialog = closeRenameDialog(renameDialog);
+  }
+
+  async function handleCreateFolder(name: string) {
+    try {
+      await createFolderDialog.callback?.(name);
+      createFolderDialog = closeCreateFolderDialog(createFolderDialog);
+    } catch (error) {}
+  }
+
+  function handleCreateFolderCancel() {
+    createFolderDialog = closeCreateFolderDialog(createFolderDialog);
   }
 
   function handlePreviewOpenChange(open: boolean) {
@@ -98,7 +128,6 @@
   async function handleFilesUpload(uploadableFiles: UploadableFile[]) {
     if (isUploading) return;
 
-    console.log("Files to upload:", uploadableFiles);
     isUploading = true;
 
     try {
@@ -106,28 +135,16 @@
 
       uploadableFiles.forEach((uploadFile, index) => {
         formData.append("files", uploadFile.file);
-        // Add relative path for folder structure preservation
+
         formData.append(
           "relativePaths",
           uploadFile.relativePath || uploadFile.name
         );
       });
 
-      // Add current folder ID if we're in a specific folder
       if (data.currentFolderId) {
         formData.append("folderId", data.currentFolderId);
       }
-
-      console.log(
-        `Uploading ${uploadableFiles.length} files with folder structure`
-      );
-
-      // Log files with relative paths for debugging
-      uploadableFiles.forEach((file, i) => {
-        if (file.relativePath && file.relativePath !== file.name) {
-          console.log(`  ${file.name} -> ${file.relativePath}`);
-        }
-      });
 
       const response = await fetch("/api/storage", {
         method: "POST",
@@ -135,49 +152,16 @@
       });
 
       if (response.ok) {
-        const result = await response.json();
-        console.log("Upload successful:", result);
-
-        // Force a complete reload to show new folder structure
         await invalidateAll();
-
-        // The page will re-render with the updated data from the server
-        // No need to manually update items since we're reloading everything
       } else {
         const error = await response.text();
-        console.error("Upload failed:", error);
         alert("Upload failed: " + error);
       }
     } catch (error) {
-      console.error("Error uploading files:", error);
       alert("Error uploading files");
     } finally {
       isUploading = false;
     }
-  }
-
-  function handleUploadClick() {
-    if (isUploading) return;
-
-    // Create a file input element and trigger it
-    const input = document.createElement("input");
-    input.type = "file";
-    input.multiple = true;
-    input.onchange = (e) => {
-      const files = (e.target as HTMLInputElement).files;
-      if (files && files.length > 0) {
-        const uploadableFiles: UploadableFile[] = Array.from(files).map(
-          (file) => ({
-            file,
-            name: file.name,
-            size: file.size,
-            type: file.type || "application/octet-stream",
-          })
-        );
-        handleFilesUpload(uploadableFiles);
-      }
-    };
-    input.click();
   }
 
   $effect(() => {
@@ -185,7 +169,7 @@
   });
 </script>
 
-<div class="p-8 h-[100dvh]">
+<div class="p-4 h-[100dvh] bg-background">
   {#if data.user}
     <FileTable
       {items}
@@ -196,6 +180,7 @@
       onAction={handleAction}
       onFilesUpload={handleFilesUpload}
       uploadDisabled={isUploading}
+      dialogsOpen={previewOpen || createFolderDialog.open}
     />
   {:else}
     <div class="flex items-center justify-center min-h-[400px]">
@@ -218,5 +203,25 @@
     open={previewOpen}
     onOpenChange={handlePreviewOpenChange}
     onAction={handleAction}
+  />
+
+  <ConfirmationDialog
+    open={confirmationDialog.open}
+    config={confirmationDialog.config}
+    onConfirm={handleConfirmationConfirm}
+    onCancel={handleConfirmationCancel}
+  />
+
+  <RenameDialog
+    open={renameDialog.open}
+    item={renameDialog.item}
+    onRename={handleRename}
+    onCancel={handleRenameCancel}
+  />
+
+  <CreateFolderDialog
+    open={createFolderDialog.open}
+    onCreateFolder={handleCreateFolder}
+    onCancel={handleCreateFolderCancel}
   />
 </div>

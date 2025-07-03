@@ -9,6 +9,7 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import MoreHorizontalIcon from "@lucide/svelte/icons/more-horizontal";
   import type { FileItem, FileAction } from "$lib/types/file.js";
+  import { getAllActions } from "./file-actions.js";
 
   let {
     item,
@@ -21,6 +22,8 @@
   function handleAction(action: FileAction) {
     onAction(action, item);
   }
+
+  const actions = getAllActions();
 </script>
 
 <DropdownMenu>
@@ -30,18 +33,18 @@
     </Button>
   </DropdownMenuTrigger>
   <DropdownMenuContent align="end">
-    <DropdownMenuItem onclick={() => handleAction("open")}>
-      Open
-    </DropdownMenuItem>
-    <DropdownMenuItem onclick={() => handleAction("download")}>
-      Download
-    </DropdownMenuItem>
-    <DropdownMenuItem onclick={() => handleAction("rename")}>
-      Rename
-    </DropdownMenuItem>
-    <DropdownMenuSeparator />
-    <DropdownMenuItem onclick={() => handleAction("delete")}>
-      Move to Trash
-    </DropdownMenuItem>
+    {#each actions as action, index}
+      {#if action.separator && index > 0}
+        <DropdownMenuSeparator />
+      {/if}
+      <DropdownMenuItem
+        onclick={() => handleAction(action.id)}
+        disabled={action.disabled?.(item)}
+        variant={action.variant}
+      >
+        <action.icon class="mr-2 size-4" />
+        {action.label}
+      </DropdownMenuItem>
+    {/each}
   </DropdownMenuContent>
 </DropdownMenu>

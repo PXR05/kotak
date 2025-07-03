@@ -5,9 +5,14 @@
   import { Button } from "$lib/components/ui/button";
   import { Label } from "$lib/components/ui/label";
   import type { ActionData } from "./$types";
+  import type { Snippet } from "svelte";
 
-  let { form }: { form: ActionData } = $props();
+  let {
+    form,
+    header,
+  }: { form: ActionData; header: Snippet<[{ title: string }]> } = $props();
 </script>
+
 
 <div class="min-h-screen flex items-center justify-center bg-background px-4">
   <Card.Root class="w-full max-w-md">

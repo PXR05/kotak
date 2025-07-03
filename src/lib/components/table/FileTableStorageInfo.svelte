@@ -42,10 +42,8 @@
 
   function navigateBack() {
     if (breadcrumbs.length > 1) {
-      // Navigate to parent folder
       navigateToFolder(breadcrumbs[breadcrumbs.length - 2].id);
     } else {
-      // Navigate to root
       navigateToRoot();
     }
   }

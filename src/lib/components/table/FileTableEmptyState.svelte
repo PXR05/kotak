@@ -1,37 +1,38 @@
 <script lang="ts">
   import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
-  import * as Table from "$lib/components/ui/table/index.js";
   import { UploadIcon, FolderPlusIcon, RefreshCwIcon } from "@lucide/svelte";
 
   let {
-    columnsLength,
     uploadDisabled = false,
+    isEmpty = false,
     onContextMenuAction,
   }: {
-    columnsLength: number;
     uploadDisabled?: boolean;
+    isEmpty?: boolean;
     onContextMenuAction?: (action: string) => void;
   } = $props();
 </script>
 
 <ContextMenu.Root>
   <ContextMenu.Trigger>
-    <Table.Row>
-      <Table.Cell colspan={columnsLength} class="h-32 text-center">
-        {#if !uploadDisabled}
-          <div class="flex flex-col items-center gap-2 text-muted-foreground">
-            <UploadIcon class="size-8" />
-            <p class="text-lg font-medium">No files yet</p>
-            <p class="text-sm">
-              Drag and drop files or folders here to upload, or use the upload
-              button
-            </p>
-          </div>
-        {:else}
-          No results.
+    {#snippet child({ props })}
+      <div {...props} class="m-auto text-center flex-1 w-full">
+        {#if isEmpty}
+          {#if !uploadDisabled}
+            <div class="flex flex-col items-center gap-2 text-muted-foreground">
+              <UploadIcon class="size-8" />
+              <p class="text-lg font-medium">No files yet</p>
+              <p class="text-sm">
+                Drag and drop files or folders here to upload, or use the upload
+                button
+              </p>
+            </div>
+          {:else}
+            No results.
+          {/if}
         {/if}
-      </Table.Cell>
-    </Table.Row>
+      </div>
+    {/snippet}
   </ContextMenu.Trigger>
   <ContextMenu.Content class="w-52">
     {#if !uploadDisabled && onContextMenuAction}
