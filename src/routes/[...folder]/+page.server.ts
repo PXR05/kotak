@@ -15,13 +15,10 @@ export const load: PageServerLoad = async ({
 
   let currentFolderId: string | null = null;
 
-  // Parse folder parameter to get current folder ID
   if (folder && folder.trim() !== "") {
-    // Assuming the folder param contains the folder ID
-    // You might need to adjust this parsing logic based on your URL structure
     const folderParts = folder.split("/").filter((part) => part.trim() !== "");
     if (folderParts.length > 0) {
-      currentFolderId = folderParts[folderParts.length - 1]; // Get the last part as folder ID
+      currentFolderId = folderParts[folderParts.length - 1];
     }
   }
 
@@ -30,7 +27,6 @@ export const load: PageServerLoad = async ({
   let currentFolder = null;
 
   if (!currentFolderId) {
-    // Get the user's root folder first
     const [rootFolder] = await db
       .select()
       .from(table.folder)
@@ -42,7 +38,6 @@ export const load: PageServerLoad = async ({
       );
 
     if (rootFolder) {
-      // Fetch folders that have the root folder as parent (uploaded folders)
       const rootLevelFolders = await db
         .select()
         .from(table.folder)
@@ -54,7 +49,6 @@ export const load: PageServerLoad = async ({
         )
         .orderBy(table.folder.name);
 
-      // Also fetch folders with parentId null (legacy root folders)
       const legacyRootFolders = await db
         .select()
         .from(table.folder)
@@ -67,10 +61,8 @@ export const load: PageServerLoad = async ({
         )
         .orderBy(table.folder.name);
 
-      // Combine both types of root folders
       folders = [...rootLevelFolders, ...legacyRootFolders];
 
-      // Fetch files in the root directory (files in the __root__ folder)
       files = (
         await db
           .select()
@@ -88,7 +80,6 @@ export const load: PageServerLoad = async ({
       }));
     }
   } else {
-    // Verify the folder exists and belongs to the user
     const [folder] = await db
       .select()
       .from(table.folder)
@@ -100,12 +91,11 @@ export const load: PageServerLoad = async ({
       );
 
     if (!folder) {
-      redirect(302, "/"); // Redirect to root if folder doesn't exist or doesn't belong to user
+      redirect(302, "/");
     }
 
     currentFolder = folder;
 
-    // Fetch subfolders of the current folder
     folders = await db
       .select()
       .from(table.folder)
@@ -117,7 +107,6 @@ export const load: PageServerLoad = async ({
       )
       .orderBy(table.folder.name);
 
-    // Fetch files in the current folder
     files = (
       await db
         .select()
@@ -135,10 +124,8 @@ export const load: PageServerLoad = async ({
     }));
   }
 
-  // Build breadcrumb path for navigation
   let breadcrumbs: Array<{ id: string; name: string }> = [];
   if (currentFolder) {
-    // Build the path from current folder to root
     let folder = currentFolder;
     const tempBreadcrumbs: Array<{ id: string; name: string }> = [];
 
@@ -164,7 +151,6 @@ export const load: PageServerLoad = async ({
     breadcrumbs = tempBreadcrumbs;
   }
 
-  // Combine folders and files into a single array
   const items = [
     ...folders.map((folder) => ({
       id: folder.id,

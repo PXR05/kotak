@@ -10,75 +10,23 @@
     UploadIcon,
     FolderPlusIcon,
     PlusIcon,
-    HomeIcon,
-    ArrowLeftIcon,
     SearchIcon,
   } from "@lucide/svelte";
-  import { goto } from "$app/navigation";
-
-  interface Breadcrumb {
-    id: string;
-    name: string;
-  }
 
   let {
-    breadcrumbs = [],
     uploadDisabled = false,
     onUploadClick,
     onFolderUploadClick,
   }: {
-    breadcrumbs?: Breadcrumb[];
     uploadDisabled?: boolean;
     onUploadClick?: () => void;
     onFolderUploadClick?: () => void;
   } = $props();
-
-  function navigateToFolder(folderId: string) {
-    goto(`/${folderId}`);
-  }
-
-  function navigateToRoot() {
-    goto("/");
-  }
-
-  function navigateBack() {
-    if (breadcrumbs.length > 1) {
-      navigateToFolder(breadcrumbs[breadcrumbs.length - 2].id);
-    } else {
-      navigateToRoot();
-    }
-  }
 </script>
 
 <div class="flex items-center justify-between p-4 border-b">
   <div class="flex items-center space-x-2">
-    {#if breadcrumbs.length > 0}
-      <Button variant="ghost" size="sm" onclick={navigateBack} title="Go back">
-        <ArrowLeftIcon class="size-4" />
-      </Button>
-
-      <div class="w-px h-4 bg-border"></div>
-    {/if}
-
-    <Button variant="ghost" size="sm" onclick={navigateToRoot}>
-      <HomeIcon class="size-4" />
-    </Button>
-
-    {#each breadcrumbs as breadcrumb, index}
-      <span class="text-muted-foreground">/</span>
-      {#if index === breadcrumbs.length - 1}
-        <span class="font-medium text-foreground">{breadcrumb.name}</span>
-      {:else}
-        <Button
-          variant="ghost"
-          size="sm"
-          onclick={() => navigateToFolder(breadcrumb.id)}
-          class="text-muted-foreground hover:text-foreground"
-        >
-          {breadcrumb.name}
-        </Button>
-      {/if}
-    {/each}
+    <!-- Space reserved for breadcrumbs (now in layout) -->
   </div>
 
   <div class="flex items-center gap-2">

@@ -16,7 +16,6 @@
     UploadableFile,
   } from "$lib/types/file.js";
   import { createFileTableColumns } from "./FileTableColumns.js";
-  import FileTableStorageInfo from "./FileTableStorageInfo.svelte";
   import FileTableBulkActions from "./FileTableBulkActions.svelte";
   import FileTableDropZone from "./FileTableDropZone.svelte";
   import FileTableHeader from "./FileTableHeader.svelte";
@@ -25,30 +24,30 @@
   import ConfirmationDialog from "./ConfirmationDialog.svelte";
   import RenameDialog from "./RenameDialog.svelte";
   import CreateFolderDialog from "./CreateFolderDialog.svelte";
-  import { invalidateAll } from "$app/navigation";
   import JSZip from "jszip";
-  import { createFileActionHandler } from "./file-actions.js";
-  import type { ConfirmationConfig } from "./ConfirmationDialog.svelte";
+
+  // Import centralized state management
   import {
-    createConfirmationDialogState,
-    openConfirmationDialog,
+    fileOperations,
+    confirmationDialogData,
+    renameDialogData,
+    createFolderDialogData,
     closeConfirmationDialog,
-    createRenameDialogState,
-    openRenameDialog,
     closeRenameDialog,
-    createCreateFolderDialogState,
-    openCreateFolderDialog,
     closeCreateFolderDialog,
-    type ConfirmationDialogState,
-    type RenameDialogState,
-    type CreateFolderDialogState,
-  } from "$lib/dialog-state.js";
+  } from "$lib/stores/index.js";
+
+  // Use getter functions for reactive state that we can't directly import
+  import {
+    isDownloading,
+    lastSelectedIndex,
+    currentUserId as currentUserIdStore,
+  } from "$lib/stores/fileOperations.svelte.js";
 
   let {
     items,
     currentUserId = "user-1",
     currentFolderId = null,
-    breadcrumbs = [],
     onItemClick,
     onAction,
     onFilesUpload,
@@ -58,18 +57,8 @@
 
   let isDragOver = $state(false);
   let dragCounter = $state(0);
-  let isDownloading = $state(false);
   let fileInputRef: HTMLInputElement;
   let folderInputRef: HTMLInputElement;
-  let lastSelectedIndex = $state<number | null>(null);
-
-  let confirmationDialog = $state<ConfirmationDialogState>(
-    createConfirmationDialogState()
-  );
-  let renameDialog = $state<RenameDialogState>(createRenameDialogState());
-  let createFolderDialog = $state<CreateFolderDialogState>(
-    createCreateFolderDialogState()
-  );
 
   function handleRowClick(item: FileItem) {
     onItemClick?.(item);
@@ -79,55 +68,41 @@
     onAction?.(action, item);
   }
 
-  const sharedFileActionHandler = createFileActionHandler({
-    onItemClick: handleRowClick,
-    onConfirm: (config: ConfirmationConfig, onConfirm: () => void) => {
-      confirmationDialog = openConfirmationDialog(
-        confirmationDialog,
-        config,
-        onConfirm
-      );
-    },
-    onRename: (
-      item: FileItem,
-      onRename: (newName: string) => Promise<void>
-    ) => {
-      renameDialog = openRenameDialog(renameDialog, item, onRename);
-    },
-  });
-
   function handleConfirmationConfirm() {
-    confirmationDialog.callback?.();
-    confirmationDialog = closeConfirmationDialog(confirmationDialog);
+    confirmationDialogData.callback?.();
+    closeConfirmationDialog();
   }
 
   function handleConfirmationCancel() {
-    confirmationDialog = closeConfirmationDialog(confirmationDialog);
+    closeConfirmationDialog();
   }
 
   async function handleRename(newName: string) {
     try {
-      await renameDialog.callback?.(newName);
-      renameDialog = closeRenameDialog(renameDialog);
+      await renameDialogData.callback?.(newName);
+      closeRenameDialog();
     } catch (error) {}
   }
 
   function handleRenameCancel() {
-    renameDialog = closeRenameDialog(renameDialog);
+    closeRenameDialog();
   }
 
   async function handleCreateFolder(name: string) {
     try {
-      await createFolderDialog.callback?.(name);
-      createFolderDialog = closeCreateFolderDialog(createFolderDialog);
+      await createFolderDialogData.callback?.(name);
+      closeCreateFolderDialog();
     } catch (error) {}
   }
 
   function handleCreateFolderCancel() {
-    createFolderDialog = closeCreateFolderDialog(createFolderDialog);
+    closeCreateFolderDialog();
   }
 
-  const columns = createFileTableColumns(currentUserId, handleAction);
+  const columns = createFileTableColumns(
+    currentUserIdStore.value || currentUserId,
+    handleAction
+  );
 
   let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 10 });
   let sorting = $state<SortingState>([]);
@@ -136,7 +111,9 @@
   $effect(() => {
     currentFolderId;
     rowSelection = {};
-    lastSelectedIndex = null;
+    if (lastSelectedIndex) {
+      lastSelectedIndex.value = null;
+    }
   });
 
   const table = createSvelteTable({
@@ -181,19 +158,6 @@
     },
     enableRowSelection: true,
   });
-
-  function handleBulkDownload() {
-    const selected = table
-      .getFilteredSelectedRowModel()
-      .rows.map((row) => row.original);
-    const fileItems = selected.filter((item) => item.type === "file");
-    if (fileItems.length === 0) return;
-
-    isDownloading = true;
-    downloadAsZip(fileItems).finally(() => {
-      isDownloading = false;
-    });
-  }
 
   async function downloadAsZip(fileItems: FileItem[]) {
     try {
@@ -247,16 +211,21 @@
     }
   }
 
-  function handleBulkDelete() {
+  function handleBulkDownload() {
     const selected = table
       .getFilteredSelectedRowModel()
       .rows.map((row) => row.original);
-    if (selected.length === 0) return;
+    const fileItems = selected.filter((item) => item.type === "file");
+    if (fileItems.length === 0) return;
 
-    selected.forEach((item) => {
-      handleAction("delete", item);
+    if (isDownloading) isDownloading.value = true;
+    downloadAsZip(fileItems).finally(() => {
+      if (isDownloading) isDownloading.value = false;
     });
+  }
 
+  function handleBulkDelete() {
+    fileOperations.bulkDelete();
     rowSelection = {};
   }
 
@@ -366,21 +335,12 @@
     }
   }
 
-  function handleUploadClick() {
-    fileInputRef?.click();
-  }
-
-  function handleFolderUploadClick() {
-    folderInputRef?.click();
-  }
-
   function handleFileInputChange(e: Event) {
     const target = e.target as HTMLInputElement;
     const files = target.files;
     if (files && files.length > 0 && onFilesUpload) {
       const uploadableFiles: UploadableFile[] = Array.from(files).map(
         (file, index) => {
-          // For folder uploads, extract the relative path from webkitRelativePath
           const webkitPath = (file as any).webkitRelativePath;
           const relativePath = webkitPath || file.name;
 
@@ -400,78 +360,17 @@
   }
 
   function handleContextMenuAction(action: string, item?: FileItem) {
-    if (
-      item &&
-      (action === "open" ||
-        action === "view" ||
-        action === "download" ||
-        action === "delete" ||
-        action === "rename")
-    ) {
-      const fileAction = action === "view" ? "open" : (action as FileAction);
-      sharedFileActionHandler(fileAction, item);
-      return;
-    }
-
-    switch (action) {
-      case "upload":
-        handleUploadClick();
-        break;
-      case "upload-folder":
-        handleFolderUploadClick();
-        break;
-      case "refresh":
-        invalidateAll();
-        break;
-      case "select-all":
-        table.toggleAllPageRowsSelected(true);
-        const rows = table.getRowModel().rows;
-        lastSelectedIndex = rows.length > 0 ? rows.length - 1 : null;
-        break;
-      case "deselect-all":
-        table.toggleAllPageRowsSelected(false);
-        lastSelectedIndex = null;
-        break;
-      case "create-folder":
-        const performCreateFolder = async (name: string) => {
-          try {
-            const response = await fetch("/api/folders", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                name,
-                parentId: currentFolderId,
-              }),
-            });
-
-            if (response.ok) {
-              await invalidateAll();
-            } else {
-              const errorText = await response.text();
-              throw new Error(`Failed to create folder: ${errorText}`);
-            }
-          } catch (error) {
-            throw error;
-          }
-        };
-
-        createFolderDialog = openCreateFolderDialog(
-          createFolderDialog,
-          performCreateFolder
-        );
-        break;
-      default:
-        break;
+    fileOperations.handleContextMenuAction(action, item);
+    if (action === "select-all") {
+      table.toggleAllPageRowsSelected(true);
     }
   }
 
   function handleKeyDown(e: KeyboardEvent) {
     if (
-      confirmationDialog.open ||
-      renameDialog.open ||
-      createFolderDialog.open ||
+      confirmationDialogData.open ||
+      renameDialogData.open ||
+      createFolderDialogData.open ||
       dialogsOpen
     ) {
       return;
@@ -499,7 +398,7 @@
       !target.closest('[role="menuitem"]')
     ) {
       table.toggleAllPageRowsSelected(false);
-      lastSelectedIndex = null;
+      if (lastSelectedIndex) lastSelectedIndex.value = null;
     }
   }
 </script>
@@ -540,20 +439,11 @@
     disabled={uploadDisabled}
   />
 
-  {#if table.getFilteredSelectedRowModel().rows.length === 0}
-    <FileTableStorageInfo
-      {breadcrumbs}
-      {uploadDisabled}
-      onUploadClick={onFilesUpload ? handleUploadClick : undefined}
-      onFolderUploadClick={onFilesUpload ? handleFolderUploadClick : undefined}
-    />
-  {/if}
-
   {#if table.getFilteredSelectedRowModel().rows.length > 0}
     <FileTableBulkActions
       selectedCount={table.getFilteredSelectedRowModel().rows.length}
       totalCount={table.getFilteredRowModel().rows.length}
-      {isDownloading}
+      isDownloading={isDownloading?.value || false}
       onBulkDownload={handleBulkDownload}
       onBulkDelete={handleBulkDelete}
       onDeselectAll={() => {
@@ -562,7 +452,7 @@
     />
   {/if}
 
-  <Table.Root class="h-full">
+  <Table.Root>
     <FileTableHeader
       {table}
       {uploadDisabled}
@@ -574,10 +464,12 @@
           <FileTableRow
             {row}
             {table}
-            {lastSelectedIndex}
+            lastSelectedIndex={lastSelectedIndex?.value || null}
             onRowDoubleClick={handleRowClick}
             onContextMenuAction={handleContextMenuAction}
-            onLastSelectedIndexChange={(index) => (lastSelectedIndex = index)}
+            onLastSelectedIndexChange={(index) => {
+              if (lastSelectedIndex) lastSelectedIndex.value = index;
+            }}
           />
         {/each}
       </Table.Body>
@@ -590,21 +482,21 @@
   />
 
   <ConfirmationDialog
-    open={confirmationDialog.open}
-    config={confirmationDialog.config}
+    open={confirmationDialogData.open}
+    config={confirmationDialogData.config}
     onConfirm={handleConfirmationConfirm}
     onCancel={handleConfirmationCancel}
   />
 
   <RenameDialog
-    open={renameDialog.open}
-    item={renameDialog.item}
+    open={renameDialogData.open}
+    item={renameDialogData.item}
     onRename={handleRename}
     onCancel={handleRenameCancel}
   />
 
   <CreateFolderDialog
-    open={createFolderDialog.open}
+    open={createFolderDialogData.open}
     onCreateFolder={handleCreateFolder}
     onCancel={handleCreateFolderCancel}
   />

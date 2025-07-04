@@ -35,7 +35,6 @@ export interface FileTableProps {
   items: FileItem[];
   currentUserId?: string;
   currentFolderId?: string | null;
-  breadcrumbs?: Array<{ id: string; name: string }>;
   onItemClick?: (item: FileItem) => void;
   onAction?: (action: FileAction, item: FileItem) => void;
   onFilesUpload?: (files: UploadableFile[]) => void;

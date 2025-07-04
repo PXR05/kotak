@@ -1,5 +1,6 @@
 import type { UploadableFile } from "./types/file.js";
 import { invalidateAll } from "$app/navigation";
+import { isUploading } from "./stores/fileOperations.svelte.js";
 
 export interface UploadOptions {
   folderId?: string;
@@ -12,6 +13,11 @@ export async function uploadFiles(
   files: UploadableFile[],
   options: UploadOptions = {}
 ): Promise<boolean> {
+  // Check if already uploading using global state
+  if (isUploading.value) {
+    return false;
+  }
+
   try {
     const formData = new FormData();
 
