@@ -6,7 +6,6 @@ import { Readable } from "node:stream";
 
 const STORAGE_PATH = path.resolve(process.cwd(), "storage");
 
-// Ensure storage directory exists on startup
 mkdir(STORAGE_PATH, { recursive: true }).catch((e) => {
   console.error("Failed to create storage directory on startup.", e);
 });
@@ -52,7 +51,6 @@ export async function deleteFile(storageKey: string): Promise<void> {
   try {
     await unlink(filePath);
   } catch (error) {
-    // If file doesn't exist, we can ignore the error.
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return;
     }

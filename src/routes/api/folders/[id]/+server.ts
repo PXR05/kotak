@@ -5,12 +5,10 @@ import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 
-// Recursively delete all files and subfolders in a folder
 async function recursivelyDeleteFolder(
   folderId: string,
   ownerId: string
 ): Promise<void> {
-  // Get all files in this folder
   const files = await db
     .select()
     .from(table.file)
@@ -18,7 +16,6 @@ async function recursivelyDeleteFolder(
       and(eq(table.file.folderId, folderId), eq(table.file.ownerId, ownerId))
     );
 
-  // Delete all files from storage and database
   for (const file of files) {
     try {
       await deleteFile(file.storageKey);
@@ -26,11 +23,9 @@ async function recursivelyDeleteFolder(
       console.log(`Deleted file: ${file.name}`);
     } catch (err) {
       console.error(`Failed to delete file ${file.name}:`, err);
-      // Continue with other files even if one fails
     }
   }
 
-  // Get all child folders
   const childFolders = await db
     .select()
     .from(table.folder)
@@ -41,12 +36,10 @@ async function recursivelyDeleteFolder(
       )
     );
 
-  // Recursively delete all child folders
   for (const childFolder of childFolders) {
     await recursivelyDeleteFolder(childFolder.id, ownerId);
   }
 
-  // Finally, delete the folder itself
   await db.delete(table.folder).where(eq(table.folder.id, folderId));
   console.log(`Deleted folder: ${folderId}`);
 }
@@ -71,24 +64,20 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
     throw error(400, "Name cannot be empty");
   }
 
-  // Validate name length and characters
   if (trimmedName.length > 255) {
     throw error(400, "Name is too long (maximum 255 characters)");
   }
 
-  // Check for invalid characters
   const invalidChars = /[<>:"/\\|?*\x00-\x1f]/;
   if (invalidChars.test(trimmedName)) {
     throw error(400, "Name contains invalid characters");
   }
 
-  // Check for reserved names
   const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
   if (reservedNames.test(trimmedName)) {
     throw error(400, "This name is reserved and cannot be used");
   }
 
-  // Check if folder exists and belongs to user
   const [folder] = await db
     .select()
     .from(table.folder)
@@ -103,12 +92,10 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
     throw error(404, "Folder not found or access denied");
   }
 
-  // Prevent renaming root folder
   if (folder.name === "__root__") {
     throw error(400, "Cannot rename root folder");
   }
 
-  // Check if a folder with the same name already exists in the same parent folder
   const [existingFolder] = await db
     .select()
     .from(table.folder)
@@ -126,7 +113,6 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
     throw error(409, "A folder with this name already exists in this location");
   }
 
-  // Update the folder name
   const [updatedFolder] = await db
     .update(table.folder)
     .set({
@@ -149,7 +135,6 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
     throw error(400, "Missing folder ID");
   }
 
-  // Check if folder exists and belongs to the user
   const [folder] = await db
     .select()
     .from(table.folder)
@@ -164,7 +149,6 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
     throw error(404, "Folder not found or access denied");
   }
 
-  // Prevent deletion of root folder
   if (folder.name === "__root__") {
     throw error(400, "Cannot delete root folder");
   }

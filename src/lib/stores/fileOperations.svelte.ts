@@ -148,7 +148,7 @@ export const fileOperations = {
   downloadFile(item: FileItem) {
     if (item.storageKey) {
       window.open(
-        `/api/storage?key=${encodeURIComponent(item.storageKey)}&download=true`,
+        `/api/files/${encodeURIComponent(item.storageKey)}?download=true`,
         "_blank"
       );
     }
@@ -247,8 +247,7 @@ export const fileOperations = {
 
     isDownloading.value = true;
     try {
-      // Download each file individually for now
-      // Could be enhanced to create a zip file
+      // TODO: Implement bulk download logic (ZIP)
       selectedItems
         .filter((item) => item.type === "file")
         .forEach((item) => fileOperations.downloadFile(item));
@@ -347,7 +346,7 @@ async function uploadFiles(
       formData.append("folderId", options.folderId);
     }
 
-    const response = await fetch("/api/storage", {
+    const response = await fetch("/api/files/upload", {
       method: "POST",
       body: formData,
     });

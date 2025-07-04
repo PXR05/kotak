@@ -57,14 +57,16 @@
   function handleDownload() {
     if (file && file.storageKey) {
       window.open(
-        `/api/storage?key=${file.storageKey}&download=true`,
+        `/api/files/${encodeURIComponent(file.storageKey)}?download=true`,
         "_blank"
       );
     }
   }
 
   function getFileUrl(file: FileItem): string | null {
-    return file.storageKey ? `/api/storage?key=${file.storageKey}` : null;
+    return file.storageKey
+      ? `/api/files/${encodeURIComponent(file.storageKey)}`
+      : null;
   }
 
   function isImage(mimeType: string | undefined): boolean {

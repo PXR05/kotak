@@ -5,12 +5,12 @@ export type FileItem = {
   ownerId: string;
   updatedAt: Date;
   createdAt: Date;
-  // File-specific properties
+  // File
   size?: number;
   mimeType?: string;
   storageKey?: string;
   folderId?: string;
-  // Folder-specific properties
+  // Folder
   parentId?: string | null;
 };
 

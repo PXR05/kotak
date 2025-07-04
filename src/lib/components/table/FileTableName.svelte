@@ -1,14 +1,14 @@
 <script lang="ts">
   import type { FileItem } from "$lib/types/file.js";
-
-  // Lucide icons
-  import FolderIcon from "@lucide/svelte/icons/folder";
-  import FileIcon from "@lucide/svelte/icons/file";
-  import FileTextIcon from "@lucide/svelte/icons/file-text";
-  import ImageIcon from "@lucide/svelte/icons/image";
-  import FileVideoIcon from "@lucide/svelte/icons/file-video";
-  import FileAudioIcon from "@lucide/svelte/icons/file-audio";
-  import ArchiveIcon from "@lucide/svelte/icons/archive";
+  import {
+    FolderIcon,
+    FileIcon,
+    FileTextIcon,
+    ImageIcon,
+    FileVideoIcon,
+    FileAudioIcon,
+    ArchiveIcon,
+  } from "@lucide/svelte";
 
   let {
     item,

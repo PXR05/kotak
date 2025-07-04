@@ -29,7 +29,6 @@ export const actions: Actions = {
       });
     }
 
-    // Check if email already exists
     const existingUsers = await db
       .select()
       .from(table.user)

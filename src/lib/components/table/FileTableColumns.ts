@@ -99,7 +99,6 @@ export function createFileTableColumns(
       sortingFn: (rowA, rowB, columnId) => {
         const a = rowA.original;
         const b = rowB.original;
-        // Sort folders first, then by size
         if (a.type === "folder" && b.type !== "folder") return -1;
         if (b.type === "folder" && a.type !== "folder") return 1;
         if (a.type === "folder" && b.type === "folder") return 0;

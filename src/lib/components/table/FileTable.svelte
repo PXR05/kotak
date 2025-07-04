@@ -107,7 +107,7 @@
             }
 
             const response = await fetch(
-              `/api/storage?key=${encodeURIComponent(item.storageKey)}&download=true`
+              `/api/files/${encodeURIComponent(item.storageKey)}?download=true`
             );
             if (!response.ok) {
               return;
