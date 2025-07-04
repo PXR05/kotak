@@ -11,30 +11,20 @@
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
   import { EditIcon } from "@lucide/svelte";
-  import type { FileItem } from "$lib/types/file.js";
+  import { closeRenameDialog, renameDialogData } from "$lib/stores";
 
-  let {
-    open = false,
-    item = null,
-    onRename,
-    onCancel,
-  }: {
-    open?: boolean;
-    item?: FileItem | null;
-    onRename?: (newName: string) => Promise<void>;
-    onCancel?: () => void;
-  } = $props();
+  const item = $derived(renameDialogData.item);
+  const open = $derived(renameDialogData.open);
 
   let newName = $state("");
   let isSubmitting = $state(false);
   let error = $state<string | null>(null);
 
-  // Update newName when item changes or dialog opens
   $effect(() => {
     if (item && open) {
       newName = item.name;
       error = null;
-      isSubmitting = false; // Reset submitting state when dialog opens
+      isSubmitting = false;
     }
   });
 
@@ -45,7 +35,7 @@
   }
 
   function handleCancel() {
-    onCancel?.();
+    closeRenameDialog();
     newName = "";
     error = null;
     isSubmitting = false;
@@ -60,13 +50,11 @@
       return "Name must be different from current name";
     }
 
-    // Check for invalid characters (common across most file systems)
     const invalidChars = /[<>:"/\\|?*\x00-\x1f]/;
     if (invalidChars.test(name)) {
       return "Name contains invalid characters";
     }
 
-    // Check for reserved names on Windows
     const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
     if (reservedNames.test(name.trim())) {
       return "This name is reserved and cannot be used";
@@ -94,10 +82,9 @@
     error = null;
 
     try {
-      await onRename?.(trimmedName);
-      // Dialog will be closed by parent component on success
+      await renameDialogData.callback?.(trimmedName);
+      closeRenameDialog();
     } catch (err) {
-      // Show error in dialog and keep it open
       isSubmitting = false;
       error =
         err instanceof Error ? err.message : "An unexpected error occurred";

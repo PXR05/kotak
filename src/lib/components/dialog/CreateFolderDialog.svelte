@@ -11,22 +11,14 @@
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
   import { FolderPlusIcon } from "@lucide/svelte";
+  import { closeCreateFolderDialog, createFolderDialogData } from "$lib/stores";
 
-  let {
-    open = false,
-    onCreateFolder,
-    onCancel,
-  }: {
-    open?: boolean;
-    onCreateFolder?: (name: string) => Promise<void>;
-    onCancel?: () => void;
-  } = $props();
+  const open = $derived(createFolderDialogData.open);
 
   let folderName = $state("");
   let isSubmitting = $state(false);
   let error = $state<string | null>(null);
 
-  // Reset state when dialog opens
   $effect(() => {
     if (open) {
       folderName = "";
@@ -42,7 +34,7 @@
   }
 
   function handleCancel() {
-    onCancel?.();
+    closeCreateFolderDialog();
     folderName = "";
     error = null;
     isSubmitting = false;
@@ -53,13 +45,11 @@
       return "Folder name cannot be empty";
     }
 
-    // Check for invalid characters (common across most file systems)
     const invalidChars = /[<>:"/\\|?*\x00-\x1f]/;
     if (invalidChars.test(name)) {
       return "Name contains invalid characters";
     }
 
-    // Check for reserved names on Windows
     const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
     if (reservedNames.test(name.trim())) {
       return "This name is reserved and cannot be used";
@@ -69,7 +59,6 @@
       return "Name is too long (maximum 255 characters)";
     }
 
-    // Check for leading/trailing spaces or dots
     if (name !== name.trim()) {
       return "Name cannot start or end with spaces";
     }
@@ -96,10 +85,9 @@
     error = null;
 
     try {
-      await onCreateFolder?.(trimmedName);
-      // Dialog will be closed by parent component on success
+      await createFolderDialogData.callback?.(trimmedName);
+      closeCreateFolderDialog();
     } catch (err) {
-      // Show error in dialog and keep it open
       isSubmitting = false;
       error =
         err instanceof Error ? err.message : "An unexpected error occurred";

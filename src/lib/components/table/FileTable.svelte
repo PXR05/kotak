@@ -1,110 +1,56 @@
 <script lang="ts">
+  import { createSvelteTable } from "$lib/components/ui/data-table/index.js";
+  import * as Table from "$lib/components/ui/table/index.js";
+  import type { FileItem, UploadableFile } from "$lib/types/file.js";
   import {
-    type PaginationState,
-    type SortingState,
     type RowSelectionState,
+    type SortingState,
     getCoreRowModel,
     getPaginationRowModel,
     getSortedRowModel,
   } from "@tanstack/table-core";
-  import { createSvelteTable } from "$lib/components/ui/data-table/index.js";
-  import * as Table from "$lib/components/ui/table/index.js";
-  import type {
-    FileItem,
-    FileAction,
-    FileTableProps,
-    UploadableFile,
-  } from "$lib/types/file.js";
-  import { createFileTableColumns } from "./FileTableColumns.js";
+  import JSZip from "jszip";
   import FileTableBulkActions from "./FileTableBulkActions.svelte";
+  import { createFileTableColumns } from "./FileTableColumns.js";
   import FileTableDropZone from "./FileTableDropZone.svelte";
+  import FileTableEmptyState from "./FileTableEmptyState.svelte";
   import FileTableHeader from "./FileTableHeader.svelte";
   import FileTableRow from "./FileTableRow.svelte";
-  import FileTableEmptyState from "./FileTableEmptyState.svelte";
-  import ConfirmationDialog from "./ConfirmationDialog.svelte";
-  import RenameDialog from "./RenameDialog.svelte";
-  import CreateFolderDialog from "./CreateFolderDialog.svelte";
-  import JSZip from "jszip";
 
-  // Import centralized state management
   import {
-    fileOperations,
     confirmationDialogData,
-    renameDialogData,
     createFolderDialogData,
-    closeConfirmationDialog,
-    closeRenameDialog,
-    closeCreateFolderDialog,
+    fileOperations,
+    filePreviewDialogData,
+    renameDialogData,
   } from "$lib/stores/index.js";
 
-  // Use getter functions for reactive state that we can't directly import
   import {
+    currentUserId as currentUserIdStore,
     isDownloading,
     lastSelectedIndex,
-    currentUserId as currentUserIdStore,
   } from "$lib/stores/fileOperations.svelte.js";
 
   let {
     items,
     currentUserId = "user-1",
     currentFolderId = null,
-    onItemClick,
-    onAction,
-    onFilesUpload,
     uploadDisabled = false,
-    dialogsOpen = false,
-  }: FileTableProps & { dialogsOpen?: boolean } = $props();
+  }: {
+    items: FileItem[];
+    currentUserId?: string;
+    currentFolderId?: string | null;
+    uploadDisabled?: boolean;
+  } = $props();
 
   let isDragOver = $state(false);
   let dragCounter = $state(0);
-  let fileInputRef: HTMLInputElement;
-  let folderInputRef: HTMLInputElement;
-
-  function handleRowClick(item: FileItem) {
-    onItemClick?.(item);
-  }
-
-  function handleAction(action: FileAction, item: FileItem) {
-    onAction?.(action, item);
-  }
-
-  function handleConfirmationConfirm() {
-    confirmationDialogData.callback?.();
-    closeConfirmationDialog();
-  }
-
-  function handleConfirmationCancel() {
-    closeConfirmationDialog();
-  }
-
-  async function handleRename(newName: string) {
-    try {
-      await renameDialogData.callback?.(newName);
-      closeRenameDialog();
-    } catch (error) {}
-  }
-
-  function handleRenameCancel() {
-    closeRenameDialog();
-  }
-
-  async function handleCreateFolder(name: string) {
-    try {
-      await createFolderDialogData.callback?.(name);
-      closeCreateFolderDialog();
-    } catch (error) {}
-  }
-
-  function handleCreateFolderCancel() {
-    closeCreateFolderDialog();
-  }
 
   const columns = createFileTableColumns(
     currentUserIdStore.value || currentUserId,
-    handleAction
+    fileOperations.handleAction
   );
 
-  let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 10 });
   let sorting = $state<SortingState>([]);
   let rowSelection = $state<RowSelectionState>({});
 
@@ -122,9 +68,6 @@
     },
     columns,
     state: {
-      get pagination() {
-        return pagination;
-      },
       get sorting() {
         return sorting;
       },
@@ -135,13 +78,6 @@
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    onPaginationChange: (updater) => {
-      if (typeof updater === "function") {
-        pagination = updater(pagination);
-      } else {
-        pagination = updater;
-      }
-    },
     onSortingChange: (updater) => {
       if (typeof updater === "function") {
         sorting = updater(sorting);
@@ -180,7 +116,7 @@
             const blob = await response.blob();
             zip.file(item.name, blob);
           } catch (error) {
-            // Silently skip failed downloads
+            console.error(`Failed to download ${item.name}:`, error);
           }
         })
       );
@@ -206,7 +142,7 @@
       URL.revokeObjectURL(url);
     } catch (error) {
       fileItems.forEach((item) => {
-        handleAction("download", item);
+        fileOperations.handleAction("download", item);
       });
     }
   }
@@ -226,11 +162,11 @@
 
   function handleBulkDelete() {
     fileOperations.bulkDelete();
-    rowSelection = {};
+    table.toggleAllPageRowsSelected(false);
   }
 
   function handleDragEnter(e: DragEvent) {
-    if (uploadDisabled || !onFilesUpload) return;
+    if (uploadDisabled) return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -242,7 +178,7 @@
   }
 
   function handleDragOver(e: DragEvent) {
-    if (uploadDisabled || !onFilesUpload) return;
+    if (uploadDisabled) return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -253,7 +189,7 @@
   }
 
   function handleDragLeave(e: DragEvent) {
-    if (uploadDisabled || !onFilesUpload) return;
+    if (uploadDisabled) return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -265,7 +201,7 @@
   }
 
   async function handleDrop(e: DragEvent) {
-    if (uploadDisabled || !onFilesUpload) return;
+    if (uploadDisabled) return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -277,7 +213,6 @@
     if (items && items.length > 0) {
       const uploadableFiles: UploadableFile[] = [];
 
-      // Process all dropped items (files and folders)
       await Promise.all(
         Array.from(items).map(async (item) => {
           if (item.kind === "file") {
@@ -290,12 +225,11 @@
       );
 
       if (uploadableFiles.length > 0) {
-        onFilesUpload(uploadableFiles);
+        fileOperations.handleFilesUpload(uploadableFiles);
       }
     }
   }
 
-  // Recursively process directory entries
   async function processEntry(
     entry: FileSystemEntry,
     uploadableFiles: UploadableFile[],
@@ -338,9 +272,9 @@
   function handleFileInputChange(e: Event) {
     const target = e.target as HTMLInputElement;
     const files = target.files;
-    if (files && files.length > 0 && onFilesUpload) {
+    if (files && files.length > 0) {
       const uploadableFiles: UploadableFile[] = Array.from(files).map(
-        (file, index) => {
+        (file) => {
           const webkitPath = (file as any).webkitRelativePath;
           const relativePath = webkitPath || file.name;
 
@@ -354,15 +288,8 @@
           };
         }
       );
-      onFilesUpload(uploadableFiles);
+      fileOperations.handleFilesUpload(uploadableFiles);
       target.value = "";
-    }
-  }
-
-  function handleContextMenuAction(action: string, item?: FileItem) {
-    fileOperations.handleContextMenuAction(action, item);
-    if (action === "select-all") {
-      table.toggleAllPageRowsSelected(true);
     }
   }
 
@@ -371,7 +298,7 @@
       confirmationDialogData.open ||
       renameDialogData.open ||
       createFolderDialogData.open ||
-      dialogsOpen
+      filePreviewDialogData.open
     ) {
       return;
     }
@@ -379,26 +306,27 @@
     if (e.ctrlKey || e.metaKey) {
       if (e.key === "a") {
         e.preventDefault();
-        handleContextMenuAction("select-all");
+        table.toggleAllPageRowsSelected(true);
       }
     } else if (e.key === "Escape") {
       e.preventDefault();
-      handleContextMenuAction("deselect-all");
+      table.toggleAllPageRowsSelected(false);
     }
   }
 
   function handleOutsideClick(e: MouseEvent) {
     const target = e.target as HTMLElement;
     if (
-      !target.closest("tr") &&
-      !target.closest("button") &&
-      !target.closest('[data-slot="button"]') &&
-      !target.closest('[data-slot="dropdown-menu-trigger"]') &&
-      !target.closest("input") &&
-      !target.closest('[role="menuitem"]')
+      !e ||
+      !target ||
+      (!target.closest("tr") &&
+        !target.closest("button") &&
+        !target.closest('[data-slot="button"]') &&
+        !target.closest('[data-slot="dropdown-menu-trigger"]') &&
+        !target.closest("input") &&
+        !target.closest('[role="menuitem"]'))
     ) {
       table.toggleAllPageRowsSelected(false);
-      if (lastSelectedIndex) lastSelectedIndex.value = null;
     }
   }
 </script>
@@ -417,11 +345,10 @@
   aria-label="File upload drop zone"
   onclick={handleOutsideClick}
 >
-  <FileTableDropZone {isDragOver} {uploadDisabled} {onFilesUpload} />
+  <FileTableDropZone {isDragOver} {uploadDisabled} />
 
   <!-- Hidden file input for upload -->
   <input
-    bind:this={fileInputRef}
     type="file"
     multiple
     class="hidden"
@@ -431,7 +358,6 @@
 
   <!-- Hidden folder input for folder upload -->
   <input
-    bind:this={folderInputRef}
     type="file"
     webkitdirectory
     class="hidden"
@@ -443,34 +369,18 @@
     <FileTableBulkActions
       selectedCount={table.getFilteredSelectedRowModel().rows.length}
       totalCount={table.getFilteredRowModel().rows.length}
-      isDownloading={isDownloading?.value || false}
       onBulkDownload={handleBulkDownload}
       onBulkDelete={handleBulkDelete}
-      onDeselectAll={() => {
-        handleContextMenuAction("deselect-all");
-      }}
+      onDeselectAll={() => table.toggleAllPageRowsSelected(false)}
     />
   {/if}
 
   <Table.Root>
-    <FileTableHeader
-      {table}
-      {uploadDisabled}
-      onContextMenuAction={handleContextMenuAction}
-    />
+    <FileTableHeader {table} {uploadDisabled} />
     {#if table.getRowModel().rows?.length}
       <Table.Body class="flex-1">
         {#each table.getRowModel().rows as row}
-          <FileTableRow
-            {row}
-            {table}
-            lastSelectedIndex={lastSelectedIndex?.value || null}
-            onRowDoubleClick={handleRowClick}
-            onContextMenuAction={handleContextMenuAction}
-            onLastSelectedIndexChange={(index) => {
-              if (lastSelectedIndex) lastSelectedIndex.value = index;
-            }}
-          />
+          <FileTableRow {row} {table} />
         {/each}
       </Table.Body>
     {/if}
@@ -478,26 +388,5 @@
   <FileTableEmptyState
     {uploadDisabled}
     isEmpty={!table.getRowModel().rows?.length}
-    onContextMenuAction={handleContextMenuAction}
-  />
-
-  <ConfirmationDialog
-    open={confirmationDialogData.open}
-    config={confirmationDialogData.config}
-    onConfirm={handleConfirmationConfirm}
-    onCancel={handleConfirmationCancel}
-  />
-
-  <RenameDialog
-    open={renameDialogData.open}
-    item={renameDialogData.item}
-    onRename={handleRename}
-    onCancel={handleRenameCancel}
-  />
-
-  <CreateFolderDialog
-    open={createFolderDialogData.open}
-    onCreateFolder={handleCreateFolder}
-    onCancel={handleCreateFolderCancel}
   />
 </div>

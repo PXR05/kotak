@@ -4,15 +4,13 @@
   let {
     isDragOver,
     uploadDisabled = false,
-    onFilesUpload,
   }: {
     isDragOver: boolean;
     uploadDisabled?: boolean;
-    onFilesUpload?: (files: any[]) => void;
   } = $props();
 </script>
 
-{#if isDragOver && !uploadDisabled && onFilesUpload}
+{#if isDragOver && !uploadDisabled}
   <div
     class="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-sm"
   >

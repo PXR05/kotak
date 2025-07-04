@@ -1,4 +1,11 @@
-import type { ConfirmationConfig } from "$lib/components/table/ConfirmationDialog.svelte";
+export interface ConfirmationConfig {
+  title: string;
+  description: string;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: "default" | "destructive";
+  icon?: boolean;
+}
 
 export interface ConfirmationDialogState {
   open: boolean;

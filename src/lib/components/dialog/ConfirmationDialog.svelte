@@ -9,34 +9,18 @@
   } from "$lib/components/ui/dialog/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import { AlertTriangleIcon } from "@lucide/svelte";
+  import { closeConfirmationDialog, confirmationDialogData } from "$lib/stores";
 
-  export interface ConfirmationConfig {
-    title: string;
-    description: string;
-    confirmText?: string;
-    cancelText?: string;
-    variant?: "default" | "destructive";
-    icon?: boolean;
-  }
-
-  let {
-    open = false,
-    config,
-    onConfirm,
-    onCancel,
-  }: {
-    open?: boolean;
-    config?: ConfirmationConfig | null;
-    onConfirm?: () => void;
-    onCancel?: () => void;
-  } = $props();
+  const config = $derived(confirmationDialogData.config);
+  const open = $derived(confirmationDialogData.open);
 
   function handleConfirm() {
-    onConfirm?.();
+    confirmationDialogData.callback?.();
+    closeConfirmationDialog();
   }
 
   function handleCancel() {
-    onCancel?.();
+    closeConfirmationDialog();
   }
 
   function handleOpenChange(newOpen: boolean) {

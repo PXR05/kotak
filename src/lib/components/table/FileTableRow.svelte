@@ -4,22 +4,18 @@
   import { FlexRender } from "$lib/components/ui/data-table/index.js";
   import type { Row, Table as TanStackTable } from "@tanstack/table-core";
   import type { FileItem } from "$lib/types/file.js";
-  import { getAllActions } from "./file-actions.js";
+  import {
+    fileOperations,
+    lastSelectedIndex,
+  } from "$lib/stores/fileOperations.svelte.js";
+  import { fileActions } from "$lib/utils/file-actions";
 
   let {
     row,
     table,
-    lastSelectedIndex,
-    onRowDoubleClick,
-    onContextMenuAction,
-    onLastSelectedIndexChange,
   }: {
     row: Row<FileItem>;
     table: TanStackTable<FileItem>;
-    lastSelectedIndex: number | null;
-    onRowDoubleClick?: (item: FileItem) => void;
-    onContextMenuAction?: (action: string, item: FileItem) => void;
-    onLastSelectedIndexChange?: (index: number | null) => void;
   } = $props();
 
   function handleRowClick(e: MouseEvent) {
@@ -36,10 +32,10 @@
 
     if (e.ctrlKey || e.metaKey) {
       row.toggleSelected();
-      onLastSelectedIndexChange?.(currentIndex);
-    } else if (e.shiftKey && lastSelectedIndex !== null) {
-      const start = Math.min(lastSelectedIndex, currentIndex);
-      const end = Math.max(lastSelectedIndex, currentIndex);
+      lastSelectedIndex.value = currentIndex;
+    } else if (e.shiftKey && lastSelectedIndex.value !== null) {
+      const start = Math.min(lastSelectedIndex.value, currentIndex);
+      const end = Math.max(lastSelectedIndex.value, currentIndex);
 
       table.toggleAllPageRowsSelected(false);
 
@@ -52,7 +48,7 @@
     } else {
       table.toggleAllPageRowsSelected(false);
       row.toggleSelected(true);
-      onLastSelectedIndexChange?.(currentIndex);
+      lastSelectedIndex.value = currentIndex;
     }
   }
 
@@ -65,10 +61,8 @@
     ) {
       return;
     }
-    onRowDoubleClick?.(row.original);
+    fileOperations.handleItemClick?.(row.original);
   }
-
-  const actions = getAllActions();
 </script>
 
 <ContextMenu.Root>
@@ -77,7 +71,7 @@
       <Table.Row
         {...props}
         data-state={row.getIsSelected() && "selected"}
-        class="hover:bg-muted/50 transition-colors cursor-pointer"
+        class="hover:bg-muted/50 transition-none cursor-pointer"
         onclick={handleRowClick}
         ondblclick={handleRowDoubleClick}
       >
@@ -96,13 +90,14 @@
     {/snippet}
   </ContextMenu.Trigger>
   <ContextMenu.Content class="w-52">
-    {#each actions as action, index}
+    {#each fileActions as action, index}
       {#if action.separator && index > 0}
         <ContextMenu.Separator />
       {/if}
       <ContextMenu.Item
-        onclick={() => onContextMenuAction?.(action.id, row.original)}
-        disabled={action.disabled?.(row.original)}
+        onclick={() =>
+          fileOperations.handleContextMenuAction(action.id, row.original)}
+        disabled={action.disabled}
         variant={action.variant}
       >
         <action.icon class="mr-2 size-4" />

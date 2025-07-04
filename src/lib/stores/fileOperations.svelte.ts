@@ -4,9 +4,20 @@ import { openConfirmationDialog } from "./confirmationDialog.svelte.js";
 import { openRenameDialog } from "./renameDialog.svelte.js";
 import { openCreateFolderDialog } from "./createFolderDialog.svelte.js";
 import { openFilePreviewDialog } from "./filePreviewDialog.svelte.js";
-import { uploadFiles, createFolder } from "$lib/file-operations.js";
+import { toast } from "svelte-sonner";
 
-// Global state management
+export interface UploadOptions {
+  folderId?: string;
+  onProgress?: (progress: number) => void;
+  onError?: (error: string) => void;
+  onSuccess?: () => void;
+}
+
+export interface CreateFolderOptions {
+  name: string;
+  parentId?: string;
+}
+
 export let selectedItems = $state<FileItem[]>([]);
 export let lastSelectedIndex = $state<{ value: number | null }>({
   value: null,
@@ -14,7 +25,6 @@ export let lastSelectedIndex = $state<{ value: number | null }>({
 export let isUploading = $state({ value: false });
 export let isDownloading = $state({ value: false });
 
-// Clipboard management
 export let fileClipboard = $state<{
   data: FileItem[];
   operation: "cut" | "copy" | null;
@@ -23,15 +33,12 @@ export let fileClipboard = $state<{
   operation: null,
 });
 
-// Current folder state
 export let currentFolderId = $state<{ value: string | null }>({ value: null });
 export let currentUserId = $state<{ value: string | null }>({ value: null });
 
-// Upload state
 export let uploadProgress = $state<{ [key: string]: number }>({});
 
 export const fileOperations = {
-  // Item click handlers
   handleItemClick(item: FileItem) {
     if (item.type === "folder") {
       goto(`/${item.id}`);
@@ -40,7 +47,6 @@ export const fileOperations = {
     }
   },
 
-  // File operations
   async handleRename(item: FileItem, newName: string) {
     try {
       const endpoint =
@@ -79,7 +85,6 @@ export const fileOperations = {
 
       if (response.ok) {
         await invalidateAll();
-        // Remove from selected items if it was selected
         const index = selectedItems.findIndex(
           (selected) => selected.id !== item.id
         );
@@ -112,23 +117,18 @@ export const fileOperations = {
     }
   },
 
-  // File upload operations
   async handleFilesUpload(uploadableFiles: UploadableFile[]) {
     if (isUploading.value) return;
-
-    isUploading.value = true;
 
     try {
       const success = await uploadFiles(uploadableFiles, {
         folderId: currentFolderId.value || undefined,
-        onProgress: (progress) => {
-          // Update upload progress if needed
-        },
+        onProgress: (progress) => {},
         onError: (error) => {
-          alert("Upload failed: " + error);
+          toast.error("Failed to upload files: " + error);
         },
         onSuccess: () => {
-          // Upload completed successfully
+          toast.success("Files uploaded successfully!");
         },
       });
 
@@ -136,13 +136,15 @@ export const fileOperations = {
         await invalidateAll();
       }
     } catch (error) {
-      alert("Error uploading files");
+      toast.error(
+        "Failed to upload files: " +
+          (error instanceof Error ? error.message : JSON.stringify(error))
+      );
     } finally {
       isUploading.value = false;
     }
   },
 
-  // Download operations
   downloadFile(item: FileItem) {
     if (item.storageKey) {
       window.open(
@@ -152,7 +154,6 @@ export const fileOperations = {
     }
   },
 
-  // Action handler - central dispatcher for all file actions
   handleAction(action: FileAction, item: FileItem) {
     switch (action) {
       case "open":
@@ -183,40 +184,6 @@ export const fileOperations = {
     }
   },
 
-  // Selection management
-  toggleSelection(
-    item: FileItem,
-    index: number,
-    isShiftClick: boolean = false,
-    isCtrlClick: boolean = false
-  ) {
-    if (isShiftClick && lastSelectedIndex.value !== null) {
-      // Range selection
-      const start = Math.min(lastSelectedIndex.value, index);
-      const end = Math.max(lastSelectedIndex.value, index);
-      // This would need the full items array to work properly
-      // For now, just add the current item
-      if (!selectedItems.find((selected) => selected.id === item.id)) {
-        selectedItems.push(item);
-      }
-    } else if (isCtrlClick) {
-      // Toggle individual item
-      const existingIndex = selectedItems.findIndex(
-        (selected) => selected.id === item.id
-      );
-      if (existingIndex >= 0) {
-        selectedItems.splice(existingIndex, 1);
-      } else {
-        selectedItems.push(item);
-      }
-    } else {
-      // Single selection
-      selectedItems.splice(0, selectedItems.length, item);
-    }
-
-    lastSelectedIndex.value = index;
-  },
-
   selectAll(items: FileItem[]) {
     selectedItems.splice(0, selectedItems.length, ...items);
     lastSelectedIndex.value = items.length > 0 ? items.length - 1 : null;
@@ -227,7 +194,6 @@ export const fileOperations = {
     lastSelectedIndex.value = null;
   },
 
-  // Clipboard operations
   cutItems(items: FileItem[]) {
     fileClipboard.data = [...items];
     fileClipboard.operation = "cut";
@@ -242,8 +208,6 @@ export const fileOperations = {
     if (fileClipboard.data.length === 0) return;
 
     try {
-      // Implementation depends on your backend API for move/copy operations
-      // For now, just clear clipboard after paste
       fileClipboard.data = [];
       fileClipboard.operation = null;
       await invalidateAll();
@@ -253,7 +217,6 @@ export const fileOperations = {
     }
   },
 
-  // Bulk operations
   async bulkDelete() {
     if (selectedItems.length === 0) return;
 
@@ -294,11 +257,9 @@ export const fileOperations = {
     }
   },
 
-  // Context menu actions
   handleContextMenuAction(action: string, item?: FileItem) {
     switch (action) {
       case "upload":
-        // Trigger file input
         document
           .querySelector<HTMLInputElement>(
             'input[type="file"]:not([webkitdirectory])'
@@ -306,7 +267,6 @@ export const fileOperations = {
           ?.click();
         break;
       case "upload-folder":
-        // Trigger folder input
         document
           .querySelector<HTMLInputElement>(
             'input[type="file"][webkitdirectory]'
@@ -315,12 +275,6 @@ export const fileOperations = {
         break;
       case "refresh":
         invalidateAll();
-        break;
-      case "select-all":
-        // This would need the full items array
-        break;
-      case "deselect-all":
-        fileOperations.clearSelection();
         break;
       case "create-folder":
         openCreateFolderDialog((name: string) =>
@@ -335,7 +289,6 @@ export const fileOperations = {
     }
   },
 
-  // State setters
   setCurrentFolder(folderId: string | null) {
     currentFolderId.value = folderId;
   },
@@ -344,3 +297,72 @@ export const fileOperations = {
     currentUserId.value = userId;
   },
 };
+
+async function createFolder(options: CreateFolderOptions): Promise<boolean> {
+  try {
+    const response = await fetch("/api/folders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: options.name,
+        parentId: options.parentId,
+      }),
+    });
+
+    if (response.ok) {
+      await invalidateAll();
+      return true;
+    } else {
+      const errorText = await response.text();
+      throw new Error(`Failed to create folder: ${errorText}`);
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+async function uploadFiles(
+  files: UploadableFile[],
+  options: UploadOptions = {}
+): Promise<boolean> {
+  if (isUploading.value) {
+    return false;
+  }
+
+  isUploading.value = true;
+
+  try {
+    const formData = new FormData();
+
+    files.forEach((uploadFile) => {
+      formData.append("files", uploadFile.file);
+      formData.append(
+        "relativePaths",
+        uploadFile.relativePath || uploadFile.name
+      );
+    });
+
+    if (options.folderId) {
+      formData.append("folderId", options.folderId);
+    }
+
+    const response = await fetch("/api/storage", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (response.ok) {
+      await invalidateAll();
+      options.onSuccess?.();
+      return true;
+    } else {
+      const error = await response.text();
+      options.onError?.(error);
+      return false;
+    }
+  } catch (error) {
+    options.onError?.("Error uploading files");
+    return false;
+  }
+}

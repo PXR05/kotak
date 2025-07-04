@@ -2,36 +2,35 @@
   import { Dialog, DialogContent } from "$lib/components/ui/dialog/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import type { FileItem, FileAction } from "$lib/types/file.js";
-
-  // Lucide icons
-  import XIcon from "@lucide/svelte/icons/x";
-  import DownloadIcon from "@lucide/svelte/icons/download";
-  import TrashIcon from "@lucide/svelte/icons/trash-2";
-  import ZoomInIcon from "@lucide/svelte/icons/zoom-in";
-  import ZoomOutIcon from "@lucide/svelte/icons/zoom-out";
-  import RotateCwIcon from "@lucide/svelte/icons/rotate-cw";
-  import FileIcon from "@lucide/svelte/icons/file";
-  import FileTextIcon from "@lucide/svelte/icons/file-text";
-  import ImageIcon from "@lucide/svelte/icons/image";
-  import VideoIcon from "@lucide/svelte/icons/video";
-  import MusicIcon from "@lucide/svelte/icons/music";
-
-  type Props = {
-    file: FileItem | null;
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onAction: (action: FileAction, file: FileItem) => void;
-  };
-
-  let { file, open, onOpenChange, onAction }: Props = $props();
+  import {
+    XIcon,
+    DownloadIcon,
+    TrashIcon,
+    ZoomInIcon,
+    ZoomOutIcon,
+    RotateCwIcon,
+    FileIcon,
+    FileTextIcon,
+    ImageIcon,
+    VideoIcon,
+    MusicIcon,
+  } from "@lucide/svelte";
+  import {
+    closeFilePreviewDialog,
+    fileOperations,
+    filePreviewDialogData,
+  } from "$lib/stores";
 
   let zoom = $state(100);
   let rotation = $state(0);
   let isLoading = $state(false);
   let error = $state<string | null>(null);
 
+  const file = $derived(filePreviewDialogData.file);
+  const open = $derived(filePreviewDialogData.open);
+
   function handleClose() {
-    onOpenChange(false);
+    closeFilePreviewDialog();
     zoom = 100;
     rotation = 0;
     error = null;
@@ -39,7 +38,7 @@
 
   function handleAction(action: FileAction) {
     if (file) {
-      onAction(action, file);
+      fileOperations.handleAction(action, file);
     }
   }
 

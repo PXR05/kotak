@@ -9,7 +9,9 @@
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
+  import { Toaster } from "$lib/components/ui/sonner/index.js";
   import AppSidebar from "$lib/components/sidebar/AppSidebar.svelte";
+  import Dialogs from "$lib/components/dialog/Dialogs.svelte";
 
   let { children } = $props();
 
@@ -24,6 +26,7 @@
   }
 </script>
 
+<Toaster />
 <ModeWatcher />
 <Sidebar.Provider class="select-none">
   <AppSidebar />
@@ -74,6 +77,8 @@
     </div>
   </Sidebar.Inset>
 </Sidebar.Provider>
+
+<Dialogs />
 
 <Button
   onclick={toggleMode}

@@ -1,18 +1,19 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button/index.js";
+  import { isDownloading } from "$lib/stores";
   import { DownloadIcon, TrashIcon, XIcon } from "@lucide/svelte";
+  import { quintOut } from "svelte/easing";
+  import { fly } from "svelte/transition";
 
   let {
     selectedCount,
     totalCount,
-    isDownloading = false,
     onBulkDownload,
     onBulkDelete,
     onDeselectAll,
   }: {
     selectedCount: number;
     totalCount: number;
-    isDownloading?: boolean;
     onBulkDownload?: () => void;
     onBulkDelete?: () => void;
     onDeselectAll?: () => void;
@@ -20,12 +21,13 @@
 </script>
 
 <div
-  class="flex items-center justify-between p-4 border-b bg-sidebar-primary/5"
+  transition:fly={{ duration: 100, y: -10, opacity: 0, easing: quintOut }}
+  class="flex items-center justify-between px-4 py-3.5 rounded-t-lg z-10 absolute top-0 left-0 right-0 bg-background"
 >
   <div class="flex items-center gap-2">
     <Button
       variant="ghost"
-      size="sm"
+      size="icon"
       onclick={onDeselectAll}
       title="Deselect all"
     >
@@ -34,7 +36,7 @@
 
     <div class="w-px h-4 bg-border"></div>
     <span class="text-sm font-medium">
-      {selectedCount} of {totalCount} row(s) selected
+      {selectedCount} of {totalCount} item(s) selected
     </span>
   </div>
   <div class="flex items-center gap-2">
@@ -43,10 +45,10 @@
         variant="outline"
         size="sm"
         onclick={onBulkDownload}
-        disabled={isDownloading}
+        disabled={isDownloading.value}
       >
         <DownloadIcon class="size-4 mr-2" />
-        {isDownloading ? "Creating Zip..." : "Download Selected"}
+        {isDownloading.value ? "Creating Zip..." : "Download Selected"}
       </Button>
     {/if}
     {#if onBulkDelete}

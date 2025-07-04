@@ -30,13 +30,3 @@ export interface UploadableFile {
   type: string;
   relativePath?: string;
 }
-
-export interface FileTableProps {
-  items: FileItem[];
-  currentUserId?: string;
-  currentFolderId?: string | null;
-  onItemClick?: (item: FileItem) => void;
-  onAction?: (action: FileAction, item: FileItem) => void;
-  onFilesUpload?: (files: UploadableFile[]) => void;
-  uploadDisabled?: boolean;
-}

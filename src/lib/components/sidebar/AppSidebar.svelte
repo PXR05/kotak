@@ -9,9 +9,9 @@
   import type { ComponentProps } from "svelte";
   import { PlusIcon, UploadIcon, FolderPlusIcon } from "@lucide/svelte";
   import type { UploadableFile } from "$lib/types/file";
-  import { uploadFiles } from "$lib/file-operations";
   import SideFooter from "./SideFooter.svelte";
   import SideContent from "./SideContent.svelte";
+  import { fileOperations } from "$lib/stores";
 
   let {
     ref = $bindable(null),
@@ -40,7 +40,7 @@
           };
         }
       );
-      uploadFiles(uploadableFiles);
+      fileOperations.handleFilesUpload(uploadableFiles);
       target.value = "";
     }
   }
