@@ -54,7 +54,7 @@ async function ensureFolderPath(
       [existingFolder] = await db
         .insert(table.folder)
         .values({
-          id: `folder-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: `folder-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           name: folderName,
           ownerId: userId,
           parentId: currentFolderId,
@@ -227,10 +227,14 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
   try {
     const fileStream = getFileStream(file.storageKey);
 
-    let contentDisposition = `inline; filename="${file.name}"`;
-
+    const encodedFilename = encodeURIComponent(file.name);
+    const asciiFilename = file.name.replace(/[^\x20-\x7E]/g, ""); 
+    
+    let contentDisposition: string;
     if (download === "true") {
-      contentDisposition = `attachment; filename="${file.name}"`;
+      contentDisposition = `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodedFilename}`;
+    } else {
+      contentDisposition = `inline; filename="${asciiFilename}"; filename*=UTF-8''${encodedFilename}`;
     }
 
     const headers: Record<string, string> = {

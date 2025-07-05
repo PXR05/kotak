@@ -12,7 +12,7 @@
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import { TrashIcon } from "@lucide/svelte";
   import Progress from "../ui/progress/progress.svelte";
-  import { enhance } from "$app/forms";
+  import { formatFileSize } from "$lib/utils/format";
 
   const user = $derived(page.data?.user);
   const sidebar = useSidebar();
@@ -59,10 +59,28 @@
                 <ChevronsUpDownIcon class="ml-auto size-4" />
               </Sidebar.MenuButton>
               <div class="flex flex-col gap-1 mt-1 px-2">
-                <Progress value={20} max={1000} class="h-1 mt-1 mb-0.5" />
-                <span class="text-xs text-muted-foreground">
-                  20 / 1000 MB
-                </span>
+                {#await page.data.storageStatus}
+                  <Progress
+                    value={50}
+                    max={100}
+                    class="h-1 mt-1 mb-0.5 animate-pulse"
+                  />
+                  <span class="text-xs text-muted-foreground animate-pulse">
+                    Loading storage...
+                  </span>
+                {:then status}
+                  <Progress
+                    value={status?.total - status?.free}
+                    max={status?.total}
+                    class="h-1 mt-1 mb-0.5"
+                  />
+                  <span class="text-xs text-muted-foreground">
+                    {formatFileSize((status?.total ?? 0) - (status?.free ?? 0))}
+                    / {formatFileSize(status?.total ?? 0)} ({formatFileSize(
+                      status?.used ?? 0
+                    )} used)
+                  </span>
+                {/await}
               </div>
             {/snippet}
           </DropdownMenu.Trigger>

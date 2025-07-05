@@ -19,9 +19,9 @@ export type FileAction =
   | "download"
   | "rename"
   | "delete"
-  | "share"
+  | "cut"
   | "copy"
-  | "move";
+  | "paste";
 
 export interface UploadableFile {
   file: File;

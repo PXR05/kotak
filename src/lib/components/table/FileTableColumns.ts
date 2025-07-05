@@ -4,6 +4,7 @@ import type { FileItem, FileAction } from "$lib/types/file.js";
 import FileTableName from "./FileTableName.svelte";
 import FileTableActions from "./FileTableActions.svelte";
 import FileTableSortableHeader from "./FileTableSortableHeader.svelte";
+import { formatFileSize } from "$lib/utils/format";
 
 function getFileTypeFromMimeType(mimeType: string): string {
   if (mimeType.startsWith("image/")) return "Image";
@@ -23,14 +24,6 @@ function getFileTypeFromMimeType(mimeType: string): string {
     return "Archive";
   if (mimeType.startsWith("text/")) return "Text";
   return "File";
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
 }
 
 function getDisplayType(item: FileItem): string {
@@ -88,7 +81,7 @@ export function createFileTableColumns(
       },
       cell: ({ row }) => {
         const item = row.original;
-        return item.type === "folder" ? "—" : formatFileSize(item.size || 0);
+        return item.type === "folder" ? "-" : formatFileSize(item.size || 0);
       },
       enableSorting: true,
       sortingFn: (rowA, rowB, columnId) => {
@@ -110,7 +103,7 @@ export function createFileTableColumns(
       },
       cell: ({ row }) => {
         const item = row.original;
-        return item.updatedAt.toLocaleDateString();
+        return new Date(item.updatedAt).toLocaleDateString();
       },
       enableSorting: true,
     },

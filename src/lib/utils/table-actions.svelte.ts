@@ -1,3 +1,4 @@
+import { fileClipboard } from "$lib/stores";
 import type { TableActions } from "$lib/types/table";
 import {
   Icon,
@@ -5,6 +6,7 @@ import {
   FolderPlusIcon,
   FolderPenIcon,
   RefreshCwIcon,
+  ClipboardPasteIcon,
 } from "@lucide/svelte";
 
 interface TableActionConfig {
@@ -16,24 +18,31 @@ interface TableActionConfig {
   separator?: boolean;
 }
 
-export const tableActions: TableActionConfig[] = [
+const actions: TableActionConfig[] = $derived([
+  {
+    id: "paste",
+    label: "Paste",
+    icon: ClipboardPasteIcon,
+    uploadDisabled: fileClipboard.data.length === 0,
+  },
   {
     id: "upload",
     label: "Upload File",
     icon: UploadIcon,
-    uploadDisabled: true,
+    uploadDisabled: false,
+    separator: true,
   },
   {
     id: "upload-folder",
     label: "Upload Folder",
     icon: FolderPlusIcon,
-    uploadDisabled: true,
+    uploadDisabled: false,
   },
   {
     id: "create-folder",
     label: "Create Folder",
     icon: FolderPenIcon,
-    uploadDisabled: true,
+    uploadDisabled: false,
   },
   {
     id: "refresh",
@@ -41,4 +50,6 @@ export const tableActions: TableActionConfig[] = [
     icon: RefreshCwIcon,
     separator: true,
   },
-];
+]);
+
+export const tableActions = () => actions;

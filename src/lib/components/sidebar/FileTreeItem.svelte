@@ -9,7 +9,7 @@
   import type { FileTreeNode } from "$lib/stores/fileTree.svelte.js";
   import { fileTree } from "$lib/stores/fileTree.svelte.js";
   import { fileOperations } from "$lib/stores/fileOperations.svelte.js";
-  import { fileActions } from "$lib/utils/file-actions";
+  import { fileActions } from "$lib/utils/file-actions.svelte";
   import FileTreeItem from "./FileTreeItem.svelte";
 
   let { node }: { node: FileTreeNode } = $props();
@@ -97,7 +97,7 @@
     {/snippet}
   </ContextMenu.Trigger>
   <ContextMenu.Content class="w-52">
-    {#each fileActions as action, index}
+    {#each fileActions() as action, index}
       {#if action.separator && index > 0}
         <ContextMenu.Separator />
       {/if}

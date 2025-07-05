@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({
   params: { folder },
 }) => {
   if (!user) {
-    throw redirect(302, "/auth/login");
+    redirect(302, "/auth/login");
   }
 
   let currentFolderId: string | null = null;
@@ -29,7 +29,7 @@ export const load: PageServerLoad = async ({
       and(eq(table.folder.ownerId, user.id), eq(table.folder.name, "__root__"))
     );
 
-  if (!rootFolder) {
+  if (!rootFolder && folder.trim() !== "") {
     redirect(302, "/");
   }
 
@@ -51,7 +51,7 @@ export const load: PageServerLoad = async ({
       redirect(302, "/");
     }
 
-    currentFolder = folder;
+    currentFolder = { ...folder, type: "folder" as const };
 
     const allFolders = await db
       .select()

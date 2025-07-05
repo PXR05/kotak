@@ -1,8 +1,8 @@
-import { redirect } from "@sveltejs/kit";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import type { LayoutServerLoad } from "./$types";
+import { getStorageStatus } from "$lib/server/storage";
 
 export const load: LayoutServerLoad = async ({ locals }) => {
   const { user } = locals;
@@ -15,7 +15,6 @@ export const load: LayoutServerLoad = async ({ locals }) => {
     };
   }
 
-  // Get root folder
   const [rootFolder] = await db
     .select()
     .from(table.folder)
@@ -31,7 +30,6 @@ export const load: LayoutServerLoad = async ({ locals }) => {
     };
   }
 
-  // Create promises for root data
   const rootFoldersPromise = db
     .select()
     .from(table.folder)
@@ -54,7 +52,6 @@ export const load: LayoutServerLoad = async ({ locals }) => {
     )
     .orderBy(table.file.name);
 
-  // Create streamed promise for transformed root data
   const rootItemsPromise = Promise.all([
     rootFoldersPromise,
     rootFilesPromise,
@@ -92,6 +89,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
   return {
     user: locals.user,
     session: locals.session,
+    storageStatus: getStorageStatus(locals.user?.id ),
     rootItems: rootItemsPromise,
   };
 };

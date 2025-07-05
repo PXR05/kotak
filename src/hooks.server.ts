@@ -1,4 +1,4 @@
-import { redirect, type Handle } from "@sveltejs/kit";
+import { type Handle } from "@sveltejs/kit";
 import * as auth from "$lib/server/auth";
 import { sequence } from "@sveltejs/kit/hooks";
 
@@ -24,11 +24,4 @@ const handleAuth: Handle = async ({ event, resolve }) => {
   return resolve(event);
 };
 
-const authGuard: Handle = async ({ event, resolve }) => {
-  if (!event.locals.user && !event.url.pathname.startsWith("/auth")) {
-    return redirect(302, "/auth/login");
-  }
-  return resolve(event);
-};
-
-export const handle: Handle = sequence(handleAuth, authGuard);
+export const handle: Handle = sequence(handleAuth);

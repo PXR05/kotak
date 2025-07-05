@@ -14,6 +14,7 @@
   import { goto } from "$app/navigation";
   import { onDestroy, onMount } from "svelte";
   import { fileOperations } from "$lib/stores";
+  import { formatFileSize } from "$lib/utils/format";
 
   type SearchResult = {
     id: string;
@@ -224,14 +225,6 @@
         searchInput.blur();
       }
     }, 0);
-  }
-
-  function formatFileSize(bytes: number): string {
-    if (bytes === 0) return "0 B";
-    const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   }
 </script>
 

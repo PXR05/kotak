@@ -124,17 +124,11 @@ export const fileOperations = {
       const success = await uploadFiles(uploadableFiles, {
         folderId: currentFolderId.value || undefined,
         onProgress: (progress) => {},
-        onError: (error) => {
-          toast.error("Failed to upload files: " + error);
-        },
-        onSuccess: () => {
-          toast.success("Files uploaded successfully!");
-        },
+        onError: (error) => toast.error("Failed to upload files: " + error),
+        onSuccess: () => toast.success("Files uploaded successfully!"),
       });
 
-      if (success) {
-        await invalidateAll();
-      }
+      if (success) await invalidateAll();
     } catch (error) {
       toast.error(
         "Failed to upload files: " +
@@ -165,6 +159,15 @@ export const fileOperations = {
         break;
       case "download":
         fileOperations.downloadFile(item);
+        break;
+      case "cut":
+        fileOperations.cutItems([item]);
+        break;
+      case "copy":
+        fileOperations.copyItems([item]);
+        break;
+      case "paste":
+        fileOperations.pasteItems(item);
         break;
       case "rename":
         openRenameDialog(item, async (newName: string) => {
@@ -212,15 +215,93 @@ export const fileOperations = {
     fileClipboard.operation = "copy";
   },
 
-  async pasteItems() {
-    if (fileClipboard.data.length === 0) return;
+  async pasteItems(destination: FileItem | null = null) {
+    if (fileClipboard.data.length === 0 || fileClipboard.operation === null)
+      return;
+
+    const targetFolderId =
+      destination?.type === "folder" ? destination.id : currentFolderId.value;
+    const isCutOperation = fileClipboard.operation === "cut";
+    const itemsToDelete: FileItem[] = [];
 
     try {
+      await Promise.all(
+        fileClipboard.data.map(async (item) => {
+          if (item.type === "file") {
+            const response = await fetch("/api/files", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: item.name,
+                folderId: targetFolderId,
+                sourceFileId: item.id,
+                operation: fileClipboard.operation,
+              }),
+            });
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(
+                `Failed to paste file "${item.name}": ${errorText}`
+              );
+            }
+
+            if (isCutOperation) itemsToDelete.push(item);
+          } else if (item.type === "folder") {
+            const response = await fetch("/api/folders", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: item.name,
+                parentId: targetFolderId,
+                sourceFolderId: item.id,
+                operation: fileClipboard.operation,
+              }),
+            });
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(
+                `Failed to paste folder "${item.name}": ${errorText}`
+              );
+            }
+
+            if (isCutOperation) itemsToDelete.push(item);
+          }
+        })
+      );
+
+      if (isCutOperation && itemsToDelete.length > 0) {
+        await Promise.all(
+          itemsToDelete.map(async (item) => {
+            try {
+              await fileOperations.handleDelete(item);
+            } catch (error) {
+              console.error(
+                `Failed to delete original item "${item.name}":`,
+                error
+              );
+            }
+          })
+        );
+      }
+
+      const itemCount = fileClipboard.data.length;
+      toast.success(
+        `Successfully ${
+          isCutOperation ? "moved" : "copied"
+        } ${itemCount} item(s)`
+      );
+
       fileClipboard.data = [];
       fileClipboard.operation = null;
       await invalidateAll();
     } catch (error) {
       console.error("Failed to paste items:", error);
+      toast.error(
+        "Failed to paste items: " +
+          (error instanceof Error ? error.message : JSON.stringify(error))
+      );
       throw error;
     }
   },
@@ -255,7 +336,6 @@ export const fileOperations = {
 
     isDownloading.value = true;
     try {
-      // TODO: Implement bulk download logic (ZIP)
       selectedItems
         .filter((item) => item.type === "file")
         .forEach((item) => fileOperations.downloadFile(item));
@@ -264,7 +344,7 @@ export const fileOperations = {
     }
   },
 
-  handleContextMenuAction(action: string, item?: FileItem) {
+  handleContextMenuAction(action: string, item?: FileItem | null) {
     switch (action) {
       case "upload":
         document
@@ -354,7 +434,7 @@ async function uploadFiles(
       formData.append("folderId", options.folderId);
     }
 
-    const response = await fetch("/api/files/upload", {
+    const response = await fetch("/api/files", {
       method: "POST",
       body: formData,
     });

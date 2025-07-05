@@ -16,16 +16,16 @@
 
 <TableContextMenu {uploadDisabled}>
   {#snippet children({ props })}
-    <Table.Header {...props}>
+    <Table.Header {...props} class="sticky top-0 bg-background">
       {#each table.getHeaderGroups() as headerGroup}
-        <Table.Row>
+        <Table.Row class="thead-sep">
           {#each headerGroup.headers as header, i}
             <Table.Head
               colspan={header.colSpan}
               class="
             {header.column.id === 'actions' ? 'w-12' : ''} 
             {i === 0 ? 'pl-6' : ''} 
-            py-4 "
+            py-2"
             >
               {#if !header.isPlaceholder}
                 <FlexRender
@@ -40,3 +40,15 @@
     </Table.Header>
   {/snippet}
 </TableContextMenu>
+
+<style>
+  :global(.thead-sep::after) {
+    content: "";
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: var(--border);
+  }
+</style>

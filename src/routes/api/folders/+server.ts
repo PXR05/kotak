@@ -104,7 +104,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   const [newFolder] = await db
     .insert(table.folder)
     .values({
-      id: `folder-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `folder-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       name: trimmedName,
       ownerId: locals.user.id,
       parentId: actualParentId,

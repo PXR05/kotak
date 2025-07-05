@@ -9,7 +9,7 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import MoreHorizontalIcon from "@lucide/svelte/icons/more-horizontal";
   import type { FileItem, FileAction } from "$lib/types/file.js";
-  import { fileActions } from "$lib/utils/file-actions";
+  import { fileActions } from "$lib/utils/file-actions.svelte";
 
   let {
     item,
@@ -31,7 +31,7 @@
     </Button>
   </DropdownMenuTrigger>
   <DropdownMenuContent align="end">
-    {#each fileActions as action, index}
+    {#each fileActions() as action, index}
       {#if action.separator && index > 0}
         <DropdownMenuSeparator />
       {/if}

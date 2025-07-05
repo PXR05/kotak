@@ -1,8 +1,16 @@
-import { mkdir, writeFile, unlink } from "node:fs/promises";
-import { createReadStream } from "node:fs";
+import {
+  mkdir,
+  writeFile,
+  unlink,
+  copyFile as fsCopyFile,
+} from "node:fs/promises";
+import { createReadStream, statfs } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
+import { db } from "./db/index.js";
+import { file } from "./db/schema.js";
+import { eq, sum } from "drizzle-orm";
 
 const STORAGE_PATH = path.resolve(process.cwd(), "storage");
 
@@ -55,5 +63,68 @@ export async function deleteFile(storageKey: string): Promise<void> {
       return;
     }
     throw error;
+  }
+}
+
+/**
+ * Gets the server's storage status.
+ * @param userId The ID of the user to calculate storage usage for.
+ * @returns An object containing total and free space in bytes, plus used space by the user.
+ */
+export async function getStorageStatus(userId?: string): Promise<{
+  total: number;
+  free: number;
+  used: number;
+}> {
+  if (!userId) {
+    throw new Error("User ID is required to get storage status");
+  }
+
+  const diskStats = await new Promise<{ total: number; free: number }>(
+    (resolve, reject) => {
+      statfs(STORAGE_PATH, (err, stats) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        const total = stats.blocks * stats.bsize;
+        const free = stats.bavail * stats.bsize;
+
+        resolve({ total, free });
+      });
+    }
+  );
+
+  const userStorageResult = await db
+    .select({ totalSize: sum(file.size) })
+    .from(file)
+    .where(eq(file.ownerId, userId));
+
+  const used = userStorageResult[0]?.totalSize || 0;
+
+  return {
+    total: diskStats.total,
+    free: diskStats.free,
+    used: Number(used),
+  };
+}
+
+/**
+ * Copies a file in storage and returns the new storage key.
+ * @param sourceStorageKey The storage key of the source file to copy.
+ * @returns The storage key of the copied file.
+ */
+export async function copyFile(sourceStorageKey: string): Promise<string> {
+  const newStorageKey = randomUUID();
+  const sourcePath = path.join(STORAGE_PATH, sourceStorageKey);
+  const destPath = path.join(STORAGE_PATH, newStorageKey);
+
+  try {
+    await fsCopyFile(sourcePath, destPath);
+    return newStorageKey;
+  } catch (error) {
+    console.error("Failed to copy file:", error);
+    throw new Error("Failed to copy file in storage");
   }
 }

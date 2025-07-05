@@ -6,7 +6,6 @@
     type RowSelectionState,
     type SortingState,
     getCoreRowModel,
-    getPaginationRowModel,
     getSortedRowModel,
   } from "@tanstack/table-core";
   import JSZip from "jszip";
@@ -43,9 +42,7 @@
   let isDragOver = $state(false);
   let dragCounter = $state(0);
 
-  const columns = createFileTableColumns(
-    fileOperations.handleAction
-  );
+  const columns = createFileTableColumns(fileOperations.handleAction);
 
   let sorting = $state<SortingState>([]);
   let rowSelection = $state<RowSelectionState>({});
@@ -72,7 +69,6 @@
       },
     },
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: (updater) => {
       if (typeof updater === "function") {
@@ -334,7 +330,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
-  class="flex flex-col relative transition-all duration-100 border rounded-lg w-full h-full overflow-clip"
+  class="flex flex-col relative transition-all duration-100 border-t w-full overflow-x-clip overflow-y-auto h-[calc(100dvh-5rem)]"
   ondragenter={handleDragEnter}
   ondragover={handleDragOver}
   ondragleave={handleDragLeave}
