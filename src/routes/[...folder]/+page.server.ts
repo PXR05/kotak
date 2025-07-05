@@ -1,9 +1,9 @@
 import { redirect } from "@sveltejs/kit";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
-import { eq, and, isNull, ne } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
-import type { FileItem } from "$lib/types/file";
+import * as auth from "$lib/server/auth.js";
 
 export const load: PageServerLoad = async ({
   locals: { user },
@@ -22,64 +22,21 @@ export const load: PageServerLoad = async ({
     }
   }
 
-  let folders: any[] = [];
-  let files: FileItem[] = [];
+  const [rootFolder] = await db
+    .select()
+    .from(table.folder)
+    .where(
+      and(eq(table.folder.ownerId, user.id), eq(table.folder.name, "__root__"))
+    );
+
+  if (!rootFolder) {
+    redirect(302, "/");
+  }
+
   let currentFolder = null;
+  let breadcrumbs: Array<{ id: string; name: string }> = [];
 
-  if (!currentFolderId) {
-    const [rootFolder] = await db
-      .select()
-      .from(table.folder)
-      .where(
-        and(
-          eq(table.folder.ownerId, user.id),
-          eq(table.folder.name, "__root__")
-        )
-      );
-
-    if (rootFolder) {
-      const rootLevelFolders = await db
-        .select()
-        .from(table.folder)
-        .where(
-          and(
-            eq(table.folder.ownerId, user.id),
-            eq(table.folder.parentId, rootFolder.id)
-          )
-        )
-        .orderBy(table.folder.name);
-
-      const legacyRootFolders = await db
-        .select()
-        .from(table.folder)
-        .where(
-          and(
-            eq(table.folder.ownerId, user.id),
-            isNull(table.folder.parentId),
-            ne(table.folder.name, "__root__")
-          )
-        )
-        .orderBy(table.folder.name);
-
-      folders = [...rootLevelFolders, ...legacyRootFolders];
-
-      files = (
-        await db
-          .select()
-          .from(table.file)
-          .where(
-            and(
-              eq(table.file.ownerId, user.id),
-              eq(table.file.folderId, rootFolder.id)
-            )
-          )
-          .orderBy(table.file.name)
-      ).map((file) => ({
-        ...file,
-        type: "file" as const,
-      }));
-    }
-  } else {
+  if (currentFolderId) {
     const [folder] = await db
       .select()
       .from(table.folder)
@@ -96,19 +53,48 @@ export const load: PageServerLoad = async ({
 
     currentFolder = folder;
 
-    folders = await db
+    const allFolders = await db
       .select()
       .from(table.folder)
-      .where(
-        and(
-          eq(table.folder.ownerId, user.id),
-          eq(table.folder.parentId, currentFolderId)
-        )
-      )
-      .orderBy(table.folder.name);
+      .where(eq(table.folder.ownerId, user.id));
 
-    files = (
-      await db
+    const folderMap = new Map(allFolders.map((f) => [f.id, f]));
+
+    let currentBreadcrumb: typeof folder | null = folder;
+    const tempBreadcrumbs: Array<{ id: string; name: string }> = [];
+
+    while (currentBreadcrumb && currentBreadcrumb.name !== "__root__") {
+      tempBreadcrumbs.unshift({
+        id: currentBreadcrumb.id,
+        name: currentBreadcrumb.name,
+      });
+
+      if (currentBreadcrumb.parentId) {
+        currentBreadcrumb = folderMap.get(currentBreadcrumb.parentId) || null;
+      } else {
+        break;
+      }
+    }
+
+    breadcrumbs = tempBreadcrumbs;
+  }
+
+  // Create promises for current folder data
+  const currentFolderItemsPromise = currentFolderId
+    ? db
+        .select()
+        .from(table.folder)
+        .where(
+          and(
+            eq(table.folder.ownerId, user.id),
+            eq(table.folder.parentId, currentFolderId)
+          )
+        )
+        .orderBy(table.folder.name)
+    : Promise.resolve([]);
+
+  const currentFolderFilesPromise = currentFolderId
+    ? db
         .select()
         .from(table.file)
         .where(
@@ -118,75 +104,63 @@ export const load: PageServerLoad = async ({
           )
         )
         .orderBy(table.file.name)
-    ).map((file) => ({
-      ...file,
-      type: "file" as const,
-    }));
-  }
+    : Promise.resolve([]);
 
-  let breadcrumbs: Array<{ id: string; name: string }> = [];
-  if (currentFolder) {
-    let folder = currentFolder;
-    const tempBreadcrumbs: Array<{ id: string; name: string }> = [];
+  // Create streamed promise for current folder items
+  const itemsPromise = currentFolderId
+    ? Promise.all([currentFolderItemsPromise, currentFolderFilesPromise]).then(
+        ([currentFolderItems, currentFolderFiles]) => {
+          const transformedCurrentFiles = currentFolderFiles.map((file) => ({
+            ...file,
+            type: "file" as const,
+          }));
 
-    while (folder && folder.name !== "__root__") {
-      tempBreadcrumbs.unshift({ id: folder.id, name: folder.name });
-
-      if (folder.parentId) {
-        const [parentFolder] = await db
-          .select()
-          .from(table.folder)
-          .where(
-            and(
-              eq(table.folder.id, folder.parentId),
-              eq(table.folder.ownerId, user.id)
-            )
-          );
-        folder = parentFolder || null;
-      } else {
-        break;
-      }
-    }
-
-    breadcrumbs = tempBreadcrumbs;
-  }
-
-  const items = [
-    ...folders.map((folder) => ({
-      id: folder.id,
-      name: folder.name,
-      type: "folder" as const,
-      ownerId: folder.ownerId,
-      parentId: folder.parentId,
-      createdAt: folder.createdAt,
-      updatedAt: folder.updatedAt,
-    })),
-    ...files.map((file) => ({
-      id: file.id,
-      name: file.name,
-      type: "file" as const,
-      storageKey: file.storageKey,
-      ownerId: file.ownerId,
-      folderId: file.folderId,
-      size: file.size,
-      mimeType: file.mimeType,
-      createdAt: file.createdAt,
-      updatedAt: file.updatedAt,
-    })),
-  ];
-
-  console.log(`Load function - Current folder: ${currentFolderId || "root"}`);
-  console.log(`  Found ${folders.length} folders and ${files.length} files`);
-  console.log(`  Total items: ${items.length}`);
-  if (folders.length > 0) {
-    console.log(`  Folders: ${folders.map((f) => f.name).join(", ")}`);
-  }
+          return [
+            ...currentFolderItems.map((folder) => ({
+              id: folder.id,
+              name: folder.name,
+              type: "folder" as const,
+              ownerId: folder.ownerId,
+              parentId: folder.parentId,
+              createdAt: folder.createdAt,
+              updatedAt: folder.updatedAt,
+            })),
+            ...transformedCurrentFiles.map((file) => ({
+              id: file.id,
+              name: file.name,
+              type: "file" as const,
+              storageKey: file.storageKey,
+              ownerId: file.ownerId,
+              folderId: file.folderId,
+              size: file.size,
+              mimeType: file.mimeType,
+              createdAt: file.createdAt,
+              updatedAt: file.updatedAt,
+            })),
+          ];
+        }
+      )
+    : Promise.resolve([]);
 
   return {
     user,
-    items,
     currentFolder,
     currentFolderId,
     breadcrumbs,
+    items: itemsPromise,
   };
+};
+
+export const actions = {
+  logout: async (event) => {
+    const sessionToken = event.cookies.get(auth.sessionCookieName);
+    if (sessionToken) {
+      const { session } = await auth.validateSessionToken(sessionToken);
+      if (session) {
+        await auth.invalidateSession(session.id);
+      }
+    }
+    auth.deleteSessionTokenCookie(event);
+    redirect(303, "/auth/login");
+  },
 };

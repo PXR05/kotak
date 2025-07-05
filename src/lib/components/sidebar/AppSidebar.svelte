@@ -74,7 +74,7 @@
               <Sidebar.MenuButton
                 {...props}
                 size="lg"
-                class="bg-sidebar-primary hover:bg-sidebar-primary/90 active:bg-sidebar-primary/80 transition-colors grid place-items-center"
+                class="bg-sidebar-primary hover:bg-sidebar-primary/90 active:bg-sidebar-primary/80 text-sidebar-primary-foreground hover:text-sidebar-primary-foreground active:text-sidebar-primary-foreground transition-colors grid place-items-center"
               >
                 <PlusIcon strokeWidth={3} class="size-6" absoluteStrokeWidth />
               </Sidebar.MenuButton>

@@ -13,7 +13,7 @@
 
 <TableContextMenu {uploadDisabled}>
   {#snippet children({ props })}
-    <div {...props} class="m-auto text-center flex-1 w-full">
+    <div {...props} class="m-auto text-center flex-1 w-full grid place-items-center">
       {#if isEmpty}
         {#if !uploadDisabled}
           <div class="flex flex-col items-center gap-2 text-muted-foreground">

@@ -38,7 +38,7 @@
 
   function handleAction(action: FileAction) {
     if (file) {
-      fileOperations.handleAction(action, file);
+      fileOperations.handleAction(action, file, handleClose);
     }
   }
 

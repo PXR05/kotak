@@ -10,7 +10,7 @@ export interface ConfirmationConfig {
 export interface ConfirmationDialogState {
   open: boolean;
   config: ConfirmationConfig | null;
-  callback: (() => void) | null;
+  callback: (() => void | Promise<void>) | null;
 }
 
 export const confirmationDialogData = $state<ConfirmationDialogState>({
@@ -21,7 +21,7 @@ export const confirmationDialogData = $state<ConfirmationDialogState>({
 
 export function openConfirmationDialog(
   config: ConfirmationConfig,
-  callback: () => void
+  callback: () => void | Promise<void>
 ) {
   confirmationDialogData.open = true;
   confirmationDialogData.config = config;

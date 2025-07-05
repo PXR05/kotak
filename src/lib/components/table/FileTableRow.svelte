@@ -7,6 +7,7 @@
   import {
     fileOperations,
     lastSelectedIndex,
+    selectedItems,
   } from "$lib/stores/fileOperations.svelte.js";
   import { fileActions } from "$lib/utils/file-actions";
 
@@ -31,21 +32,26 @@
     const currentIndex = row.index;
 
     if (e.ctrlKey || e.metaKey) {
-      row.toggleSelected();
+      row.toggleSelected(true);
+      selectedItems.push(row.original);
       lastSelectedIndex.value = currentIndex;
     } else if (e.shiftKey && lastSelectedIndex.value !== null) {
       const start = Math.min(lastSelectedIndex.value, currentIndex);
       const end = Math.max(lastSelectedIndex.value, currentIndex);
 
+      selectedItems.length = 0;
       table.toggleAllPageRowsSelected(false);
 
       for (let i = start; i <= end; i++) {
         const targetRow = table.getRowModel().rows[i];
         if (targetRow) {
+          selectedItems.push(targetRow.original);
           targetRow.toggleSelected(true);
         }
       }
     } else {
+      selectedItems.length = 0;
+      selectedItems.push(row.original);
       table.toggleAllPageRowsSelected(false);
       row.toggleSelected(true);
       lastSelectedIndex.value = currentIndex;

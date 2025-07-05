@@ -21,7 +21,7 @@
 </script>
 
 <div
-  transition:fly={{ duration: 100, y: -10, opacity: 0, easing: quintOut }}
+  transition:fly={{ duration: 100, y: -10, easing: quintOut }}
   class="flex items-center justify-between px-4 py-3.5 rounded-t-lg z-10 absolute top-0 left-0 right-0 bg-background"
 >
   <div class="flex items-center gap-2">

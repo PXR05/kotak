@@ -39,12 +39,7 @@ function getDisplayType(item: FileItem): string {
   return getFileTypeFromMimeType(item.mimeType);
 }
 
-function isOwnedByCurrentUser(ownerId: string, currentUserId: string): boolean {
-  return ownerId === currentUserId;
-}
-
 export function createFileTableColumns(
-  currentUserId: string,
   onAction: (action: FileAction, item: FileItem) => void
 ): ColumnDef<FileItem>[] {
   return [
@@ -120,20 +115,6 @@ export function createFileTableColumns(
       enableSorting: true,
     },
     {
-      accessorKey: "ownerId",
-      header: ({ column }) => {
-        return renderComponent(FileTableSortableHeader, {
-          column,
-          title: "Owner",
-        });
-      },
-      cell: ({ row }) => {
-        const item = row.original;
-        return isOwnedByCurrentUser(item.ownerId, currentUserId) ? "You" : "Shared";
-      },
-      enableSorting: true,
-    },
-    {
       id: "actions",
       header: "",
       enableHiding: false,
@@ -149,4 +130,4 @@ export function createFileTableColumns(
       },
     },
   ];
-} 
+}

@@ -154,7 +154,11 @@ export const fileOperations = {
     }
   },
 
-  handleAction(action: FileAction, item: FileItem) {
+  async handleAction(
+    action: FileAction,
+    item: FileItem,
+    callback?: () => void
+  ) {
     switch (action) {
       case "open":
         fileOperations.handleItemClick(item);
@@ -163,9 +167,10 @@ export const fileOperations = {
         fileOperations.downloadFile(item);
         break;
       case "rename":
-        openRenameDialog(item, (newName: string) =>
-          fileOperations.handleRename(item, newName)
-        );
+        openRenameDialog(item, async (newName: string) => {
+          await fileOperations.handleRename(item, newName);
+          callback?.();
+        });
         break;
       case "delete":
         openConfirmationDialog(
@@ -176,7 +181,10 @@ export const fileOperations = {
             cancelText: "Cancel",
             variant: "destructive",
           },
-          () => fileOperations.handleDelete(item)
+          async () => {
+            await fileOperations.handleDelete(item);
+            callback?.();
+          }
         );
         break;
       default:

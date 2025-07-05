@@ -7,28 +7,42 @@
     CardHeader,
     CardTitle,
   } from "$lib/components/ui/card/index.js";
-  import type { FileItem } from "$lib/types/file.js";
-  import {
-    fileOperations,
-  } from "$lib/stores/index.js";
+  import { fileOperations } from "$lib/stores/index.js";
+  import { LoaderIcon } from "@lucide/svelte";
 
   let { data } = $props();
-
-  let items: FileItem[] = $state(data.items || []);
 
   $effect(() => {
     fileOperations.setCurrentFolder(data.currentFolderId);
     fileOperations.setCurrentUser(data.user?.id || null);
-    items = data.items || [];
   });
 </script>
 
 {#if data.user}
-  <FileTable
-    {items}
-    currentUserId={data.user.id}
-    currentFolderId={data.currentFolderId}
-  />
+  {#await data.currentFolderId ? data.items : data.rootItems}
+    <div class="text-center m-auto">
+      <LoaderIcon class="animate-spin size-8 text-primary mx-auto mb-4" />
+      <p class="text-muted-foreground">Loading files and folders...</p>
+    </div>
+  {:then items}
+    <FileTable {items} currentFolderId={data.currentFolderId} />
+  {:catch}
+    <Card class="w-full max-w-md m-auto">
+      <CardHeader>
+        <CardTitle class="!font-serif font-normal text-xl"
+          >Error Loading Files</CardTitle
+        >
+      </CardHeader>
+      <CardContent>
+        <p class="text-muted-foreground mb-8">
+          Failed to load files and folders. Please try refreshing the page.
+        </p>
+        <Button onclick={() => window.location.reload()} class="w-full">
+          Refresh Page
+        </Button>
+      </CardContent>
+    </Card>
+  {/await}
 {:else}
   <div class="flex items-center justify-center min-h-[400px]">
     <Card class="w-full max-w-md">

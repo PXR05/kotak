@@ -26,19 +26,16 @@
   } from "$lib/stores/index.js";
 
   import {
-    currentUserId as currentUserIdStore,
     isDownloading,
     lastSelectedIndex,
   } from "$lib/stores/fileOperations.svelte.js";
 
   let {
     items,
-    currentUserId = "user-1",
     currentFolderId = null,
     uploadDisabled = false,
   }: {
     items: FileItem[];
-    currentUserId?: string;
     currentFolderId?: string | null;
     uploadDisabled?: boolean;
   } = $props();
@@ -47,7 +44,6 @@
   let dragCounter = $state(0);
 
   const columns = createFileTableColumns(
-    currentUserIdStore.value || currentUserId,
     fileOperations.handleAction
   );
 
@@ -294,11 +290,13 @@
   }
 
   function handleKeyDown(e: KeyboardEvent) {
+    const target = e.target as HTMLElement;
     if (
       confirmationDialogData.open ||
       renameDialogData.open ||
       createFolderDialogData.open ||
-      filePreviewDialogData.open
+      filePreviewDialogData.open ||
+      target.closest("input")
     ) {
       return;
     }

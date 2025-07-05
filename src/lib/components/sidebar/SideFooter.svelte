@@ -1,23 +1,24 @@
 <script lang="ts">
-//   import BadgeCheckIcon from "@lucide/svelte/icons/badge-check";
-//   import BellIcon from "@lucide/svelte/icons/bell";
-//   import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
-//   import CreditCardIcon from "@lucide/svelte/icons/credit-card";
-//   import LogOutIcon from "@lucide/svelte/icons/log-out";
-//   import SparklesIcon from "@lucide/svelte/icons/sparkles";
-//   import * as Avatar from "$lib/components/ui/avatar/index.js";
-//   import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
-//   import { useSidebar } from "$lib/components/ui/sidebar/index.js";
-//   import { page } from "$app/state";
+  import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
+  import LogOutIcon from "@lucide/svelte/icons/log-out";
+  import SettingsIcon from "@lucide/svelte/icons/settings";
+  import SunIcon from "@lucide/svelte/icons/sun";
+  import MoonIcon from "@lucide/svelte/icons/moon";
+  import { toggleMode } from "mode-watcher";
+  import * as Avatar from "$lib/components/ui/avatar/index.js";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
+  import { useSidebar } from "$lib/components/ui/sidebar/index.js";
+  import { page } from "$app/state";
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
-  import { CloudIcon, TrashIcon } from "@lucide/svelte";
+  import { TrashIcon } from "@lucide/svelte";
   import Progress from "../ui/progress/progress.svelte";
+  import { enhance } from "$app/forms";
 
-//   const user = $derived(page.data?.user);
-//   const sidebar = useSidebar();
+  const user = $derived(page.data?.user);
+  const sidebar = useSidebar();
 </script>
 
-<Sidebar.Group>
+<Sidebar.Group class="p-0">
   <Sidebar.GroupContent>
     <Sidebar.Menu class="flex flex-col gap-2">
       <!-- Trash -->
@@ -34,20 +35,8 @@
 
       <Sidebar.Separator />
 
-      <!-- Storage Info -->
-      <Sidebar.MenuItem class="flex flex-col gap-2 mt-2">
-        <div class="flex gap-2">
-          <CloudIcon class="size-5" />
-          <span class="text-sm font-medium">Storage Used</span>
-        </div>
-        <Progress value={20} max={1000} class="h-1 mt-1 mb-0.5" />
-        <span class="text-xs text-muted-foreground"> 20 / 1000 MB </span>
-      </Sidebar.MenuItem>
-
-      <!-- <Sidebar.Separator /> -->
-
       <!-- User -->
-      <!-- <Sidebar.MenuItem>
+      <Sidebar.MenuItem>
         <DropdownMenu.Root>
           <DropdownMenu.Trigger>
             {#snippet child({ props })}
@@ -69,6 +58,12 @@
                 </div>
                 <ChevronsUpDownIcon class="ml-auto size-4" />
               </Sidebar.MenuButton>
+              <div class="flex flex-col gap-1 mt-1 px-2">
+                <Progress value={20} max={1000} class="h-1 mt-1 mb-0.5" />
+                <span class="text-xs text-muted-foreground">
+                  20 / 1000 MB
+                </span>
+              </div>
             {/snippet}
           </DropdownMenu.Trigger>
           <DropdownMenu.Content
@@ -97,33 +92,43 @@
             <DropdownMenu.Separator />
             <DropdownMenu.Group>
               <DropdownMenu.Item>
-                <SparklesIcon />
-                Upgrade to Pro
+                <SettingsIcon />
+                Settings
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                onclick={(e) => {
+                  e.preventDefault();
+                  toggleMode();
+                }}
+                onselect={(e) => e.preventDefault()}
+              >
+                <SunIcon
+                  class="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0"
+                />
+                <MoonIcon
+                  class="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"
+                />
+                Theme
               </DropdownMenu.Item>
             </DropdownMenu.Group>
             <DropdownMenu.Separator />
-            <DropdownMenu.Group>
-              <DropdownMenu.Item>
-                <BadgeCheckIcon />
-                Account
-              </DropdownMenu.Item>
-              <DropdownMenu.Item>
-                <CreditCardIcon />
-                Billing
-              </DropdownMenu.Item>
-              <DropdownMenu.Item>
-                <BellIcon />
-                Notifications
-              </DropdownMenu.Item>
-            </DropdownMenu.Group>
-            <DropdownMenu.Separator />
-            <DropdownMenu.Item>
+            <DropdownMenu.Item
+              variant="destructive"
+              onclick={async () => {
+                await fetch("/?/logout", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                  },
+                });
+              }}
+            >
               <LogOutIcon />
               Log out
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Root>
-      </Sidebar.MenuItem> -->
+      </Sidebar.MenuItem>
     </Sidebar.Menu>
   </Sidebar.GroupContent>
 </Sidebar.Group>

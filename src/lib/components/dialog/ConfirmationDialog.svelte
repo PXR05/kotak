@@ -8,14 +8,19 @@
     DialogTitle,
   } from "$lib/components/ui/dialog/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
-  import { AlertTriangleIcon } from "@lucide/svelte";
+  import { AlertTriangleIcon, LoaderIcon } from "@lucide/svelte";
   import { closeConfirmationDialog, confirmationDialogData } from "$lib/stores";
 
   const config = $derived(confirmationDialogData.config);
   const open = $derived(confirmationDialogData.open);
 
-  function handleConfirm() {
-    confirmationDialogData.callback?.();
+  let loading = $state(false);
+
+  async function handleConfirm() {
+    if (loading) return;
+    loading = true;
+    await confirmationDialogData.callback?.();
+    loading = false;
     closeConfirmationDialog();
   }
 
@@ -49,10 +54,18 @@
         </DialogDescription>
       </DialogHeader>
       <DialogFooter class="gap-2 sm:gap-2">
-        <Button variant="outline" onclick={handleCancel}>
+        <Button variant="outline" onclick={handleCancel} disabled={loading}>
           {config.cancelText || "Cancel"}
         </Button>
-        <Button variant={config.variant || "default"} onclick={handleConfirm}>
+        <Button
+          variant={config.variant || "default"}
+          onclick={handleConfirm}
+          disabled={loading}
+          class="flex items-center gap-2"
+        >
+          {#if loading}
+            <LoaderIcon class="size-4 animate-spin" />
+          {/if}
           {config.confirmText || "Confirm"}
         </Button>
       </DialogFooter>
