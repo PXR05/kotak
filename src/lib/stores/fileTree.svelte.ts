@@ -45,7 +45,6 @@ export const fileTree = {
       fileTreeState.expandedFolders.add(folderId);
       this.setFolderExpanded(folderId, true);
 
-      // Load children if not loaded yet
       const node = this.findNode(folderId);
       if (node && !node.childrenLoaded && !node.loading) {
         this.loadFolderChildren(folderId);

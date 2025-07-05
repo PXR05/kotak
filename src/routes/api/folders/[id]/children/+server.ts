@@ -15,7 +15,6 @@ export const GET: RequestHandler = async ({ params, locals }) => {
   }
 
   try {
-    // Verify the folder exists and user has access
     const [folder] = await db
       .select()
       .from(table.folder)
@@ -30,7 +29,6 @@ export const GET: RequestHandler = async ({ params, locals }) => {
       throw error(404, "Folder not found or access denied");
     }
 
-    // Get child folders
     const childFolders = await db
       .select({
         id: table.folder.id,
@@ -49,7 +47,6 @@ export const GET: RequestHandler = async ({ params, locals }) => {
       )
       .orderBy(table.folder.name);
 
-    // Get child files
     const childFiles = await db
       .select({
         id: table.file.id,

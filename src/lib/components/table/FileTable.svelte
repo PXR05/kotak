@@ -330,7 +330,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
-  class="flex flex-col relative transition-all duration-100 border-t w-full overflow-x-clip overflow-y-auto h-[calc(100dvh-5rem)]"
+  class="flex flex-col relative transition-all duration-100 border rounded-lg w-full overflow-x-clip overflow-y-auto h-[calc(100dvh-6rem)]"
   ondragenter={handleDragEnter}
   ondragover={handleDragOver}
   ondragleave={handleDragLeave}

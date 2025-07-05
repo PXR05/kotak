@@ -22,12 +22,13 @@
 
 <div
   transition:fly={{ duration: 100, y: -10, easing: quintOut }}
-  class="flex items-center justify-between px-4 py-1.5 rounded-t-lg z-10 absolute top-0 left-0 right-0 bg-background"
+  class="flex items-center justify-between px-4 py-2 rounded-t-lg z-10 absolute top-0 left-0 right-0 bg-background"
 >
   <div class="flex items-center gap-2">
     <Button
       variant="ghost"
       size="sm"
+      class="!p-0 aspect-square"
       onclick={onDeselectAll}
       title="Deselect all"
     >

@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import * as auth from "$lib/server/auth";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
+import { ensureRootFolder, ensureTrashFolder } from "$lib/server/folderUtils";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {
@@ -52,6 +53,9 @@ export const actions: Actions = {
       const sessionToken = auth.generateSessionToken();
       const session = await auth.createSession(sessionToken, userId);
       auth.setSessionTokenCookie(event, sessionToken, session.expiresAt);
+
+      await ensureRootFolder(userId);
+      await ensureTrashFolder(userId);
     } catch {
       return fail(500, { message: "An error has occurred" });
     }

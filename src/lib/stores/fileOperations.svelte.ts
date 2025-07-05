@@ -140,6 +140,7 @@ export const fileOperations = {
   },
 
   downloadFile(item: FileItem) {
+    // TODO: Implement folder download logic
     if (item.storageKey) {
       window.open(
         `/api/files/${encodeURIComponent(item.storageKey)}?download=true`,
@@ -336,6 +337,9 @@ export const fileOperations = {
 
     isDownloading.value = true;
     try {
+
+      // TODO: Implement bulk download logic
+
       selectedItems
         .filter((item) => item.type === "file")
         .forEach((item) => fileOperations.downloadFile(item));

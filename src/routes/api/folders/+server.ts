@@ -3,29 +3,7 @@ import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
-
-async function ensureRootFolder(userId: string) {
-  let [rootFolder] = await db
-    .select()
-    .from(table.folder)
-    .where(
-      and(eq(table.folder.ownerId, userId), eq(table.folder.name, "__root__"))
-    );
-
-  if (!rootFolder) {
-    [rootFolder] = await db
-      .insert(table.folder)
-      .values({
-        id: `root-${userId}`,
-        name: "__root__",
-        ownerId: userId,
-        parentId: null,
-      })
-      .returning();
-  }
-
-  return rootFolder;
-}
+import { ensureRootFolder } from "$lib/server/folderUtils";
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   if (!locals.user) {

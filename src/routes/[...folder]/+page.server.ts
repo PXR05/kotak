@@ -79,7 +79,6 @@ export const load: PageServerLoad = async ({
     breadcrumbs = tempBreadcrumbs;
   }
 
-  // Create promises for current folder data
   const currentFolderItemsPromise = currentFolderId
     ? db
         .select()
@@ -106,7 +105,6 @@ export const load: PageServerLoad = async ({
         .orderBy(table.file.name)
     : Promise.resolve([]);
 
-  // Create streamed promise for current folder items
   const itemsPromise = currentFolderId
     ? Promise.all([currentFolderItemsPromise, currentFolderFilesPromise]).then(
         ([currentFolderItems, currentFolderFiles]) => {
