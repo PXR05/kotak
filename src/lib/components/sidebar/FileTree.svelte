@@ -1,7 +1,7 @@
 <script lang="ts">
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import FileTreeItem from "./FileTreeItem.svelte";
-  import { fileTree } from "$lib/stores/fileTree.svelte.js";
+  import { fileTree } from "$lib/stores";
   import type { FileItem } from "$lib/types/file.js";
   import { HardDriveIcon } from "@lucide/svelte";
   import { page } from "$app/state";

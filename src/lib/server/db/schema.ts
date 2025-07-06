@@ -14,6 +14,8 @@ export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   folders: many(folder),
   files: many(file),
+  sharedFolders: many(folderShare),
+  sharedFiles: many(fileShare),
 }));
 
 export const session = sqliteTable("session", {
@@ -62,6 +64,7 @@ export const folderRelations = relations(folder, ({ one, many }) => ({
     relationName: "folder_hierarchy",
   }),
   files: many(file),
+  shares: many(folderShare),
 }));
 
 export const file = sqliteTable("file", {
@@ -84,7 +87,7 @@ export const file = sqliteTable("file", {
   mimeType: text("mime_type").notNull(),
 });
 
-export const fileRelations = relations(file, ({ one }) => ({
+export const fileRelations = relations(file, ({ one, many }) => ({
   owner: one(user, {
     fields: [file.ownerId],
     references: [user.id],
@@ -93,9 +96,112 @@ export const fileRelations = relations(file, ({ one }) => ({
     fields: [file.folderId],
     references: [folder.id],
   }),
+  shares: many(fileShare),
 }));
+
+export const folderShare = sqliteTable("folder_share", {
+  id: text("id").primaryKey(),
+  folderId: text("folder_id")
+    .notNull()
+    .references(() => folder.id, { onDelete: "cascade" }),
+  sharedBy: text("shared_by")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  permissions: text("permissions").notNull().default("read"), 
+  isPublic: integer("is_public", { mode: "boolean" }).notNull().default(false),
+  expiresAt: integer("expires_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const folderShareRelations = relations(folderShare, ({ one, many }) => ({
+  folder: one(folder, {
+    fields: [folderShare.folderId],
+    references: [folder.id],
+  }),
+  sharedByUser: one(user, {
+    fields: [folderShare.sharedBy],
+    references: [user.id],
+  }),
+  recipients: many(folderShareRecipient),
+}));
+
+export const fileShare = sqliteTable("file_share", {
+  id: text("id").primaryKey(),
+  fileId: text("file_id")
+    .notNull()
+    .references(() => file.id, { onDelete: "cascade" }),
+  sharedBy: text("shared_by")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  permissions: text("permissions").notNull().default("read"),
+  isPublic: integer("is_public", { mode: "boolean" }).notNull().default(false),
+  expiresAt: integer("expires_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const fileShareRelations = relations(fileShare, ({ one, many }) => ({
+  file: one(file, {
+    fields: [fileShare.fileId],
+    references: [file.id],
+  }),
+  sharedByUser: one(user, {
+    fields: [fileShare.sharedBy],
+    references: [user.id],
+  }),
+  recipients: many(fileShareRecipient),
+}));
+
+export const folderShareRecipient = sqliteTable("folder_share_recipient", {
+  id: text("id").primaryKey(),
+  shareId: text("share_id")
+    .notNull()
+    .references(() => folderShare.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const folderShareRecipientRelations = relations(
+  folderShareRecipient,
+  ({ one }) => ({
+    share: one(folderShare, {
+      fields: [folderShareRecipient.shareId],
+      references: [folderShare.id],
+    }),
+  })
+);
+
+export const fileShareRecipient = sqliteTable("file_share_recipient", {
+  id: text("id").primaryKey(),
+  shareId: text("share_id")
+    .notNull()
+    .references(() => fileShare.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const fileShareRecipientRelations = relations(
+  fileShareRecipient,
+  ({ one }) => ({
+    share: one(fileShare, {
+      fields: [fileShareRecipient.shareId],
+      references: [fileShare.id],
+    }),
+  })
+);
 
 export type Session = typeof session.$inferSelect;
 export type User = typeof user.$inferSelect;
 export type Folder = typeof folder.$inferSelect;
 export type File = typeof file.$inferSelect;
+export type FolderShare = typeof folderShare.$inferSelect;
+export type FileShare = typeof fileShare.$inferSelect;
+export type FolderShareRecipient = typeof folderShareRecipient.$inferSelect;
+export type FileShareRecipient = typeof fileShareRecipient.$inferSelect;

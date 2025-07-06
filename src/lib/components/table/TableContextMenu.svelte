@@ -7,10 +7,8 @@
   import type { PageData } from "../../../routes/[...folder]/$types";
 
   const {
-    uploadDisabled = false,
     children,
   }: {
-    uploadDisabled?: boolean;
     children: Snippet<[{ props: Record<string, any> }]>;
   } = $props();
 </script>

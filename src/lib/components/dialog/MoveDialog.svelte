@@ -18,7 +18,7 @@
     LoaderIcon,
   } from "@lucide/svelte";
   import { closeMoveDialog, moveDialogData } from "$lib/stores";
-  import { currentFolderId } from "$lib/stores/fileOperations.svelte.js";
+  import { currentFolderId } from "$lib/stores";
   import type { FileItem } from "$lib/types/file.js";
 
   const items = $derived(moveDialogData.items);

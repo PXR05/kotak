@@ -6,12 +6,11 @@
   import FileIcon from "@lucide/svelte/icons/file";
   import FolderIcon from "@lucide/svelte/icons/folder";
   import LoaderIcon from "@lucide/svelte/icons/loader";
-  import type { FileTreeNode } from "$lib/stores/fileTree.svelte.js";
-  import { fileTree } from "$lib/stores/fileTree.svelte.js";
-  import { fileOperations } from "$lib/stores/fileOperations.svelte.js";
+  import { type FileTreeNode, fileTree, fileOperations } from "$lib/stores";
   import { fileActions } from "$lib/utils/file-actions.svelte";
   import FileTreeItem from "./FileTreeItem.svelte";
   import { page } from "$app/state";
+  import { preloadData } from "$app/navigation";
 
   let { node }: { node: FileTreeNode } = $props();
 
@@ -28,6 +27,19 @@
     e.stopPropagation();
     fileOperations.handleItemClick(node.item);
   };
+
+  let preloadTimeout: ReturnType<typeof setTimeout> | null = $state(null);
+  function handleFolderPreload() {
+    const item = node.item;
+    if (item.type === "folder") {
+      if (preloadTimeout) {
+        clearTimeout(preloadTimeout);
+      }
+      preloadTimeout = setTimeout(() => {
+        preloadData(`/${item.id}`);
+      }, 100);
+    }
+  }
 </script>
 
 <ContextMenu.Root>
@@ -74,6 +86,13 @@
 
                       <button
                         onclick={handleFolderNameClick}
+                        onmouseenter={handleFolderPreload}
+                        onmouseleave={() => {
+                          if (preloadTimeout) {
+                            clearTimeout(preloadTimeout);
+                            preloadTimeout = null;
+                          }
+                        }}
                         class="flex items-center gap-2 flex-1 min-w-0 hover:bg-accent rounded px-2 py-1 duration-150 group/name"
                         type="button"
                       >

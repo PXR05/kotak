@@ -1,7 +1,6 @@
 <script lang="ts">
   import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
   import LogOutIcon from "@lucide/svelte/icons/log-out";
-  import SettingsIcon from "@lucide/svelte/icons/settings";
   import SunIcon from "@lucide/svelte/icons/sun";
   import MoonIcon from "@lucide/svelte/icons/moon";
   import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
@@ -12,7 +11,7 @@
   import { useSidebar } from "$lib/components/ui/sidebar/index.js";
   import { page } from "$app/state";
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
-  import { settings, updateSidebarSide } from "$lib/stores/settings.svelte.js";
+  import { settings, updateSidebarSide } from "$lib/stores";
 
   const user = $derived(page.data?.user);
   const sidebar = useSidebar();
@@ -80,10 +79,6 @@
       </DropdownMenu.Label>
       <DropdownMenu.Separator />
       <DropdownMenu.Group>
-        <DropdownMenu.Item>
-          <SettingsIcon />
-          Settings
-        </DropdownMenu.Item>
         <DropdownMenu.Item
           onclick={(e) => {
             e.preventDefault();

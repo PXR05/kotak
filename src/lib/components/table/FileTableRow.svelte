@@ -8,8 +8,9 @@
     fileOperations,
     lastSelectedIndex,
     selectedItems,
-  } from "$lib/stores/fileOperations.svelte.js";
+  } from "$lib/stores";
   import { fileActions } from "$lib/utils/file-actions.svelte";
+  import { preloadData } from "$app/navigation";
 
   let {
     row,
@@ -56,6 +57,11 @@
       row.toggleSelected(true);
       lastSelectedIndex.value = currentIndex;
     }
+
+    const item = row.original;
+    if (item.type === "folder") {
+      preloadData(`/${item.id}`);
+    }
   }
 
   function handleRowDoubleClick(e: MouseEvent) {
@@ -69,6 +75,19 @@
     }
     fileOperations.handleItemClick?.(row.original);
   }
+
+  let preloadTimeout: ReturnType<typeof setTimeout> | null = $state(null);
+  function handleRowPreload() {
+    const item = row.original;
+    if (item.type === "folder") {
+      if (preloadTimeout) {
+        clearTimeout(preloadTimeout);
+      }
+      preloadTimeout = setTimeout(() => {
+        preloadData(`/${item.id}`);
+      }, 100);
+    }
+  }
 </script>
 
 <ContextMenu.Root>
@@ -80,6 +99,13 @@
         class="hover:bg-muted/50 transition-none cursor-pointer"
         onclick={handleRowClick}
         ondblclick={handleRowDoubleClick}
+        onmouseenter={handleRowPreload}
+        onmouseleave={() => {
+          if (preloadTimeout) {
+            clearTimeout(preloadTimeout);
+            preloadTimeout = null;
+          }
+        }}
       >
         {#each row.getVisibleCells() as cell, i}
           <Table.Cell

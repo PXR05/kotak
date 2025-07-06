@@ -1,8 +1,8 @@
-export * from "./confirmationDialog.svelte.js";
-export * from "./renameDialog.svelte.js";
-export * from "./createFolderDialog.svelte.js";
-export * from "./filePreviewDialog.svelte.js";
-export * from "./moveDialog.svelte.js";
-export * from "./settings.svelte.js";
+// File Management
+export * from "./file/index.js";
 
-export * from "./fileOperations.svelte.js";
+// Dialog Management
+export * from "./dialogs/index.js";
+
+// Core Application
+export * from "./core/index.js";

@@ -21,9 +21,9 @@
     fileOperations,
     filePreviewDialogData,
     renameDialogData,
-  } from "$lib/stores/index.js";
+  } from "$lib/stores";
 
-  import { lastSelectedIndex } from "$lib/stores/fileOperations.svelte.js";
+  import { lastSelectedIndex } from "$lib/stores";
 
   let {
     items,
@@ -281,7 +281,5 @@
     </Table.Body>
   </Table.Root>
 
-  {#if !table.getRowModel().rows?.length}
-    <FileTableEmptyState />
-  {/if}
+  <FileTableEmptyState isEmpty={!table.getRowModel().rows?.length} />
 </div>

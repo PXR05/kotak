@@ -7,7 +7,7 @@
     CardHeader,
     CardTitle,
   } from "$lib/components/ui/card/index.js";
-  import { fileOperations } from "$lib/stores/index.js";
+  import { fileOperations } from "$lib/stores";
   import { LoaderIcon } from "@lucide/svelte";
 
   let { data } = $props();
@@ -29,7 +29,7 @@
   {:catch}
     <Card class="w-full max-w-md m-auto">
       <CardHeader>
-        <CardTitle class="!font-serif font-normal text-xl"
+        <CardTitle class="font-serif text-xl"
           >Error Loading Files</CardTitle
         >
       </CardHeader>

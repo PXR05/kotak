@@ -9,7 +9,7 @@
   import Breadcrumb from "$lib/components/sidebar/Breadcrumb.svelte";
   import Search from "$lib/components/sidebar/Search.svelte";
   import { page } from "$app/state";
-  import { settings } from "$lib/stores/settings.svelte.js";
+  import { settings } from "$lib/stores";
 
   let { children } = $props();
 

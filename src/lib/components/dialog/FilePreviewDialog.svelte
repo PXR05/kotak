@@ -21,6 +21,7 @@
     filePreviewDialogData,
   } from "$lib/stores";
   import { formatFileSize } from "$lib/utils/format";
+  import { Separator } from "../ui/separator";
 
   let zoom = $state(100);
   let rotation = $state(0);
@@ -103,25 +104,32 @@
     if (isText(mimeType)) return FileTextIcon;
     return FileIcon;
   }
+
+  const backgroundStyle =
+    "flex items-center gap-2 bg-sidebar/75 border border-sidebar-border backdrop-blur-sm rounded-lg p-2";
+  const separatorStyle = "w-0.5 h-6 bg-border rounded-full";
 </script>
 
 <Dialog {open} onOpenChange={handleClose}>
   <DialogContent
-    class="!max-w-screen w-screen h-screen flex flex-col p-0 gap-0 rounded-none border-none"
+    class="!max-w-screen w-screen h-screen flex flex-col p-0 gap-0 rounded-none border-none bg-black/25 backdrop-blur"
     showCloseButton={false}
   >
     {#if file}
       <!-- Header with actions -->
-      <div
-        class="w-full flex items-center justify-between bg-background/75 border-b backdrop-blur px-6 py-4 h-16"
-      >
-        <div class="flex items-center gap-3">
+      <div class="w-full flex items-start justify-between p-4">
+        <div class="{backgroundStyle} gap-3 px-4">
           {#if file.mimeType}
             {@const Icon = getFileIcon(file.mimeType)}
-            <Icon class="size-5 text-muted-foreground" />
+            <Icon
+              class="size-9 text-muted-foreground"
+              absoluteStrokeWidth
+              strokeWidth={1.5}
+            />
           {/if}
+          <span class={separatorStyle}></span>
           <div>
-            <h2 class="font-semibold text-lg">{file.name}</h2>
+            <h2 class="font-medium text-lg">{file.name}</h2>
             <p class="text-sm text-muted-foreground">
               {formatFileSize(file.size || 0)} • {file.mimeType ||
                 "Unknown type"}
@@ -132,46 +140,63 @@
         <div class="flex items-center gap-2">
           <!-- Zoom controls for images -->
           {#if isImage(file.mimeType)}
-            <Button
-              variant="ghost"
-              size="sm"
-              onclick={handleZoomOut}
-              disabled={zoom <= 25}
-            >
-              <ZoomOutIcon class="size-4" />
-            </Button>
-            <span class="text-sm text-muted-foreground w-12 text-center"
-              >{zoom}%</span
-            >
-            <Button
-              variant="ghost"
-              size="sm"
-              onclick={handleZoomIn}
-              disabled={zoom >= 300}
-            >
-              <ZoomInIcon class="size-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onclick={handleRotate}>
-              <RotateCwIcon class="size-4" />
-            </Button>
+            <div class="{backgroundStyle} !p-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onclick={handleZoomOut}
+                disabled={zoom <= 25}
+              >
+                <ZoomOutIcon class="size-4" />
+              </Button>
+              <span
+                class="justify-center text-sm font-medium text-muted-foreground w-14 text-center"
+              >
+                {zoom}%
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onclick={handleZoomIn}
+                disabled={zoom >= 300}
+              >
+                <ZoomInIcon class="size-4" />
+              </Button>
+              <span class={separatorStyle}></span>
+              <Button variant="ghost" size="icon" onclick={handleRotate}>
+                <RotateCwIcon class="size-4" />
+              </Button>
+            </div>
           {/if}
 
-          <Button variant="ghost" size="sm" onclick={handleDownload}>
-            <DownloadIcon class="size-4" />
-            Download
-          </Button>
+          <div class="{backgroundStyle} !p-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onclick={handleDownload}
+              class="h-9"
+            >
+              <DownloadIcon class="size-4" />
+              Download
+            </Button>
+            <span class={separatorStyle}></span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onclick={() => handleAction("delete")}
+              class="text-destructive hover:text-destructive h-9"
+            >
+              <TrashIcon class="size-4" />
+              Delete
+            </Button>
+          </div>
 
           <Button
             variant="ghost"
-            size="sm"
-            onclick={() => handleAction("delete")}
-            class="text-destructive hover:text-destructive"
+            size="icon"
+            class="{backgroundStyle} size-11"
+            onclick={handleClose}
           >
-            <TrashIcon class="size-4" />
-            Delete
-          </Button>
-
-          <Button variant="ghost" size="sm" onclick={handleClose}>
             <XIcon class="size-4" />
           </Button>
         </div>
@@ -197,7 +222,7 @@
             <img
               src={getFileUrl(file)}
               alt={file.name}
-              class="object-contain w-full h-full transition-transform duration-200"
+              class="object-contain transition-transform duration-200"
               style="scale: {zoom}%; transform: rotate({rotation}deg);"
               onload={() => (isLoading = false)}
               onerror={() => (error = "Failed to load image")}
@@ -292,15 +317,15 @@
       </div>
 
       <!-- Bottom controls -->
-      <div
-        class="bg-background/75 border-t backdrop-blur px-6 py-3 h-14 flex items-center justify-center"
-      >
-        <div class="flex items-center gap-4 text-sm text-muted-foreground">
+      <div class="{backgroundStyle} w-fit m-4 px-2">
+        <div
+          class="flex items-center gap-4 text-sm font-medium text-muted-foreground"
+        >
           <span>Created: {file.createdAt.toLocaleString()}</span>
-          <span>•</span>
+          <span class={separatorStyle}></span>
           <span>Modified: {file.updatedAt.toLocaleString()}</span>
           {#if file.ownerId}
-            <span>•</span>
+            <span class={separatorStyle}></span>
             <span>Owner: {file.ownerId}</span>
           {/if}
         </div>
