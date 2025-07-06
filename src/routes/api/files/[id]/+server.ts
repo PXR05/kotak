@@ -166,8 +166,8 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
     const fileStream = getFileStream(file.storageKey);
 
     const encodedFilename = encodeURIComponent(file.name);
-    const asciiFilename = file.name.replace(/[^\x20-\x7E]/g, ""); 
-    
+    const asciiFilename = file.name.replace(/[^\x20-\x7E]/g, "");
+
     let contentDisposition: string;
     if (download === "true") {
       contentDisposition = `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodedFilename}`;
@@ -202,9 +202,88 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
     throw error(400, "Missing file ID");
   }
 
-  const { name } = await request.json();
-  if (!name || typeof name !== "string") {
-    throw error(400, "Invalid or missing name");
+  const { name, folderId, skipConflicts = false } = await request.json();
+
+  if (!name && folderId === undefined) {
+    throw error(400, "Either name or folderId must be provided");
+  }
+
+  const file = await findFileByIdOrStorageKey(fileId, locals.user.id);
+  if (!file) {
+    throw error(404, "File not found or access denied");
+  }
+
+  const updateData: { name?: string; folderId?: string; updatedAt: Date } = {
+    updatedAt: new Date(),
+  };
+
+  if (name) {
+    const trimmedName = validateFileName(name);
+    const targetFolderId = folderId || file.folderId;
+
+    const hasConflict = await hasFileNameConflict(
+      trimmedName,
+      targetFolderId,
+      locals.user.id,
+      file.id
+    );
+    if (hasConflict) {
+      if (skipConflicts) {
+        return json(
+          { skipped: true, reason: "Name conflict", fileName: file.name },
+          { status: 200 }
+        );
+      } else {
+        throw error(409, "A file with this name already exists in this folder");
+      }
+    }
+    updateData.name = trimmedName;
+  }
+
+  if (folderId !== undefined) {
+    const targetFolderId = await resolveTargetFolder(folderId, locals.user.id);
+
+    if (!name) {
+      const hasConflict = await hasFileNameConflict(
+        file.name,
+        targetFolderId,
+        locals.user.id,
+        file.id
+      );
+      if (hasConflict) {
+        if (skipConflicts) {
+          return json(
+            {
+              skipped: true,
+              reason: "Name conflict in target folder",
+              fileName: file.name,
+            },
+            { status: 200 }
+          );
+        } else {
+          throw error(
+            409,
+            "A file with this name already exists in the target folder"
+          );
+        }
+      }
+    }
+
+    updateData.folderId = targetFolderId;
+  }
+
+  const [updatedFile] = await db
+    .update(table.file)
+    .set(updateData)
+    .where(eq(table.file.id, file.id))
+    .returning();
+
+  return json({ success: true, file: updatedFile });
+};
+
+function validateFileName(name: string): string {
+  if (typeof name !== "string") {
+    throw error(400, "Invalid name type");
   }
 
   const trimmedName = name.trim();
@@ -221,38 +300,68 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
     throw error(400, "Name contains invalid characters");
   }
 
-  const file = await findFileByIdOrStorageKey(fileId, locals.user.id);
+  return trimmedName;
+}
 
-  if (!file) {
-    throw error(404, "File not found or access denied");
+async function resolveTargetFolder(
+  folderId: string | null,
+  userId: string
+): Promise<string> {
+  if (folderId === null) {
+    const rootFolder = await ensureRootFolder(userId);
+    return rootFolder.id;
   }
 
+  const [targetFolder] = await db
+    .select()
+    .from(table.folder)
+    .where(
+      and(eq(table.folder.id, folderId), eq(table.folder.ownerId, userId))
+    );
+
+  if (!targetFolder) {
+    throw error(404, "Target folder not found or access denied");
+  }
+
+  return folderId;
+}
+
+async function hasFileNameConflict(
+  fileName: string,
+  folderId: string,
+  userId: string,
+  excludeFileId?: string
+): Promise<boolean> {
   const [existingFile] = await db
     .select()
     .from(table.file)
     .where(
       and(
-        eq(table.file.folderId, file.folderId),
-        eq(table.file.name, trimmedName),
-        eq(table.file.ownerId, locals.user.id)
+        eq(table.file.folderId, folderId),
+        eq(table.file.name, fileName),
+        eq(table.file.ownerId, userId)
       )
     );
 
-  if (existingFile && existingFile.id !== file.id) {
+  return existingFile !== undefined && existingFile.id !== excludeFileId;
+}
+
+async function checkFileNameConflict(
+  fileName: string,
+  folderId: string,
+  userId: string,
+  excludeFileId?: string
+): Promise<void> {
+  const hasConflict = await hasFileNameConflict(
+    fileName,
+    folderId,
+    userId,
+    excludeFileId
+  );
+  if (hasConflict) {
     throw error(409, "A file with this name already exists in this folder");
   }
-
-  const [updatedFile] = await db
-    .update(table.file)
-    .set({
-      name: trimmedName,
-      updatedAt: new Date(),
-    })
-    .where(eq(table.file.id, file.id))
-    .returning();
-
-  return json(updatedFile);
-};
+}
 
 export const DELETE: RequestHandler = async ({ params, locals }) => {
   if (!locals.user) {

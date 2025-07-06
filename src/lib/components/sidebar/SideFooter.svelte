@@ -27,7 +27,7 @@
       <Sidebar.Separator />
 
       <Sidebar.MenuItem>
-        <div class="flex flex-col gap-2 mt-1 px-1">
+        <div class="flex flex-col gap-2 my-1 px-2">
           <div class="flex items-center gap-2">
             <CloudIcon class="size-4" />
             <span class="text-sm font-medium">Storage</span>

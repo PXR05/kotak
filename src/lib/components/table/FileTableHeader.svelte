@@ -7,24 +7,24 @@
 
   let {
     table,
-    uploadDisabled = false,
   }: {
     table: TanStackTable<FileItem>;
-    uploadDisabled?: boolean;
   } = $props();
 </script>
 
-<TableContextMenu {uploadDisabled}>
+<TableContextMenu>
   {#snippet children({ props })}
-    <Table.Header {...props} class="sticky top-0 bg-background">
+    <Table.Header {...props} class="sticky top-0 bg-sidebar">
       {#each table.getHeaderGroups() as headerGroup}
-        <Table.Row class="thead-sep">
+        <Table.Row
+          class={table.getRowModel().rows.length > 0 ? "thead-sep" : ""}
+        >
           {#each headerGroup.headers as header, i}
             <Table.Head
               colspan={header.colSpan}
               class="
             {header.column.id === 'actions' ? 'w-12' : ''} 
-            {i === 0 ? 'pl-6' : ''} 
+            {i === 0 ? 'pl-5' : ''} 
             py-2"
             >
               {#if !header.isPlaceholder}

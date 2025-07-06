@@ -4,6 +4,7 @@ import { openConfirmationDialog } from "./confirmationDialog.svelte.js";
 import { openRenameDialog } from "./renameDialog.svelte.js";
 import { openCreateFolderDialog } from "./createFolderDialog.svelte.js";
 import { openFilePreviewDialog } from "./filePreviewDialog.svelte.js";
+import { openMoveDialog } from "./moveDialog.svelte.js";
 import { toast } from "svelte-sonner";
 import JSZip from "jszip";
 
@@ -25,14 +26,6 @@ export let lastSelectedIndex = $state<{ value: number | null }>({
 });
 export let isUploading = $state({ value: false });
 export let isDownloading = $state({ value: false });
-
-export let fileClipboard = $state<{
-  data: FileItem[];
-  operation: "cut" | "copy" | null;
-}>({
-  data: [],
-  operation: null,
-});
 
 export let currentFolderId = $state<{ value: string | null }>({ value: null });
 export let currentUserId = $state<{ value: string | null }>({ value: null });
@@ -289,14 +282,11 @@ export const fileOperations = {
       case "download":
         fileOperations.downloadFile(item);
         break;
-      case "cut":
-        fileOperations.cutItems([item]);
-        break;
-      case "copy":
-        fileOperations.copyItems([item]);
-        break;
-      case "paste":
-        fileOperations.pasteItems(item);
+      case "move":
+        openMoveDialog([item], async (targetFolderId: string | null) => {
+          await fileOperations.moveItems([item], targetFolderId);
+          callback?.();
+        });
         break;
       case "rename":
         openRenameDialog(item, async (newName: string) => {
@@ -334,125 +324,65 @@ export const fileOperations = {
     lastSelectedIndex.value = null;
   },
 
-  cutItems(items: FileItem[]) {
-    fileClipboard.data = [...items];
-    fileClipboard.operation = "cut";
-  },
-
-  copyItems(items: FileItem[]) {
-    fileClipboard.data = [...items];
-    fileClipboard.operation = "copy";
-  },
-
-  async pasteItems(destination: FileItem | null = null) {
-    if (fileClipboard.data.length === 0 || fileClipboard.operation === null)
-      return;
-
-    const targetFolderId =
-      destination?.type === "folder" ? destination.id : currentFolderId.value;
-    const isCutOperation = fileClipboard.operation === "cut";
-    const itemsToDelete: FileItem[] = [];
-
+  async moveItems(items: FileItem[], targetFolderId: string | null) {
     try {
-      await Promise.all(
-        fileClipboard.data.map(async (item) => {
-          if (item.type === "file") {
-            const response = await fetch("/api/files", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name: item.name,
-                folderId: targetFolderId,
-                sourceFileId: item.id,
-                operation: fileClipboard.operation,
-              }),
-            });
-
-            if (!response.ok) {
-              const errorText = await response.text();
-              throw new Error(
-                `Failed to paste file "${item.name}": ${errorText}`
-              );
-            }
-
-            if (isCutOperation) itemsToDelete.push(item);
-          } else if (item.type === "folder") {
-            const response = await fetch("/api/folders", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name: item.name,
-                parentId: targetFolderId,
-                sourceFolderId: item.id,
-                operation: fileClipboard.operation,
-              }),
-            });
-
-            if (!response.ok) {
-              const errorText = await response.text();
-              throw new Error(
-                `Failed to paste folder "${item.name}": ${errorText}`
-              );
-            }
-
-            if (isCutOperation) itemsToDelete.push(item);
-          }
-        })
+      const movePromises = items.map((item) =>
+        moveItemToFolder(item, targetFolderId)
       );
+      const results = await Promise.all(movePromises);
 
-      if (isCutOperation && itemsToDelete.length > 0) {
-        await Promise.all(
-          itemsToDelete.map(async (item) => {
-            try {
-              await fileOperations.handleDelete(item);
-            } catch (error) {
-              console.error(
-                `Failed to delete original item "${item.name}":`,
-                error
-              );
-            }
-          })
+      const successful = results.filter((r) => r.success);
+      const skipped = results.filter((r) => r.skipped);
+
+      if (successful.length > 0) {
+        toast.success(`Successfully moved ${successful.length} item(s)`);
+      }
+
+      if (skipped.length > 0) {
+        const skippedNames = skipped.map((r) => r.itemName).join(", ");
+        toast.warning(
+          `Skipped ${skipped.length} item(s) due to name conflicts: ${skippedNames}`
         );
       }
 
-      const itemCount = fileClipboard.data.length;
-      toast.success(
-        `Successfully ${
-          isCutOperation ? "moved" : "copied"
-        } ${itemCount} item(s)`
-      );
-
-      fileClipboard.data = [];
-      fileClipboard.operation = null;
       await invalidateAll();
     } catch (error) {
-      console.error("Failed to paste items:", error);
-      toast.error(
-        "Failed to paste items: " +
-          (error instanceof Error ? error.message : JSON.stringify(error))
-      );
+      console.error("Failed to move items:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error(`Failed to move items: ${errorMessage}`);
       throw error;
     }
+  },
+
+  async bulkMove() {
+    if (selectedItems.length === 0) return;
+
+    openMoveDialog(selectedItems, async (targetFolderId: string | null) => {
+      await fileOperations.moveItems(selectedItems, targetFolderId);
+      this.clearSelection();
+    });
   },
 
   async bulkDelete() {
     if (selectedItems.length === 0) return;
 
+    const itemCount = selectedItems.length;
     openConfirmationDialog(
       {
-        title: `Delete ${selectedItems.length} items`,
-        description: `Are you sure you want to delete ${selectedItems.length} selected items? This action cannot be undone.`,
+        title: `Delete ${itemCount} items`,
+        description: `Are you sure you want to delete ${itemCount} selected items? This action cannot be undone.`,
         confirmText: "Delete All",
         cancelText: "Cancel",
         variant: "destructive",
       },
       async () => {
         try {
-          await Promise.all(
-            selectedItems.map((item) => fileOperations.handleDelete(item))
+          const deletePromises = selectedItems.map((item) =>
+            fileOperations.handleDelete(item)
           );
-          selectedItems.length = 0;
-          lastSelectedIndex.value = null;
+          await Promise.all(deletePromises);
+          this.clearSelection();
         } catch (error) {
           console.error("Failed to delete items:", error);
         }
@@ -582,4 +512,42 @@ async function uploadFiles(
     options.onError?.("Error uploading files");
     return false;
   }
+}
+
+async function moveItemToFolder(
+  item: FileItem,
+  targetFolderId: string | null
+): Promise<{
+  success: boolean;
+  skipped?: boolean;
+  reason?: string;
+  itemName: string;
+}> {
+  const endpoint =
+    item.type === "file" ? `/api/files/${item.id}` : `/api/folders/${item.id}`;
+
+  const requestBody =
+    item.type === "file"
+      ? { folderId: targetFolderId, skipConflicts: true }
+      : { parentId: targetFolderId, skipConflicts: true };
+
+  const response = await fetch(endpoint, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to move "${item.name}": ${errorText}`);
+  }
+
+  const result = await response.json();
+
+  return {
+    success: !result.skipped,
+    skipped: result.skipped,
+    reason: result.reason,
+    itemName: item.name,
+  };
 }

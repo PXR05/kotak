@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button/index.js";
   import { isDownloading, selectedItems, fileOperations } from "$lib/stores";
-  import { DownloadIcon, TrashIcon, XIcon } from "@lucide/svelte";
+  import { DownloadIcon, TrashIcon, XIcon, MoveIcon } from "@lucide/svelte";
   import { quintOut } from "svelte/easing";
   import { fly } from "svelte/transition";
   import type { Table } from "@tanstack/table-core";
@@ -19,14 +19,20 @@
   const totalCount = $derived(table.getFilteredRowModel().rows.length);
 
   function handleBulkDownload() {
-    const selected = table
-      .getFilteredSelectedRowModel()
-      .rows.map((row) => row.original);
+    const selectedFiles = getSelectedItems();
+    if (selectedFiles.length === 0) return;
 
-    if (selected.length === 0) return;
-
-    selectedItems.splice(0, selectedItems.length, ...selected);
+    updateSelectedItems(selectedFiles);
     fileOperations.bulkDownload();
+  }
+
+  function handleBulkMove() {
+    const selectedFiles = getSelectedItems();
+    if (selectedFiles.length === 0) return;
+
+    updateSelectedItems(selectedFiles);
+    fileOperations.bulkMove();
+    table.toggleAllPageRowsSelected(false);
   }
 
   function handleBulkDelete() {
@@ -37,11 +43,19 @@
   function handleDeselectAll() {
     table.toggleAllPageRowsSelected(false);
   }
+
+  function getSelectedItems(): FileItem[] {
+    return table.getFilteredSelectedRowModel().rows.map((row) => row.original);
+  }
+
+  function updateSelectedItems(items: FileItem[]) {
+    selectedItems.splice(0, selectedItems.length, ...items);
+  }
 </script>
 
 <div
   transition:fly={{ duration: 100, y: -10, easing: quintOut }}
-  class="flex items-center justify-between px-4 py-2 rounded-t-lg z-10 absolute top-0 left-0 right-0 bg-background"
+  class="flex items-center justify-between px-4 py-2 rounded-t-lg z-10 absolute top-0 left-0 right-0 bg-sidebar"
 >
   <div class="flex items-center gap-2">
     <Button
@@ -68,6 +82,10 @@
     >
       <DownloadIcon class="size-4 mr-2" />
       {isDownloading.value ? "Creating Zip..." : "Download Selected"}
+    </Button>
+    <Button variant="outline" size="sm" onclick={handleBulkMove}>
+      <MoveIcon class="size-4 mr-2" />
+      Move Selected
     </Button>
     <Button variant="outline" size="sm" onclick={handleBulkDelete}>
       <TrashIcon class="size-4 mr-2" />

@@ -2,8 +2,45 @@ import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { ensureRootFolder } from "$lib/server/folderUtils";
+
+export const GET: RequestHandler = async ({ locals }) => {
+  if (!locals.user) {
+    throw error(401, "Unauthorized");
+  }
+
+  try {
+    const folders = await db
+      .select({
+        id: table.folder.id,
+        name: table.folder.name,
+        ownerId: table.folder.ownerId,
+        parentId: table.folder.parentId,
+        createdAt: table.folder.createdAt,
+        updatedAt: table.folder.updatedAt,
+      })
+      .from(table.folder)
+      .where(
+        and(
+          eq(table.folder.ownerId, locals.user.id),
+          ne(table.folder.name, "__root__"),
+          ne(table.folder.name, "__trash__")
+        )
+      )
+      .orderBy(table.folder.name);
+
+    const transformedFolders = folders.map((folder) => ({
+      ...folder,
+      type: "folder" as const,
+    }));
+
+    return json(transformedFolders);
+  } catch (err) {
+    console.error("Error fetching folders:", err);
+    throw error(500, "Failed to fetch folders");
+  }
+};
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   if (!locals.user) {

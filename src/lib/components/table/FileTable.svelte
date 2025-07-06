@@ -23,18 +23,14 @@
     renameDialogData,
   } from "$lib/stores/index.js";
 
-  import {
-    lastSelectedIndex,
-  } from "$lib/stores/fileOperations.svelte.js";
+  import { lastSelectedIndex } from "$lib/stores/fileOperations.svelte.js";
 
   let {
     items,
     currentFolderId = null,
-    uploadDisabled = false,
   }: {
     items: FileItem[];
     currentFolderId?: string | null;
-    uploadDisabled?: boolean;
   } = $props();
 
   let isDragOver = $state(false);
@@ -86,8 +82,6 @@
   });
 
   function handleDragEnter(e: DragEvent) {
-    if (uploadDisabled) return;
-
     e.preventDefault();
     e.stopPropagation();
 
@@ -98,8 +92,6 @@
   }
 
   function handleDragOver(e: DragEvent) {
-    if (uploadDisabled) return;
-
     e.preventDefault();
     e.stopPropagation();
 
@@ -109,8 +101,6 @@
   }
 
   function handleDragLeave(e: DragEvent) {
-    if (uploadDisabled) return;
-
     e.preventDefault();
     e.stopPropagation();
 
@@ -121,8 +111,6 @@
   }
 
   async function handleDrop(e: DragEvent) {
-    if (uploadDisabled) return;
-
     e.preventDefault();
     e.stopPropagation();
 
@@ -258,7 +246,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
-  class="flex flex-col relative transition-all duration-100 border rounded-lg w-full overflow-x-clip overflow-y-auto h-[calc(100dvh-6rem)]"
+  class="flex flex-col relative transition-all duration-100 w-full h-[calc(100dvh-5.5rem-2px)]"
   ondragenter={handleDragEnter}
   ondragover={handleDragOver}
   ondragleave={handleDragLeave}
@@ -267,16 +255,10 @@
   aria-label="File upload drop zone"
   onclick={handleOutsideClick}
 >
-  <FileTableDropZone {isDragOver} {uploadDisabled} />
+  <FileTableDropZone {isDragOver} />
 
   <!-- Hidden file input for upload -->
-  <input
-    type="file"
-    multiple
-    class="hidden"
-    onchange={handleFileInputChange}
-    disabled={uploadDisabled}
-  />
+  <input type="file" multiple class="hidden" onchange={handleFileInputChange} />
 
   <!-- Hidden folder input for folder upload -->
   <input
@@ -284,7 +266,6 @@
     webkitdirectory
     class="hidden"
     onchange={handleFileInputChange}
-    disabled={uploadDisabled}
   />
 
   {#if table.getFilteredSelectedRowModel().rows.length > 0}
@@ -292,17 +273,15 @@
   {/if}
 
   <Table.Root>
-    <FileTableHeader {table} {uploadDisabled} />
-    {#if table.getRowModel().rows?.length}
-      <Table.Body class="flex-1">
-        {#each table.getRowModel().rows as row}
-          <FileTableRow {row} {table} />
-        {/each}
-      </Table.Body>
-    {/if}
+    <FileTableHeader {table} />
+    <Table.Body>
+      {#each table.getRowModel().rows as row}
+        <FileTableRow {row} {table} />
+      {/each}
+    </Table.Body>
   </Table.Root>
-  <FileTableEmptyState
-    {uploadDisabled}
-    isEmpty={!table.getRowModel().rows?.length}
-  />
+
+  {#if !table.getRowModel().rows?.length}
+    <FileTableEmptyState />
+  {/if}
 </div>

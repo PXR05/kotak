@@ -4,12 +4,10 @@ import {
   EditIcon,
   TrashIcon,
   Icon,
-  ScissorsIcon,
-  CopyIcon,
-  ClipboardPasteIcon,
+  Share2Icon,
+  MoveIcon,
 } from "@lucide/svelte";
 import type { FileAction } from "$lib/types/file.js";
-import { fileClipboard } from "$lib/stores";
 
 interface FileActionConfig {
   id: FileAction;
@@ -32,26 +30,20 @@ const actions: FileActionConfig[] = $derived([
     icon: DownloadIcon,
   },
   {
+    id: "share",
+    label: "Share",
+    icon: Share2Icon,
+  },
+  {
     id: "rename",
     label: "Rename",
     icon: EditIcon,
-  },
-  {
-    id: "cut",
-    label: "Cut",
-    icon: ScissorsIcon,
     separator: true,
   },
   {
-    id: "copy",
-    label: "Copy",
-    icon: CopyIcon,
-  },
-  {
-    id: "paste",
-    label: "Paste",
-    icon: ClipboardPasteIcon,
-    disabled: fileClipboard.data.length === 0,
+    id: "move",
+    label: "Move to Folder",
+    icon: MoveIcon,
   },
   {
     id: "delete",

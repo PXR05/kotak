@@ -20,8 +20,10 @@
 {#if page.data.user}
   <Sidebar.Provider class="select-none">
     <AppSidebar />
-    <Sidebar.Inset>
-      <header class="flex h-16 shrink-0 items-center gap-2">
+    <Sidebar.Inset class="py-2 pr-2 gap-2">
+      <header
+        class="flex h-16 shrink-0 items-center gap-2 bg-sidebar rounded-lg border border-sidebar-border shadow-sm"
+      >
         <div class="flex items-center justify-between w-full gap-4 px-4">
           <div class="flex items-center gap-2">
             <Sidebar.Trigger class="-ml-1" />
@@ -34,7 +36,9 @@
           <Search />
         </div>
       </header>
-      <div class="flex flex-1 flex-col">
+      <div
+        class="flex flex-1 flex-col overflow-clip bg-sidebar rounded-lg border border-sidebar-border shadow-sm"
+      >
         {@render children()}
       </div>
     </Sidebar.Inset>

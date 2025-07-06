@@ -296,7 +296,7 @@
   </div>
   {#if searchOpen && (searchResults.length > 0 || isSearching || (hasSearched && searchValue.trim()))}
     <div
-      class="absolute top-9 left-0 right-0 bg-background shadow-md rounded-b-lg border border-input max-h-80 overflow-y-auto z-40"
+      class="absolute top-9 left-0 right-0 bg-sidebar shadow-md rounded-b-lg border border-input max-h-80 overflow-y-auto z-40"
       transition:fly={{ y: -10, duration: 150, easing: quintOut }}
     >
       {#if isSearching}

@@ -25,9 +25,7 @@
       <p class="text-muted-foreground">Loading files and folders...</p>
     </div>
   {:then items}
-  <div class="p-4 pt-0">
     <FileTable {items} currentFolderId={data.currentFolderId} />
-  </div>
   {:catch}
     <Card class="w-full max-w-md m-auto">
       <CardHeader>

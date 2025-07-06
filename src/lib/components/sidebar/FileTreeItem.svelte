@@ -11,6 +11,7 @@
   import { fileOperations } from "$lib/stores/fileOperations.svelte.js";
   import { fileActions } from "$lib/utils/file-actions.svelte";
   import FileTreeItem from "./FileTreeItem.svelte";
+  import { page } from "$app/state";
 
   let { node }: { node: FileTreeNode } = $props();
 
@@ -50,7 +51,9 @@
                 {#snippet child({ props })}
                   <Sidebar.MenuButton
                     {...props}
-                    class="w-full justify-start p-0 !bg-transparent"
+                    data-active={page.url.pathname === `/${node.item.id}`}
+                    class="w-full justify-start p-0 data-[active=false]:!bg-transparent"
+                    onclick={() => {}}
                   >
                     <div class="flex items-center w-full">
                       <button

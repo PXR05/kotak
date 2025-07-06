@@ -32,7 +32,7 @@
             action.id,
             (page.data as PageData).currentFolder
           )}
-        disabled={action.uploadDisabled || uploadDisabled}
+        disabled={action.disabled}
         variant={action.variant}
       >
         <action.icon class="mr-2 size-4" />

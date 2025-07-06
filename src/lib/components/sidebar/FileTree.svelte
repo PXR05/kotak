@@ -4,6 +4,7 @@
   import { fileTree } from "$lib/stores/fileTree.svelte.js";
   import type { FileItem } from "$lib/types/file.js";
   import { HardDriveIcon } from "@lucide/svelte";
+  import { page } from "$app/state";
 
   let { rootItems }: { rootItems: FileItem[] } = $props();
 
@@ -17,7 +18,10 @@
     <div class="flex-shrink-0">
       <Sidebar.Menu>
         <Sidebar.MenuItem>
-          <Sidebar.MenuButton class="font-medium">
+          <Sidebar.MenuButton
+            data-active={page.url.pathname === "/"}
+            class="font-medium"
+          >
             {#snippet child({ props })}
               <a href="/files" {...props}>
                 <HardDriveIcon class="size-4" />

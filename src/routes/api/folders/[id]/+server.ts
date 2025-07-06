@@ -4,6 +4,7 @@ import { deleteFile } from "$lib/server/storage";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
+import { ensureRootFolder } from "$lib/server/folderUtils";
 
 async function recursivelyDeleteFolder(
   folderId: string,
@@ -54,9 +55,112 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
     throw error(400, "Missing folder ID");
   }
 
-  const { name } = await request.json();
-  if (!name || typeof name !== "string") {
-    throw error(400, "Invalid or missing name");
+  const { name, parentId, skipConflicts = false } = await request.json();
+
+  if (!name && parentId === undefined) {
+    throw error(400, "Either name or parentId must be provided");
+  }
+
+  const [folder] = await db
+    .select()
+    .from(table.folder)
+    .where(
+      and(
+        eq(table.folder.id, folderId),
+        eq(table.folder.ownerId, locals.user.id)
+      )
+    );
+
+  if (!folder) {
+    throw error(404, "Folder not found or access denied");
+  }
+
+  if (folder.name === "__root__" || folder.name === "__trash__") {
+    throw error(400, "Cannot modify system folders");
+  }
+
+  const updateData: {
+    name?: string;
+    parentId?: string | null;
+    updatedAt: Date;
+  } = {
+    updatedAt: new Date(),
+  };
+
+  if (name) {
+    const trimmedName = validateFolderName(name);
+    const targetParentId = parentId !== undefined ? parentId : folder.parentId;
+
+    const hasConflict = await hasFolderNameConflict(
+      trimmedName,
+      targetParentId,
+      locals.user.id,
+      folder.id
+    );
+    if (hasConflict) {
+      if (skipConflicts) {
+        return json(
+          { skipped: true, reason: "Name conflict", folderName: folder.name },
+          { status: 200 }
+        );
+      } else {
+        throw error(
+          409,
+          "A folder with this name already exists in this location"
+        );
+      }
+    }
+    updateData.name = trimmedName;
+  }
+
+  if (parentId !== undefined) {
+    const targetParentId = await resolveTargetParent(
+      parentId,
+      locals.user.id,
+      folderId
+    );
+
+    if (!name) {
+      const hasConflict = await hasFolderNameConflict(
+        folder.name,
+        targetParentId,
+        locals.user.id,
+        folder.id
+      );
+      if (hasConflict) {
+        if (skipConflicts) {
+          return json(
+            {
+              skipped: true,
+              reason: "Name conflict in target location",
+              folderName: folder.name,
+            },
+            { status: 200 }
+          );
+        } else {
+          throw error(
+            409,
+            "A folder with this name already exists in the target location"
+          );
+        }
+      }
+    }
+
+    updateData.parentId = targetParentId;
+  }
+
+  const [updatedFolder] = await db
+    .update(table.folder)
+    .set(updateData)
+    .where(eq(table.folder.id, folderId))
+    .returning();
+
+  return json({ success: true, folder: updatedFolder });
+};
+
+function validateFolderName(name: string): string {
+  if (typeof name !== "string") {
+    throw error(400, "Invalid name type");
   }
 
   const trimmedName = name.trim();
@@ -78,52 +182,79 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
     throw error(400, "This name is reserved and cannot be used");
   }
 
-  const [folder] = await db
+  return trimmedName;
+}
+
+async function resolveTargetParent(
+  parentId: string | null,
+  userId: string,
+  folderId: string
+): Promise<string | null> {
+  if (parentId === null) {
+    const rootFolder = await ensureRootFolder(userId);
+    return rootFolder.id;
+  }
+
+  if (parentId === folderId) {
+    throw error(400, "Cannot move folder into itself");
+  }
+
+  const [targetFolder] = await db
     .select()
     .from(table.folder)
     .where(
-      and(
-        eq(table.folder.id, folderId),
-        eq(table.folder.ownerId, locals.user.id)
-      )
+      and(eq(table.folder.id, parentId), eq(table.folder.ownerId, userId))
     );
 
-  if (!folder) {
-    throw error(404, "Folder not found or access denied");
+  if (!targetFolder) {
+    throw error(404, "Target folder not found or access denied");
   }
 
-  if (folder.name === "__root__") {
-    throw error(400, "Cannot rename root folder");
+  if (targetFolder.parentId === folderId) {
+    throw error(400, "Cannot move folder into its own child");
   }
 
+  return parentId;
+}
+
+async function hasFolderNameConflict(
+  folderName: string,
+  parentId: string | null,
+  userId: string,
+  excludeFolderId?: string
+): Promise<boolean> {
   const [existingFolder] = await db
     .select()
     .from(table.folder)
     .where(
       and(
-        folder.parentId === null
+        parentId === null
           ? isNull(table.folder.parentId)
-          : eq(table.folder.parentId, folder.parentId),
-        eq(table.folder.name, trimmedName),
-        eq(table.folder.ownerId, locals.user.id)
+          : eq(table.folder.parentId, parentId),
+        eq(table.folder.name, folderName),
+        eq(table.folder.ownerId, userId)
       )
     );
 
-  if (existingFolder && existingFolder.id !== folder.id) {
+  return existingFolder !== undefined && existingFolder.id !== excludeFolderId;
+}
+
+async function checkFolderNameConflict(
+  folderName: string,
+  parentId: string | null,
+  userId: string,
+  excludeFolderId?: string
+): Promise<void> {
+  const hasConflict = await hasFolderNameConflict(
+    folderName,
+    parentId,
+    userId,
+    excludeFolderId
+  );
+  if (hasConflict) {
     throw error(409, "A folder with this name already exists in this location");
   }
-
-  const [updatedFolder] = await db
-    .update(table.folder)
-    .set({
-      name: trimmedName,
-      updatedAt: new Date(),
-    })
-    .where(eq(table.folder.id, folderId))
-    .returning();
-
-  return json(updatedFolder);
-};
+}
 
 export const DELETE: RequestHandler = async ({ params, locals }) => {
   if (!locals.user) {

@@ -11,7 +11,7 @@
   }: ComponentProps<typeof Sidebar.Root> = $props();
 </script>
 
-<Sidebar.Root bind:ref variant="inset" {...restProps}>
+<Sidebar.Root bind:ref variant="floating" {...restProps}>
   <Sidebar.Header>
     <SideHeader />
   </Sidebar.Header>
