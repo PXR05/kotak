@@ -14,6 +14,7 @@
     ImageIcon,
     VideoIcon,
     MusicIcon,
+    LoaderIcon,
   } from "@lucide/svelte";
   import {
     closeFilePreviewDialog,
@@ -21,7 +22,6 @@
     filePreviewDialogData,
   } from "$lib/stores";
   import { formatFileSize } from "$lib/utils/format";
-  import { Separator } from "../ui/separator";
 
   let zoom = $state(100);
   let rotation = $state(0);
@@ -53,7 +53,7 @@
   }
 
   function handleRotate() {
-    rotation = (rotation + 90) % 360;
+    rotation = rotation + 90;
   }
 
   function handleDownload() {
@@ -65,49 +65,90 @@
     }
   }
 
+  const FILE_TYPES = {
+    image: {
+      check: (mimeType: string) => mimeType.startsWith("image/"),
+      icon: ImageIcon,
+      supportsZoom: true,
+      supportsRotation: true,
+    },
+    video: {
+      check: (mimeType: string) => mimeType.startsWith("video/"),
+      icon: VideoIcon,
+      supportsZoom: false,
+      supportsRotation: false,
+    },
+    audio: {
+      check: (mimeType: string) => mimeType.startsWith("audio/"),
+      icon: MusicIcon,
+      supportsZoom: false,
+      supportsRotation: false,
+    },
+    pdf: {
+      check: (mimeType: string) => mimeType === "application/pdf",
+      icon: FileIcon,
+      supportsZoom: false,
+      supportsRotation: false,
+    },
+    text: {
+      check: (mimeType: string) =>
+        mimeType.startsWith("text/") ||
+        [
+          "application/json",
+          "application/javascript",
+          "application/xml",
+        ].includes(mimeType),
+      icon: FileTextIcon,
+      supportsZoom: false,
+      supportsRotation: false,
+    },
+  } as const;
+
   function getFileUrl(file: FileItem): string | null {
     return file.storageKey
       ? `/api/files/${encodeURIComponent(file.storageKey)}`
       : null;
   }
 
-  function isImage(mimeType: string | undefined): boolean {
-    return mimeType ? mimeType.startsWith("image/") : false;
-  }
+  function getFileType(
+    mimeType: string | undefined
+  ): keyof typeof FILE_TYPES | null {
+    if (!mimeType) return null;
 
-  function isVideo(mimeType: string | undefined): boolean {
-    return mimeType ? mimeType.startsWith("video/") : false;
-  }
-
-  function isAudio(mimeType: string | undefined): boolean {
-    return mimeType ? mimeType.startsWith("audio/") : false;
-  }
-
-  function isPdf(mimeType: string | undefined): boolean {
-    return mimeType === "application/pdf";
-  }
-
-  function isText(mimeType: string | undefined): boolean {
-    if (!mimeType) return false;
-    return (
-      mimeType.startsWith("text/") ||
-      mimeType === "application/json" ||
-      mimeType === "application/javascript" ||
-      mimeType === "application/xml"
-    );
+    for (const [type, config] of Object.entries(FILE_TYPES)) {
+      if (config.check(mimeType)) {
+        return type as keyof typeof FILE_TYPES;
+      }
+    }
+    return null;
   }
 
   function getFileIcon(mimeType: string | undefined) {
-    if (isImage(mimeType)) return ImageIcon;
-    if (isVideo(mimeType)) return VideoIcon;
-    if (isAudio(mimeType)) return MusicIcon;
-    if (isText(mimeType)) return FileTextIcon;
-    return FileIcon;
+    const fileType = getFileType(mimeType);
+    return fileType ? FILE_TYPES[fileType].icon : FileIcon;
   }
 
-  const backgroundStyle =
-    "flex items-center gap-2 bg-sidebar/75 border border-sidebar-border backdrop-blur-sm rounded-lg p-2";
-  const separatorStyle = "w-0.5 h-6 bg-border rounded-full";
+  function supportsZoom(mimeType: string | undefined): boolean {
+    const fileType = getFileType(mimeType);
+    return fileType ? FILE_TYPES[fileType].supportsZoom : false;
+  }
+
+  const fileType = $derived(getFileType(file?.mimeType));
+  const fileUrl = $derived(file ? getFileUrl(file) : null);
+
+  const styles = {
+    background:
+      "flex items-center gap-2 bg-sidebar/75 border border-sidebar-border backdrop-blur-sm rounded-lg p-2",
+    separator: "w-0.5 h-6 bg-border rounded-full",
+  } as const;
+
+  function handleMediaLoad() {
+    isLoading = false;
+  }
+
+  function handleMediaError(type: string) {
+    error = `Failed to load ${type}`;
+  }
 </script>
 
 <Dialog {open} onOpenChange={handleClose}>
@@ -118,7 +159,7 @@
     {#if file}
       <!-- Header with actions -->
       <div class="w-full flex items-start justify-between p-4">
-        <div class="{backgroundStyle} gap-3 px-4">
+        <div class="{styles.background} gap-3 px-4">
           {#if file.mimeType}
             {@const Icon = getFileIcon(file.mimeType)}
             <Icon
@@ -127,7 +168,7 @@
               strokeWidth={1.5}
             />
           {/if}
-          <span class={separatorStyle}></span>
+          <span class={styles.separator}></span>
           <div>
             <h2 class="font-medium text-lg">{file.name}</h2>
             <p class="text-sm text-muted-foreground">
@@ -138,9 +179,9 @@
         </div>
 
         <div class="flex items-center gap-2">
-          <!-- Zoom controls for images -->
-          {#if isImage(file.mimeType)}
-            <div class="{backgroundStyle} !p-1">
+          <!-- Zoom and rotation controls -->
+          {#if supportsZoom(file.mimeType)}
+            <div class="{styles.background} !p-1">
               <Button
                 variant="ghost"
                 size="icon"
@@ -162,14 +203,14 @@
               >
                 <ZoomInIcon class="size-4" />
               </Button>
-              <span class={separatorStyle}></span>
+              <span class={styles.separator}></span>
               <Button variant="ghost" size="icon" onclick={handleRotate}>
                 <RotateCwIcon class="size-4" />
               </Button>
             </div>
           {/if}
 
-          <div class="{backgroundStyle} !p-1">
+          <div class="{styles.background} !p-1">
             <Button
               variant="ghost"
               size="sm"
@@ -179,7 +220,7 @@
               <DownloadIcon class="size-4" />
               Download
             </Button>
-            <span class={separatorStyle}></span>
+            <span class={styles.separator}></span>
             <Button
               variant="ghost"
               size="sm"
@@ -194,7 +235,7 @@
           <Button
             variant="ghost"
             size="icon"
-            class="{backgroundStyle} size-11"
+            class="{styles.background} size-11"
             onclick={handleClose}
           >
             <XIcon class="size-4" />
@@ -202,94 +243,89 @@
         </div>
       </div>
 
-      <!-- Content area -->
       <div class="flex-1 -z-1 relative">
         <div class="absolute inset-0 flex items-center justify-center">
           {#if isLoading}
-            <div class="text-center">
-              <div
-                class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"
-              ></div>
-              <p class="text-sm text-muted-foreground mt-2">Loading...</p>
+            <div class="text-center grid place-items-center">
+              <LoaderIcon class="size-6 animate-spin" />
+              <p class="text-muted-foreground mt-2">Loading</p>
             </div>
           {:else if error}
             <div class="text-center">
               <FileIcon class="size-12 text-muted-foreground mx-auto mb-2" />
               <p class="text-sm text-muted-foreground">{error}</p>
             </div>
-          {:else if file.storageKey && isImage(file.mimeType)}
-            <!-- Image preview -->
-            <img
-              src={getFileUrl(file)}
-              alt={file.name}
-              class="object-contain transition-transform duration-200"
-              style="scale: {zoom}%; transform: rotate({rotation}deg);"
-              onload={() => (isLoading = false)}
-              onerror={() => (error = "Failed to load image")}
-            />
-          {:else if file.storageKey && isVideo(file.mimeType)}
-            <!-- Video preview -->
-            <video
-              controls
-              class="max-w-full max-h-full"
-              onloadstart={() => (isLoading = false)}
-              onerror={() => (error = "Failed to load video")}
-            >
-              <source src={getFileUrl(file)} type={file.mimeType} />
-              <track kind="captions" />
-              Your browser does not support the video element.
-            </video>
-          {:else if file.storageKey && isAudio(file.mimeType)}
-            <!-- Audio preview -->
-            <div class="text-center">
-              <MusicIcon class="size-16 text-muted-foreground mx-auto mb-4" />
-              <audio
+          {:else if file.storageKey && fileType}
+            {#if fileType === "image"}
+              <img
+                src={fileUrl}
+                alt={file.name}
+                class="object-contain transition-transform duration-200"
+                style="scale: {zoom}%; transform: rotate({rotation}deg);"
+                onload={handleMediaLoad}
+                onerror={() => handleMediaError("image")}
+              />
+            {:else if fileType === "video"}
+              <video
                 controls
-                class="mx-auto"
-                onloadstart={() => (isLoading = false)}
-                onerror={() => (error = "Failed to load audio")}
+                class="max-w-full max-h-full"
+                onloadstart={handleMediaLoad}
+                onerror={() => handleMediaError("video")}
               >
-                <source src={getFileUrl(file)} type={file.mimeType} />
-                Your browser does not support the audio element.
-              </audio>
-            </div>
-          {:else if file.storageKey && isPdf(file.mimeType)}
-            <!-- PDF preview -->
-            <object
-              data={getFileUrl(file)}
-              type="application/pdf"
-              class="w-full h-full"
-              title={file.name}
-              onload={() => (isLoading = false)}
-              onerror={() => (error = "Failed to load PDF")}
-            >
-              <div class="text-center p-8">
-                <FileIcon class="size-16 text-muted-foreground mx-auto mb-4" />
-                <h3 class="text-lg font-semibold mb-2">
-                  PDF Preview Unavailable
-                </h3>
-                <p class="text-sm text-muted-foreground mb-4">
-                  Your browser doesn't support inline PDF viewing.
-                </p>
-                <Button onclick={handleDownload}>
-                  <DownloadIcon class="size-4 mr-2" />
-                  Download PDF
-                </Button>
+                <source src={fileUrl} type={file.mimeType} />
+                <track kind="captions" />
+                Your browser does not support the video element.
+              </video>
+            {:else if fileType === "audio"}
+              <div class="text-center">
+                <MusicIcon class="size-16 text-muted-foreground mx-auto mb-4" />
+                <audio
+                  controls
+                  class="mx-auto"
+                  onloadstart={handleMediaLoad}
+                  onerror={() => handleMediaError("audio")}
+                >
+                  <source src={fileUrl} type={file.mimeType} />
+                  Your browser does not support the audio element.
+                </audio>
               </div>
-            </object>
-          {:else if file.storageKey && isText(file.mimeType)}
-            <!-- Text file preview -->
-            <div class="w-full h-full max-w-4xl mx-auto">
-              <iframe
-                src={getFileUrl(file)}
-                class="w-full h-full border border-border rounded-lg bg-background"
+            {:else if fileType === "pdf"}
+              <object
+                data={fileUrl}
+                type="application/pdf"
+                class="w-full h-full"
                 title={file.name}
-                onload={() => (isLoading = false)}
-                onerror={() => (error = "Failed to load text file")}
-              ></iframe>
-            </div>
+                onload={handleMediaLoad}
+                onerror={() => handleMediaError("PDF")}
+              >
+                <div class="text-center p-8">
+                  <FileIcon
+                    class="size-16 text-muted-foreground mx-auto mb-4"
+                  />
+                  <h3 class="text-lg font-semibold mb-2">
+                    PDF Preview Unavailable
+                  </h3>
+                  <p class="text-sm text-muted-foreground mb-4">
+                    Your browser doesn't support inline PDF viewing.
+                  </p>
+                  <Button onclick={handleDownload}>
+                    <DownloadIcon class="size-4 mr-2" />
+                    Download PDF
+                  </Button>
+                </div>
+              </object>
+            {:else if fileType === "text"}
+              <div class="w-full h-full max-w-4xl mx-auto">
+                <iframe
+                  src={fileUrl}
+                  class="w-full h-full border border-border rounded-lg bg-background"
+                  title={file.name}
+                  onload={handleMediaLoad}
+                  onerror={() => handleMediaError("text file")}
+                ></iframe>
+              </div>
+            {/if}
           {:else}
-            <!-- Unsupported file type or missing storage key -->
             <div class="text-center">
               {#if file.mimeType}
                 {@const Icon = getFileIcon(file.mimeType)}
@@ -317,15 +353,15 @@
       </div>
 
       <!-- Bottom controls -->
-      <div class="{backgroundStyle} w-fit m-4 px-2">
+      <div class="{styles.background} w-fit m-4 px-2">
         <div
           class="flex items-center gap-4 text-sm font-medium text-muted-foreground"
         >
           <span>Created: {file.createdAt.toLocaleString()}</span>
-          <span class={separatorStyle}></span>
+          <span class={styles.separator}></span>
           <span>Modified: {file.updatedAt.toLocaleString()}</span>
           {#if file.ownerId}
-            <span class={separatorStyle}></span>
+            <span class={styles.separator}></span>
             <span>Owner: {file.ownerId}</span>
           {/if}
         </div>

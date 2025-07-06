@@ -45,6 +45,8 @@
   let hasSearched = $state(false);
   let searchTimeout: ReturnType<typeof setTimeout> | null = null;
   let selectedIndex = $state(-1);
+  let searchResultsContainer: HTMLDivElement | null = $state(null);
+  let resultElements: HTMLDivElement[] = $state([]);
 
   onMount(() => {
     const urlSearchValue = page.url.searchParams.get("s") || "";
@@ -57,6 +59,7 @@
   async function performSearch(query: string) {
     if (!query.trim()) {
       searchResults = [];
+      resultElements = [];
       isSearching = false;
       hasSearched = false;
       selectedIndex = -1;
@@ -73,13 +76,16 @@
       if (response.ok) {
         const data: SearchResponse = await response.json();
         searchResults = data.results;
+        resultElements = new Array(data.results.length);
       } else {
         console.error("Search failed:", response.statusText);
         searchResults = [];
+        resultElements = [];
       }
     } catch (error) {
       console.error("Search error:", error);
       searchResults = [];
+      resultElements = [];
     } finally {
       isSearching = false;
     }
@@ -92,6 +98,7 @@
 
     if (!query.trim()) {
       searchResults = [];
+      resultElements = [];
       isSearching = false;
       hasSearched = false;
       selectedIndex = -1;
@@ -141,11 +148,13 @@
         event.preventDefault();
         selectedIndex =
           selectedIndex < searchResults.length - 1 ? selectedIndex + 1 : 0;
+        scrollToSelectedResult();
         break;
       case "ArrowUp":
         event.preventDefault();
         selectedIndex =
           selectedIndex > 0 ? selectedIndex - 1 : searchResults.length - 1;
+        scrollToSelectedResult();
         break;
       case "Enter":
         event.preventDefault();
@@ -165,6 +174,22 @@
     }
   }
 
+  function scrollToSelectedResult() {
+    if (
+      selectedIndex >= 0 &&
+      selectedIndex < resultElements.length &&
+      searchResultsContainer
+    ) {
+      const selectedElement = resultElements[selectedIndex];
+      if (selectedElement) {
+        selectedElement.scrollIntoView({
+          block: "nearest",
+          inline: "nearest",
+        });
+      }
+    }
+  }
+
   function handleSearchToggle() {
     searchOpen = !searchOpen;
     setTimeout(() => {
@@ -180,6 +205,7 @@
   function clearInput(redirect = true) {
     searchValue = "";
     searchResults = [];
+    resultElements = [];
     isSearching = false;
     hasSearched = false;
     selectedIndex = -1;
@@ -296,6 +322,7 @@
   </div>
   {#if searchOpen && (searchResults.length > 0 || isSearching || (hasSearched && searchValue.trim()))}
     <div
+      bind:this={searchResultsContainer}
       class="absolute top-9 left-0 right-0 bg-sidebar shadow-md rounded-b-lg border border-input max-h-80 overflow-y-auto z-40"
       transition:fly={{ y: -10, duration: 150, easing: quintOut }}
     >
@@ -309,34 +336,36 @@
       {:else if searchResults.length > 0}
         <div>
           {#each searchResults as result, index}
-            <Button
-              variant="ghost"
-              class="text-left text-sm w-full justify-start h-auto px-4 py-2 rounded-none dark:bg-input/30 dark:hover:bg-input/50
-              transition-none
-              {index === selectedIndex ? 'bg-accent dark:bg-input/50 ' : ''}"
-              onclick={() => handleResultClick(result)}
-            >
-              <div class="flex items-center gap-3">
-                <div class="flex-shrink-0">
-                  {#if result.type === "file"}
-                    <FileIcon class="size-4" />
-                  {:else}
-                    <FolderIcon class="size-4" />
-                  {/if}
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="font-medium truncate">
-                    {result.name}
-                  </div>
-                  <div class="text-xs text-muted-foreground">
-                    {result.type === "file" ? "File" : "Folder"}
-                    {#if result.type === "file" && result.size}
-                      • {formatFileSize(result.size)}
+            <div bind:this={resultElements[index]}>
+              <Button
+                variant="ghost"
+                class="text-left text-sm w-full justify-start h-auto px-4 py-2 rounded-none dark:bg-input/30 dark:hover:bg-input/50
+                transition-none
+                {index === selectedIndex ? 'bg-accent dark:bg-input/50 ' : ''}"
+                onclick={() => handleResultClick(result)}
+              >
+                <div class="flex items-center gap-3">
+                  <div class="flex-shrink-0">
+                    {#if result.type === "file"}
+                      <FileIcon class="size-4" />
+                    {:else}
+                      <FolderIcon class="size-4" />
                     {/if}
                   </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium truncate">
+                      {result.name}
+                    </div>
+                    <div class="text-xs text-muted-foreground">
+                      {result.type === "file" ? "File" : "Folder"}
+                      {#if result.type === "file" && result.size}
+                        • {formatFileSize(result.size)}
+                      {/if}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </Button>
+              </Button>
+            </div>
           {/each}
         </div>
       {:else if hasSearched && searchValue.trim()}

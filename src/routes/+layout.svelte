@@ -25,7 +25,11 @@
     class="select-none {side === 'left' ? 'flex-row' : 'flex-row-reverse'}"
   >
     <AppSidebar {side} />
-    <Sidebar.Inset class="py-2 gap-2 {side === 'left' ? 'pr-2' : 'pl-2'}">
+    <Sidebar.Inset
+      class="py-2 gap-2 
+      {side === 'left' ? 'pr-2' : 'pl-2'} 
+      {Sidebar.useSidebar()?.state === 'collapsed' ? 'px-2' : ''}"
+    >
       <header
         class="flex h-16 shrink-0 items-center gap-2 bg-sidebar rounded-lg border border-sidebar-border shadow-sm"
       >

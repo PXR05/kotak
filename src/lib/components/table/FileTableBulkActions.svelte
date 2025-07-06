@@ -55,7 +55,7 @@
 
 <div
   transition:fly={{ duration: 100, y: -10, easing: quintOut }}
-  class="flex items-center justify-between px-4 py-2 rounded-t-lg z-10 absolute top-0 left-0 right-0 bg-sidebar"
+  class="flex items-center justify-between px-4 py-2 rounded-t-lg z-10 absolute top-0 left-0 right-0 bg-sidebar-accent"
 >
   <div class="flex items-center gap-2">
     <Button
@@ -81,15 +81,15 @@
       disabled={isDownloading.value}
     >
       <DownloadIcon class="size-4 mr-2" />
-      {isDownloading.value ? "Creating Zip..." : "Download Selected"}
+      {isDownloading.value ? "Creating Zip..." : `Download selected`}
     </Button>
     <Button variant="outline" size="sm" onclick={handleBulkMove}>
       <MoveIcon class="size-4 mr-2" />
-      Move Selected
+      Move selected
     </Button>
     <Button variant="outline" size="sm" onclick={handleBulkDelete}>
       <TrashIcon class="size-4 mr-2" />
-      Delete Selected
+      Delete selected
     </Button>
   </div>
 </div>

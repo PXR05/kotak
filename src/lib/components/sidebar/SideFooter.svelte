@@ -1,13 +1,9 @@
 <script lang="ts">
   import { page } from "$app/state";
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
-  import { useSidebar } from "$lib/components/ui/sidebar/index.js";
   import { formatFileSize } from "$lib/utils/format";
   import { CloudIcon, TrashIcon } from "@lucide/svelte";
   import Progress from "../ui/progress/progress.svelte";
-
-  const user = $derived(page.data?.user);
-  const sidebar = useSidebar();
 </script>
 
 <Sidebar.Group class="p-0">
