@@ -5,6 +5,7 @@ import { openRenameDialog } from "./renameDialog.svelte.js";
 import { openCreateFolderDialog } from "./createFolderDialog.svelte.js";
 import { openFilePreviewDialog } from "./filePreviewDialog.svelte.js";
 import { toast } from "svelte-sonner";
+import JSZip from "jszip";
 
 export interface UploadOptions {
   folderId?: string;
@@ -37,6 +38,120 @@ export let currentFolderId = $state<{ value: string | null }>({ value: null });
 export let currentUserId = $state<{ value: string | null }>({ value: null });
 
 export let uploadProgress = $state<{ [key: string]: number }>({});
+
+interface FileItemWithPath extends FileItem {
+  relativePath?: string;
+}
+
+async function fetchFolderContentsRecursively(
+  folderId: string,
+  path = ""
+): Promise<FileItemWithPath[]> {
+  try {
+    const response = await fetch(`/api/folders/${folderId}/children`);
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch folder contents: ${response.statusText}`
+      );
+    }
+
+    const contents: FileItem[] = await response.json();
+    const allItems: FileItemWithPath[] = [];
+
+    for (const item of contents) {
+      if (item.type === "file") {
+        allItems.push({
+          ...item,
+          relativePath: path ? `${path}/${item.name}` : item.name,
+        });
+      } else if (item.type === "folder") {
+        const subItems = await fetchFolderContentsRecursively(
+          item.id,
+          path ? `${path}/${item.name}` : item.name
+        );
+        allItems.push(...subItems);
+      }
+    }
+
+    return allItems;
+  } catch (error) {
+    console.error(`Failed to fetch folder contents for ${folderId}:`, error);
+    return [];
+  }
+}
+
+async function downloadAsZip(items: FileItem[], zipName?: string) {
+  try {
+    const zip = new JSZip();
+    const allFiles: FileItemWithPath[] = [];
+
+    for (const item of items) {
+      if (item.type === "file") {
+        allFiles.push({ ...item, relativePath: item.name });
+      } else if (item.type === "folder") {
+        const folderFiles = await fetchFolderContentsRecursively(
+          item.id,
+          item.name
+        );
+        allFiles.push(...folderFiles);
+      }
+    }
+
+    const filesToDownload = allFiles.filter((item) => item.type === "file");
+
+    if (filesToDownload.length === 0) {
+      toast.error("No files found to download");
+      return;
+    }
+
+    await Promise.all(
+      filesToDownload.map(async (item) => {
+        try {
+          if (!item.storageKey) return;
+
+          const response = await fetch(
+            `/api/files/${encodeURIComponent(item.storageKey)}?download=true`
+          );
+          if (!response.ok) return;
+
+          const blob = await response.blob();
+          const filePath = item.relativePath || item.name;
+          zip.file(filePath, blob);
+        } catch (error) {
+          console.error(`Failed to download ${item.name}:`, error);
+        }
+      })
+    );
+
+    const fileCount = Object.keys(zip.files).length;
+    if (fileCount === 0) {
+      toast.error("No files could be downloaded");
+      return;
+    }
+
+    const zipBlob = await zip.generateAsync({
+      type: "blob",
+      compression: "DEFLATE",
+      compressionOptions: { level: 6 },
+    });
+
+    const url = URL.createObjectURL(zipBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download =
+      zipName || `files_${new Date().toISOString().split("T")[0]}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success(`Downloaded ${fileCount} file(s) successfully`);
+  } catch (error) {
+    console.error("Failed to create zip download:", error);
+    toast.error("Failed to download files");
+    throw error;
+  }
+}
 
 export const fileOperations = {
   handleItemClick(item: FileItem) {
@@ -139,13 +254,26 @@ export const fileOperations = {
     }
   },
 
-  downloadFile(item: FileItem) {
-    // TODO: Implement folder download logic
-    if (item.storageKey) {
-      window.open(
-        `/api/files/${encodeURIComponent(item.storageKey)}?download=true`,
-        "_blank"
-      );
+  async downloadFile(item: FileItem) {
+    if (isDownloading.value) return;
+
+    isDownloading.value = true;
+    try {
+      if (item.type === "file") {
+        if (item.storageKey) {
+          window.open(
+            `/api/files/${encodeURIComponent(item.storageKey)}?download=true`,
+            "_blank"
+          );
+        }
+      } else if (item.type === "folder") {
+        await downloadAsZip([item], `${item.name}.zip`);
+      }
+    } catch (error) {
+      console.error("Failed to download item:", error);
+      toast.error("Failed to download item");
+    } finally {
+      isDownloading.value = false;
     }
   },
 
@@ -337,12 +465,10 @@ export const fileOperations = {
 
     isDownloading.value = true;
     try {
-
-      // TODO: Implement bulk download logic
-
-      selectedItems
-        .filter((item) => item.type === "file")
-        .forEach((item) => fileOperations.downloadFile(item));
+      await downloadAsZip(selectedItems);
+    } catch (error) {
+      console.error("Failed to bulk download:", error);
+      toast.error("Failed to download selected items");
     } finally {
       isDownloading.value = false;
     }

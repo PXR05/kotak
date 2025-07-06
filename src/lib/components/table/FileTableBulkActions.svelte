@@ -1,23 +1,42 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button/index.js";
-  import { isDownloading } from "$lib/stores";
+  import { isDownloading, selectedItems, fileOperations } from "$lib/stores";
   import { DownloadIcon, TrashIcon, XIcon } from "@lucide/svelte";
   import { quintOut } from "svelte/easing";
   import { fly } from "svelte/transition";
+  import type { Table } from "@tanstack/table-core";
+  import type { FileItem } from "$lib/types/file.js";
 
   let {
-    selectedCount,
-    totalCount,
-    onBulkDownload,
-    onBulkDelete,
-    onDeselectAll,
+    table,
   }: {
-    selectedCount: number;
-    totalCount: number;
-    onBulkDownload?: () => void;
-    onBulkDelete?: () => void;
-    onDeselectAll?: () => void;
+    table: Table<FileItem>;
   } = $props();
+
+  const selectedCount = $derived(
+    table.getFilteredSelectedRowModel().rows.length
+  );
+  const totalCount = $derived(table.getFilteredRowModel().rows.length);
+
+  function handleBulkDownload() {
+    const selected = table
+      .getFilteredSelectedRowModel()
+      .rows.map((row) => row.original);
+
+    if (selected.length === 0) return;
+
+    selectedItems.splice(0, selectedItems.length, ...selected);
+    fileOperations.bulkDownload();
+  }
+
+  function handleBulkDelete() {
+    fileOperations.bulkDelete();
+    table.toggleAllPageRowsSelected(false);
+  }
+
+  function handleDeselectAll() {
+    table.toggleAllPageRowsSelected(false);
+  }
 </script>
 
 <div
@@ -29,7 +48,7 @@
       variant="ghost"
       size="sm"
       class="!p-0 aspect-square"
-      onclick={onDeselectAll}
+      onclick={handleDeselectAll}
       title="Deselect all"
     >
       <XIcon class="size-4" />
@@ -41,22 +60,18 @@
     </span>
   </div>
   <div class="flex items-center gap-2">
-    {#if onBulkDownload}
-      <Button
-        variant="outline"
-        size="sm"
-        onclick={onBulkDownload}
-        disabled={isDownloading.value}
-      >
-        <DownloadIcon class="size-4 mr-2" />
-        {isDownloading.value ? "Creating Zip..." : "Download Selected"}
-      </Button>
-    {/if}
-    {#if onBulkDelete}
-      <Button variant="outline" size="sm" onclick={onBulkDelete}>
-        <TrashIcon class="size-4 mr-2" />
-        Delete Selected
-      </Button>
-    {/if}
+    <Button
+      variant="outline"
+      size="sm"
+      onclick={handleBulkDownload}
+      disabled={isDownloading.value}
+    >
+      <DownloadIcon class="size-4 mr-2" />
+      {isDownloading.value ? "Creating Zip..." : "Download Selected"}
+    </Button>
+    <Button variant="outline" size="sm" onclick={handleBulkDelete}>
+      <TrashIcon class="size-4 mr-2" />
+      Delete Selected
+    </Button>
   </div>
 </div>

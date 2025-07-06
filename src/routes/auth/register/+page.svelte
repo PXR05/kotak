@@ -5,8 +5,47 @@
   import { Button } from "$lib/components/ui/button";
   import { Label } from "$lib/components/ui/label";
   import type { ActionData } from "./$types";
+  import type { SubmitFunction } from "@sveltejs/kit";
+  import { goto } from "$app/navigation";
+  import { toast } from "svelte-sonner";
+  import { LoaderIcon } from "@lucide/svelte";
 
   let { form }: { form: ActionData } = $props();
+
+  let loading = $state(false);
+
+  function handleSubmit(e: {
+    action: URL;
+    formData: FormData;
+    formElement: HTMLFormElement;
+    controller: AbortController;
+    submitter: HTMLElement | null;
+    cancel: () => void;
+  }): ReturnType<SubmitFunction> {
+    loading = true;
+    return async ({ result }) => {
+      switch (result.type) {
+        case "redirect":
+          goto(result.location, {
+            invalidateAll: true,
+          });
+          break;
+        case "failure":
+          loading = false;
+          if (!result.data) {
+            toast.error("An error occurred. Please try again.");
+            console.error(result);
+          } else {
+            toast.error(
+              result.data.message || "An error occurred. Please try again."
+            );
+          }
+          break;
+        default:
+          loading = false;
+      }
+    };
+  }
 </script>
 
 <div class="min-h-screen flex items-center justify-center bg-background px-4">
@@ -15,7 +54,7 @@
       <Card.Title class="text-2xl">Create Account</Card.Title>
     </Card.Header>
     <Card.Content>
-      <form method="post" use:enhance class="space-y-6">
+      <form method="post" use:enhance={handleSubmit} class="space-y-6">
         <div class="space-y-2">
           <Label for="email">Email</Label>
           <Input
@@ -42,7 +81,12 @@
         {#if form?.message}
           <div class="text-sm text-destructive text-center">{form.message}</div>
         {/if}
-        <Button type="submit" class="w-full">Create Account</Button>
+        <Button type="submit" class="w-full" disabled={loading}>
+          {#if loading}
+            <LoaderIcon class="animate-spin size-4" />
+          {/if}
+          Create Account
+        </Button>
       </form>
     </Card.Content>
     <Card.Footer class="text-center">

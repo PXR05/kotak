@@ -8,7 +8,6 @@
     getCoreRowModel,
     getSortedRowModel,
   } from "@tanstack/table-core";
-  import JSZip from "jszip";
   import FileTableBulkActions from "./FileTableBulkActions.svelte";
   import { createFileTableColumns } from "./FileTableColumns.js";
   import FileTableDropZone from "./FileTableDropZone.svelte";
@@ -25,7 +24,6 @@
   } from "$lib/stores/index.js";
 
   import {
-    isDownloading,
     lastSelectedIndex,
   } from "$lib/stores/fileOperations.svelte.js";
 
@@ -86,76 +84,6 @@
     },
     enableRowSelection: true,
   });
-
-  async function downloadAsZip(fileItems: FileItem[]) {
-    try {
-      const zip = new JSZip();
-
-      await Promise.all(
-        fileItems.map(async (item) => {
-          try {
-            if (!item.storageKey) {
-              return;
-            }
-
-            const response = await fetch(
-              `/api/files/${encodeURIComponent(item.storageKey)}?download=true`
-            );
-            if (!response.ok) {
-              return;
-            }
-
-            const blob = await response.blob();
-            zip.file(item.name, blob);
-          } catch (error) {
-            console.error(`Failed to download ${item.name}:`, error);
-          }
-        })
-      );
-
-      const fileCount = Object.keys(zip.files).length;
-      if (fileCount === 0) {
-        return;
-      }
-
-      const zipBlob = await zip.generateAsync({
-        type: "blob",
-        compression: "DEFLATE",
-        compressionOptions: { level: 6 },
-      });
-
-      const url = URL.createObjectURL(zipBlob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `files_${new Date().toISOString().split("T")[0]}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      fileItems.forEach((item) => {
-        fileOperations.handleAction("download", item);
-      });
-    }
-  }
-
-  function handleBulkDownload() {
-    const selected = table
-      .getFilteredSelectedRowModel()
-      .rows.map((row) => row.original);
-    const fileItems = selected.filter((item) => item.type === "file");
-    if (fileItems.length === 0) return;
-
-    if (isDownloading) isDownloading.value = true;
-    downloadAsZip(fileItems).finally(() => {
-      if (isDownloading) isDownloading.value = false;
-    });
-  }
-
-  function handleBulkDelete() {
-    fileOperations.bulkDelete();
-    table.toggleAllPageRowsSelected(false);
-  }
 
   function handleDragEnter(e: DragEvent) {
     if (uploadDisabled) return;
@@ -360,13 +288,7 @@
   />
 
   {#if table.getFilteredSelectedRowModel().rows.length > 0}
-    <FileTableBulkActions
-      selectedCount={table.getFilteredSelectedRowModel().rows.length}
-      totalCount={table.getFilteredRowModel().rows.length}
-      onBulkDownload={handleBulkDownload}
-      onBulkDelete={handleBulkDelete}
-      onDeselectAll={() => table.toggleAllPageRowsSelected(false)}
-    />
+    <FileTableBulkActions {table} />
   {/if}
 
   <Table.Root>
