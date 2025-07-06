@@ -10,7 +10,7 @@
   } from "@tanstack/table-core";
   import FileTableBulkActions from "./FileTableBulkActions.svelte";
   import { createFileTableColumns } from "./FileTableColumns.js";
-  import FileTableDropZone from "./FileTableDropZone.svelte";
+  import DragDropZone from "$lib/components/shared/DragDropZone.svelte";
   import FileTableEmptyState from "./FileTableEmptyState.svelte";
   import FileTableHeader from "./FileTableHeader.svelte";
   import FileTableRow from "./FileTableRow.svelte";
@@ -32,9 +32,6 @@
     items: FileItem[];
     currentFolderId?: string | null;
   } = $props();
-
-  let isDragOver = $state(false);
-  let dragCounter = $state(0);
 
   const columns = createFileTableColumns(fileOperations.handleAction);
 
@@ -80,102 +77,6 @@
     },
     enableRowSelection: true,
   });
-
-  function handleDragEnter(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    dragCounter++;
-    if (dragCounter === 1) {
-      isDragOver = true;
-    }
-  }
-
-  function handleDragOver(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = "copy";
-    }
-  }
-
-  function handleDragLeave(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    dragCounter--;
-    if (dragCounter === 0) {
-      isDragOver = false;
-    }
-  }
-
-  async function handleDrop(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    isDragOver = false;
-    dragCounter = 0;
-
-    const items = e.dataTransfer?.items;
-    if (items && items.length > 0) {
-      const uploadableFiles: UploadableFile[] = [];
-
-      await Promise.all(
-        Array.from(items).map(async (item) => {
-          if (item.kind === "file") {
-            const entry = item.webkitGetAsEntry();
-            if (entry) {
-              await processEntry(entry, uploadableFiles);
-            }
-          }
-        })
-      );
-
-      if (uploadableFiles.length > 0) {
-        fileOperations.handleFilesUpload(uploadableFiles);
-      }
-    }
-  }
-
-  async function processEntry(
-    entry: FileSystemEntry,
-    uploadableFiles: UploadableFile[],
-    path = ""
-  ) {
-    if (entry.isFile) {
-      const fileEntry = entry as FileSystemFileEntry;
-      return new Promise<void>((resolve) => {
-        fileEntry.file((file) => {
-          const relativePath = path ? `${path}/${file.name}` : file.name;
-
-          uploadableFiles.push({
-            file,
-            name: file.name,
-            size: file.size,
-            type: file.type || "application/octet-stream",
-            relativePath,
-          });
-          resolve();
-        });
-      });
-    } else if (entry.isDirectory) {
-      const dirEntry = entry as FileSystemDirectoryEntry;
-      const dirPath = path ? `${path}/${entry.name}` : entry.name;
-
-      return new Promise<void>((resolve) => {
-        const reader = dirEntry.createReader();
-        reader.readEntries(async (entries) => {
-          await Promise.all(
-            entries.map((childEntry) =>
-              processEntry(childEntry, uploadableFiles, dirPath)
-            )
-          );
-          resolve();
-        });
-      });
-    }
-  }
 
   function handleFileInputChange(e: Event) {
     const target = e.target as HTMLInputElement;
@@ -243,43 +144,46 @@
 
 <svelte:window onkeydown={handleKeyDown} />
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<div
+<DragDropZone
   class="flex flex-col relative transition-all duration-100 w-full h-[calc(100dvh-5.5rem-2px)]"
-  ondragenter={handleDragEnter}
-  ondragover={handleDragOver}
-  ondragleave={handleDragLeave}
-  ondrop={handleDrop}
-  role="region"
-  aria-label="File upload drop zone"
-  onclick={handleOutsideClick}
 >
-  <FileTableDropZone {isDragOver} />
+  {#snippet children()}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="flex flex-col relative w-full h-full"
+      onclick={handleOutsideClick}
+    >
+      <!-- Hidden file input for upload -->
+      <input
+        type="file"
+        multiple
+        class="hidden"
+        onchange={handleFileInputChange}
+      />
 
-  <!-- Hidden file input for upload -->
-  <input type="file" multiple class="hidden" onchange={handleFileInputChange} />
+      <!-- Hidden folder input for folder upload -->
+      <input
+        type="file"
+        webkitdirectory
+        class="hidden"
+        onchange={handleFileInputChange}
+      />
 
-  <!-- Hidden folder input for folder upload -->
-  <input
-    type="file"
-    webkitdirectory
-    class="hidden"
-    onchange={handleFileInputChange}
-  />
+      {#if table.getFilteredSelectedRowModel().rows.length > 0}
+        <FileTableBulkActions {table} />
+      {/if}
 
-  {#if table.getFilteredSelectedRowModel().rows.length > 0}
-    <FileTableBulkActions {table} />
-  {/if}
+      <Table.Root>
+        <FileTableHeader {table} />
+        <Table.Body>
+          {#each table.getRowModel().rows as row}
+            <FileTableRow {row} {table} />
+          {/each}
+        </Table.Body>
+      </Table.Root>
 
-  <Table.Root>
-    <FileTableHeader {table} />
-    <Table.Body>
-      {#each table.getRowModel().rows as row}
-        <FileTableRow {row} {table} />
-      {/each}
-    </Table.Body>
-  </Table.Root>
-
-  <FileTableEmptyState isEmpty={!table.getRowModel().rows?.length} />
-</div>
+      <FileTableEmptyState isEmpty={!table.getRowModel().rows?.length} />
+    </div>
+  {/snippet}
+</DragDropZone>
