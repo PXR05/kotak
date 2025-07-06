@@ -4,15 +4,25 @@
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import SunIcon from "@lucide/svelte/icons/sun";
   import MoonIcon from "@lucide/svelte/icons/moon";
+  import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
+  import PanelRightIcon from "@lucide/svelte/icons/panel-right";
   import { toggleMode } from "mode-watcher";
   import * as Avatar from "$lib/components/ui/avatar/index.js";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
   import { useSidebar } from "$lib/components/ui/sidebar/index.js";
   import { page } from "$app/state";
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+  import { settings, updateSidebarSide } from "$lib/stores/settings.svelte.js";
 
   const user = $derived(page.data?.user);
   const sidebar = useSidebar();
+
+  const currentSidebarSide = $derived(settings.getSetting("sidebarSide"));
+
+  function toggleSidebarSide() {
+    const newSide = currentSidebarSide === "left" ? "right" : "left";
+    updateSidebarSide(newSide);
+  }
 </script>
 
 <Sidebar.MenuItem>
@@ -88,6 +98,20 @@
             class="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"
           />
           Theme
+        </DropdownMenu.Item>
+        <DropdownMenu.Item
+          onclick={(e) => {
+            e.preventDefault();
+            toggleSidebarSide();
+          }}
+          onselect={(e) => e.preventDefault()}
+        >
+          {#if currentSidebarSide === "left"}
+            <PanelRightIcon class="h-4 w-4" />
+          {:else}
+            <PanelLeftIcon class="h-4 w-4" />
+          {/if}
+          Sidebar Side
         </DropdownMenu.Item>
       </DropdownMenu.Group>
       <DropdownMenu.Separator />

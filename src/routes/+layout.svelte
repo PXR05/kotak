@@ -9,8 +9,11 @@
   import Breadcrumb from "$lib/components/sidebar/Breadcrumb.svelte";
   import Search from "$lib/components/sidebar/Search.svelte";
   import { page } from "$app/state";
+  import { settings } from "$lib/stores/settings.svelte.js";
 
   let { children } = $props();
+
+  const side = $derived(settings.getSetting("sidebarSide"));
 </script>
 
 <Toaster />
@@ -18,9 +21,11 @@
 <Dialogs />
 
 {#if page.data.user}
-  <Sidebar.Provider class="select-none">
-    <AppSidebar />
-    <Sidebar.Inset class="py-2 pr-2 gap-2">
+  <Sidebar.Provider
+    class="select-none {side === 'left' ? 'flex-row' : 'flex-row-reverse'}"
+  >
+    <AppSidebar {side} />
+    <Sidebar.Inset class="py-2 gap-2 {side === 'left' ? 'pr-2' : 'pl-2'}">
       <header
         class="flex h-16 shrink-0 items-center gap-2 bg-sidebar rounded-lg border border-sidebar-border shadow-sm"
       >
