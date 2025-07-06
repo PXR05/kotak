@@ -13,15 +13,15 @@
   let { form }: { form: ActionData } = $props();
 
   let loading = $state(false);
+  let password = $state("");
+  let confirmPassword = $state("");
 
-  function handleSubmit(e: {
-    action: URL;
-    formData: FormData;
-    formElement: HTMLFormElement;
-    controller: AbortController;
-    submitter: HTMLElement | null;
-    cancel: () => void;
-  }): ReturnType<SubmitFunction> {
+  const passwordsMatch = $derived(
+    password.length >= 6 && password === confirmPassword
+  );
+  const canSubmit = $derived(passwordsMatch && !loading);
+
+  function handleSubmit(): ReturnType<SubmitFunction> {
     loading = true;
     return async ({ result }) => {
       switch (result.type) {
@@ -73,15 +73,30 @@
             type="password"
             required
             placeholder="Create a password"
+            bind:value={password}
           />
           <p class="text-xs text-muted-foreground">
             Password must be at least 6 characters long
           </p>
         </div>
+        <div class="space-y-2">
+          <Label for="confirm-password">Confirm Password</Label>
+          <Input
+            id="confirm-password"
+            name="confirm-password"
+            type="password"
+            required
+            placeholder="Confirm your password"
+            bind:value={confirmPassword}
+          />
+          {#if confirmPassword.length > 0 && !passwordsMatch}
+            <p class="text-xs text-destructive">Passwords do not match</p>
+          {/if}
+        </div>
         {#if form?.message}
           <div class="text-sm text-destructive text-center">{form.message}</div>
         {/if}
-        <Button type="submit" class="w-full" disabled={loading}>
+        <Button type="submit" class="w-full" disabled={!canSubmit}>
           {#if loading}
             <LoaderIcon class="animate-spin size-4" />
           {/if}

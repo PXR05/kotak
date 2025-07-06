@@ -14,14 +14,7 @@
 
   let loading = $state(false);
 
-  function handleSubmit(e: {
-    action: URL;
-    formData: FormData;
-    formElement: HTMLFormElement;
-    controller: AbortController;
-    submitter: HTMLElement | null;
-    cancel: () => void;
-  }): ReturnType<SubmitFunction> {
+  function handleSubmit(): ReturnType<SubmitFunction> {
     loading = true;
     return async ({ result }) => {
       switch (result.type) {
