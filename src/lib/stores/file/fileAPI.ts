@@ -1,5 +1,6 @@
 import { invalidateAll } from "$app/navigation";
 import type { FileItem } from "$lib/types/file.js";
+import type { TrashedItem } from "$lib/types/file.js";
 
 export interface CreateFolderOptions {
   name: string;
@@ -117,6 +118,161 @@ export const fileAPI = {
       }
     } catch (error) {
       console.error("Failed to delete item:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Ensure the __trash__ folder exists and return its ID
+   */
+  async ensureTrashFolder(): Promise<string> {
+    try {
+      const response = await fetch("/api/folders?getTrash=true");
+
+      if (response.ok) {
+        const trashFolder = await response.json();
+        return trashFolder.id;
+      } else {
+        const errorText = await response.text();
+        throw new Error(`Failed to get trash folder: ${errorText}`);
+      }
+    } catch (error) {
+      console.error("Failed to ensure trash folder:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Move item to trash folder
+   */
+  async trashItem(item: FileItem): Promise<void> {
+    try {
+      const trashFolderId = await this.ensureTrashFolder();
+
+      const trashRecord = {
+        itemId: item.id,
+        itemType: item.type,
+        originalFolderId: item.type === "file" ? item.folderId : undefined,
+        originalParentId: item.type === "folder" ? item.parentId : undefined,
+        name: item.name,
+      };
+
+      const recordResponse = await fetch("/api/trash/record", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(trashRecord),
+      });
+
+      if (!recordResponse.ok) {
+        const errorText = await recordResponse.text();
+        throw new Error(`Failed to record in trash: ${errorText}`);
+      }
+
+      const result = await this.moveItemToFolder(item, trashFolderId);
+
+      if (!result.success) {
+        throw new Error(result.reason || "Failed to move item to trash");
+      }
+
+      await invalidateAll();
+    } catch (error) {
+      console.error("Failed to trash item:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all trashed items
+   */
+  async getTrashedItems(): Promise<TrashedItem[]> {
+    try {
+      const response = await fetch("/api/trash");
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to get trashed items: ${errorText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Failed to get trashed items:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Restore item from trash
+   */
+  async restoreItem(itemId: string): Promise<void> {
+    try {
+      const response = await fetch("/api/trash", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "restore",
+          itemId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to restore item: ${errorText}`);
+      }
+
+      await invalidateAll();
+    } catch (error) {
+      console.error("Failed to restore item:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Permanently delete item from trash
+   */
+  async permanentlyDeleteItem(itemId: string): Promise<void> {
+    try {
+      const response = await fetch("/api/trash", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "permanentDelete",
+          itemId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to permanently delete item: ${errorText}`);
+      }
+
+      await invalidateAll();
+    } catch (error) {
+      console.error("Failed to permanently delete item:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Empty entire trash
+   */
+  async emptyTrash(): Promise<void> {
+    try {
+      const response = await fetch("/api/trash", {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to empty trash: ${errorText}`);
+      }
+
+      await invalidateAll();
+    } catch (error) {
+      console.error("Failed to empty trash:", error);
       throw error;
     }
   },

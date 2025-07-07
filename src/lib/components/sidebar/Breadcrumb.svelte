@@ -9,6 +9,7 @@
 
   const breadcrumbs = $derived(page.data?.breadcrumbs || []);
   const isMobile = new IsMobile();
+  const isTrashPage = $derived(page.route?.id === "/trash");
 
   const items = $derived([
     { href: "/", label: "", isHome: true },
@@ -31,7 +32,14 @@
       </Breadcrumb.Link>
     </Breadcrumb.Item>
 
-    {#if breadcrumbs.length > 0}
+    {#if isTrashPage}
+      <Breadcrumb.Separator />
+      <Breadcrumb.Item>
+        <Breadcrumb.Page class="flex items-center gap-2">
+          Trash
+        </Breadcrumb.Page>
+      </Breadcrumb.Item>
+    {:else if breadcrumbs.length > 0}
       <Breadcrumb.Separator />
 
       {#if breadcrumbs.length > ITEMS_TO_DISPLAY - 1}

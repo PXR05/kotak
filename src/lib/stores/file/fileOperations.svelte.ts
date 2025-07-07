@@ -67,6 +67,14 @@ export const fileOperations = {
   },
 
   /**
+   * Handle moving an item to trash
+   */
+  async handleTrash(item: FileItem) {
+    await fileAPI.trashItem(item);
+    selectionUtils.removeFromSelection(item);
+  },
+
+  /**
    * Handle creating a new folder
    */
   async handleCreateFolder(name: string) {
@@ -122,17 +130,17 @@ export const fileOperations = {
           callback?.();
         });
         break;
-      case "delete":
+      case "trash":
         openConfirmationDialog(
           {
-            title: `Delete ${item.type}`,
-            description: `Are you sure you want to delete "${item.name}"? This action cannot be undone.`,
-            confirmText: "Delete",
+            title: `Move ${item.type} to trash`,
+            description: `Are you sure you want to move "${item.name}" to trash?`,
+            confirmText: "Move to Trash",
             cancelText: "Cancel",
             variant: "destructive",
           },
           async () => {
-            await this.handleDelete(item);
+            await this.handleTrash(item);
             callback?.();
           }
         );
@@ -208,21 +216,21 @@ export const fileOperations = {
     const itemCount = selectedItems.length;
     openConfirmationDialog(
       {
-        title: `Delete ${itemCount} items`,
-        description: `Are you sure you want to delete ${itemCount} selected items? This action cannot be undone.`,
-        confirmText: "Delete All",
+        title: `Move ${itemCount} items to trash`,
+        description: `Are you sure you want to move ${itemCount} selected items to trash?`,
+        confirmText: "Move to Trash",
         cancelText: "Cancel",
         variant: "destructive",
       },
       async () => {
         try {
-          const deletePromises = selectedItems.map((item) =>
-            this.handleDelete(item)
+          const trashPromises = selectedItems.map((item) =>
+            this.handleTrash(item)
           );
-          await Promise.all(deletePromises);
+          await Promise.all(trashPromises);
           this.clearSelection();
         } catch (error) {
-          console.error("Failed to delete items:", error);
+          console.error("Failed to trash items:", error);
         }
       }
     );
@@ -299,6 +307,52 @@ export const fileOperations = {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
       toast.error(`Failed to share ${item.type}: ${errorMessage}`);
+      throw error;
+    }
+  },
+
+  /**
+   * Trash operations
+   */
+  async getTrashedItems() {
+    return await fileAPI.getTrashedItems();
+  },
+
+  async restoreItem(itemId: string) {
+    try {
+      await fileAPI.restoreItem(itemId);
+      toast.success("Item restored successfully");
+    } catch (error) {
+      console.error("Failed to restore item:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error(`Failed to restore item: ${errorMessage}`);
+      throw error;
+    }
+  },
+
+  async permanentlyDeleteItem(itemId: string) {
+    try {
+      await fileAPI.permanentlyDeleteItem(itemId);
+      toast.success("Item permanently deleted");
+    } catch (error) {
+      console.error("Failed to permanently delete item:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error(`Failed to permanently delete item: ${errorMessage}`);
+      throw error;
+    }
+  },
+
+  async emptyTrash() {
+    try {
+      await fileAPI.emptyTrash();
+      toast.success("Trash emptied successfully");
+    } catch (error) {
+      console.error("Failed to empty trash:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error(`Failed to empty trash: ${errorMessage}`);
       throw error;
     }
   },

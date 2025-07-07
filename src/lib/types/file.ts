@@ -20,7 +20,7 @@ export type FileAction =
   | "rename"
   | "move"
   | "share"
-  | "delete";
+  | "trash";
 
 export interface UploadableFile {
   file: File;
@@ -28,4 +28,14 @@ export interface UploadableFile {
   size: number;
   type: string;
   relativePath?: string;
+}
+
+export interface TrashedItem {
+  id: string;
+  itemId: string;
+  itemType: "file" | "folder";
+  originalFolderId?: string | null;
+  originalParentId?: string | null;
+  trashedAt: Date;
+  name: string;
 }

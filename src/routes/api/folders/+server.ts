@@ -3,11 +3,30 @@ import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { and, eq, ne } from "drizzle-orm";
-import { ensureRootFolder } from "$lib/server/folderUtils";
+import { ensureRootFolder, ensureTrashFolder } from "$lib/server/folderUtils";
 
-export const GET: RequestHandler = async ({ locals }) => {
+export const GET: RequestHandler = async ({ locals, url }) => {
   if (!locals.user) {
     throw error(401, "Unauthorized");
+  }
+
+  const getTrash = url.searchParams.get("getTrash");
+  if (getTrash === "true") {
+    try {
+      const trashFolder = await ensureTrashFolder(locals.user.id);
+      return json({
+        id: trashFolder.id,
+        name: trashFolder.name,
+        type: "folder" as const,
+        ownerId: trashFolder.ownerId,
+        parentId: trashFolder.parentId,
+        createdAt: trashFolder.createdAt,
+        updatedAt: trashFolder.updatedAt,
+      });
+    } catch (err) {
+      console.error("Error ensuring trash folder:", err);
+      throw error(500, "Failed to get trash folder");
+    }
   }
 
   try {

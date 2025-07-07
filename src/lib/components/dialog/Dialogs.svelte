@@ -1,7 +1,7 @@
 <script>
   import ConfirmationDialog from "./ConfirmationDialog.svelte";
   import CreateFolderDialog from "./CreateFolderDialog.svelte";
-  import FilePreviewDialog from "./FilePreviewDialog.svelte";
+  import { FilePreviewDialog } from "./filepreview/index.js";
   import RenameDialog from "./RenameDialog.svelte";
   import MoveDialog from "./MoveDialog.svelte";
   import ShareDialog from "./ShareDialog.svelte";

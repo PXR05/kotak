@@ -46,7 +46,7 @@ const actions: FileActionConfig[] = $derived([
     icon: MoveIcon,
   },
   {
-    id: "delete",
+    id: "trash",
     label: "Move to Trash",
     icon: TrashIcon,
     variant: "destructive",

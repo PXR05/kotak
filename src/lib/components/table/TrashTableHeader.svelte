@@ -1,18 +1,20 @@
 <script lang="ts">
   import { FlexRender } from "$lib/components/ui/data-table/index.js";
   import * as Table from "$lib/components/ui/table/index.js";
-  import type { FileItem } from "$lib/types/file.js";
+  import type { TrashedItem } from "$lib/types/file.js";
   import type { Table as TanStackTable } from "@tanstack/table-core";
-  import TableContextMenu from "./TableContextMenu.svelte";
+  import TrashTableContextMenu from "./TrashTableContextMenu.svelte";
 
   let {
     table,
+    onContextAction,
   }: {
-    table: TanStackTable<FileItem>;
+    table: TanStackTable<TrashedItem>;
+    onContextAction: (actionId: string) => void;
   } = $props();
 </script>
 
-<TableContextMenu>
+<TrashTableContextMenu onAction={onContextAction}>
   {#snippet children({ props })}
     <Table.Header {...props} class="sticky top-0 bg-sidebar">
       {#each table.getHeaderGroups() as headerGroup}
@@ -39,7 +41,7 @@
       {/each}
     </Table.Header>
   {/snippet}
-</TableContextMenu>
+</TrashTableContextMenu>
 
 <style>
   :global(.thead-sep::after) {

@@ -84,7 +84,7 @@ export function createFileTableColumns(
         return item.type === "folder" ? "-" : formatFileSize(item.size || 0);
       },
       enableSorting: true,
-      sortingFn: (rowA, rowB, columnId) => {
+      sortingFn: (rowA, rowB) => {
         const a = rowA.original;
         const b = rowB.original;
         if (a.type === "folder" && b.type !== "folder") return -1;

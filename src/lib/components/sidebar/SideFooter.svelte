@@ -10,7 +10,7 @@
   <Sidebar.GroupContent>
     <Sidebar.Menu class="flex flex-col gap-2">
       <Sidebar.MenuItem>
-        <Sidebar.MenuButton>
+        <Sidebar.MenuButton data-active={page.url.pathname === "/trash"}>
           {#snippet child({ props })}
             <a href="/trash" {...props}>
               <TrashIcon />

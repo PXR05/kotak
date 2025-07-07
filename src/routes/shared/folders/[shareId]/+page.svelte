@@ -15,7 +15,7 @@
     TableRow,
   } from "$lib/components/ui/table/index.js";
   import { FolderIcon, FileIcon, DownloadIcon, EyeIcon } from "@lucide/svelte";
-  import FilePreviewDialog from "$lib/components/dialog/FilePreviewDialog.svelte";
+  import { FilePreviewDialog } from "$lib/components/dialog/filepreview/index.js";
   import type { FileItem } from "$lib/types/file.js";
 
   let { data } = $props();

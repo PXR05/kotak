@@ -1,5 +1,5 @@
 <script lang="ts">
-  import FilePreviewDialog from "$lib/components/dialog/FilePreviewDialog.svelte";
+  import { FilePreviewDialog } from "$lib/components/dialog/filepreview/index.js";
   import type { FileItem } from "$lib/types/file.js";
   import { onMount } from "svelte";
 

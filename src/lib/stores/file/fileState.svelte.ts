@@ -4,7 +4,9 @@ import type { FileItem } from "$lib/types/file.js";
  * Core file management state
  */
 export let selectedItems = $state<FileItem[]>([]);
-export let lastSelectedIndex = $state<{ value: number | null }>({ value: null });
+export let lastSelectedIndex = $state<{ value: number | null }>({
+  value: null,
+});
 export let currentFolderId = $state<{ value: string | null }>({ value: null });
 export let currentUserId = $state<{ value: string | null }>({ value: null });
 
@@ -30,14 +32,16 @@ export const selectionUtils = {
   },
 
   removeFromSelection(item: FileItem) {
-    const index = selectedItems.findIndex(selected => selected.id === item.id);
+    const index = selectedItems.findIndex(
+      (selected) => selected.id === item.id
+    );
     if (index > -1) {
       selectedItems.splice(index, 1);
     }
   },
 
   isSelected(item: FileItem): boolean {
-    return selectedItems.some(selected => selected.id === item.id);
+    return selectedItems.some((selected) => selected.id === item.id);
   },
 
   toggleSelection(item: FileItem) {
@@ -46,7 +50,7 @@ export const selectionUtils = {
     } else {
       selectedItems.push(item);
     }
-  }
+  },
 };
 
 /**
@@ -59,5 +63,5 @@ export const contextUtils = {
 
   setCurrentUser(userId: string | null) {
     currentUserId.value = userId;
-  }
+  },
 };

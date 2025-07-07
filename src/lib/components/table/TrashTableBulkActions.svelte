@@ -1,16 +1,19 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button/index.js";
-  import { isDownloading, selectedItems, fileOperations } from "$lib/stores";
-  import { DownloadIcon, TrashIcon, XIcon, MoveIcon } from "@lucide/svelte";
+  import { UndoIcon, XIcon, Trash2Icon } from "@lucide/svelte";
   import { quintOut } from "svelte/easing";
   import { fly } from "svelte/transition";
   import type { Table } from "@tanstack/table-core";
-  import type { FileItem } from "$lib/types/file.js";
+  import type { TrashedItem } from "$lib/types/file.js";
 
   let {
     table,
+    onBulkRestore,
+    onBulkDelete,
   }: {
-    table: Table<FileItem>;
+    table: Table<TrashedItem>;
+    onBulkRestore: (items: TrashedItem[]) => void;
+    onBulkDelete: (items: TrashedItem[]) => void;
   } = $props();
 
   const selectedCount = $derived(
@@ -18,25 +21,17 @@
   );
   const totalCount = $derived(table.getFilteredRowModel().rows.length);
 
-  function handleBulkDownload() {
-    const selectedFiles = getSelectedItems();
-    if (selectedFiles.length === 0) return;
-
-    updateSelectedItems(selectedFiles);
-    fileOperations.bulkDownload();
-  }
-
-  function handleBulkMove() {
-    const selectedFiles = getSelectedItems();
-    if (selectedFiles.length === 0) return;
-
-    updateSelectedItems(selectedFiles);
-    fileOperations.bulkMove();
+  function handleBulkRestore() {
+    const selectedItems = getSelectedItems();
+    if (selectedItems.length === 0) return;
+    onBulkRestore(selectedItems);
     table.toggleAllPageRowsSelected(false);
   }
 
   function handleBulkDelete() {
-    fileOperations.bulkDelete();
+    const selectedItems = getSelectedItems();
+    if (selectedItems.length === 0) return;
+    onBulkDelete(selectedItems);
     table.toggleAllPageRowsSelected(false);
   }
 
@@ -44,12 +39,8 @@
     table.toggleAllPageRowsSelected(false);
   }
 
-  function getSelectedItems(): FileItem[] {
+  function getSelectedItems(): TrashedItem[] {
     return table.getFilteredSelectedRowModel().rows.map((row) => row.original);
-  }
-
-  function updateSelectedItems(items: FileItem[]) {
-    selectedItems.splice(0, selectedItems.length, ...items);
   }
 </script>
 
@@ -74,21 +65,12 @@
     </span>
   </div>
   <div class="flex items-center gap-2">
-    <Button
-      variant="outline"
-      size="sm"
-      onclick={handleBulkDownload}
-      disabled={isDownloading.value}
-    >
-      <DownloadIcon class="size-4 mr-2" />
-      {isDownloading.value ? "Creating Zip..." : `Download selected`}
+    <Button variant="outline" size="sm" onclick={handleBulkRestore}>
+      <UndoIcon class="size-4 mr-2" />
+      Restore selected
     </Button>
-    <Button variant="outline" size="sm" onclick={handleBulkMove}>
-      <MoveIcon class="size-4 mr-2" />
-      Move selected
-    </Button>
-    <Button variant="outline" size="sm" onclick={handleBulkDelete}>
-      <TrashIcon class="size-4 mr-2" />
+    <Button variant="destructive" size="sm" onclick={handleBulkDelete}>
+      <Trash2Icon class="size-4 mr-2" />
       Delete selected
     </Button>
   </div>

@@ -16,6 +16,7 @@ export const userRelations = relations(user, ({ many }) => ({
   files: many(file),
   sharedFolders: many(folderShare),
   sharedFiles: many(fileShare),
+  trashedItems: many(trashedItem),
 }));
 
 export const session = sqliteTable("session", {
@@ -107,7 +108,7 @@ export const folderShare = sqliteTable("folder_share", {
   sharedBy: text("shared_by")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  permissions: text("permissions").notNull().default("read"), 
+  permissions: text("permissions").notNull().default("read"),
   isPublic: integer("is_public", { mode: "boolean" }).notNull().default(false),
   expiresAt: integer("expires_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" })
@@ -197,6 +198,36 @@ export const fileShareRecipientRelations = relations(
   })
 );
 
+export const trashedItem = sqliteTable("trashed_item", {
+  id: text("id").primaryKey(),
+  itemId: text("item_id").notNull(),
+  itemType: text("item_type").notNull(),
+  originalFolderId: text("original_folder_id"),
+  originalParentId: text("original_parent_id"),
+  ownerId: text("owner_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  trashedAt: integer("trashed_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  name: text("name").notNull(),
+});
+
+export const trashedItemRelations = relations(trashedItem, ({ one }) => ({
+  owner: one(user, {
+    fields: [trashedItem.ownerId],
+    references: [user.id],
+  }),
+  originalFolder: one(folder, {
+    fields: [trashedItem.originalFolderId],
+    references: [folder.id],
+  }),
+  originalParent: one(folder, {
+    fields: [trashedItem.originalParentId],
+    references: [folder.id],
+  }),
+}));
+
 export type Session = typeof session.$inferSelect;
 export type User = typeof user.$inferSelect;
 export type Folder = typeof folder.$inferSelect;
@@ -205,3 +236,4 @@ export type FolderShare = typeof folderShare.$inferSelect;
 export type FileShare = typeof fileShare.$inferSelect;
 export type FolderShareRecipient = typeof folderShareRecipient.$inferSelect;
 export type FileShareRecipient = typeof fileShareRecipient.$inferSelect;
+export type TrashedItem = typeof trashedItem.$inferSelect;
