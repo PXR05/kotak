@@ -5,6 +5,10 @@ import { openRenameDialog } from "../dialogs/renameDialog.svelte.js";
 import { openCreateFolderDialog } from "../dialogs/createFolderDialog.svelte.js";
 import { openFilePreviewDialog } from "../dialogs/filePreviewDialog.svelte.js";
 import { openMoveDialog } from "../dialogs/moveDialog.svelte.js";
+import {
+  openShareDialog,
+  type ShareData,
+} from "../dialogs/shareDialog.svelte.js";
 import { toast } from "svelte-sonner";
 
 import {
@@ -16,6 +20,7 @@ import {
 import { fileAPI, type CreateFolderOptions } from "./fileAPI.js";
 import { uploadUtils } from "./uploadUtils.js";
 import { downloadUtils } from "./downloadUtils.js";
+import { capitalize } from "$lib/utils/format.js";
 
 export {
   selectedItems,
@@ -131,6 +136,12 @@ export const fileOperations = {
             callback?.();
           }
         );
+        break;
+      case "share":
+        openShareDialog(item, async (shareData) => {
+          await this.handleShare(item, shareData);
+          callback?.();
+        });
         break;
       default:
         console.warn(`Unknown action: ${action}`);
@@ -258,4 +269,36 @@ export const fileOperations = {
    */
   setCurrentFolder: contextUtils.setCurrentFolder,
   setCurrentUser: contextUtils.setCurrentUser,
+
+  /**
+   * Handle sharing an item
+   */
+  async handleShare(item: FileItem, shareData: ShareData) {
+    try {
+      const result = await fileAPI.shareItem(item, shareData);
+      if (result.success) {
+        if (result.publicUrl) {
+          toast.success(
+            `${
+              result.message || `${capitalize(item.type)} shared successfully`
+            }! Public link copied to clipboard.`
+          );
+          await navigator.clipboard.writeText(result.publicUrl);
+        } else {
+          toast.success(
+            result.message ||
+              `${capitalize(
+                item.type
+              )} shared successfully with specified users.`
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Failed to share item:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error(`Failed to share ${item.type}: ${errorMessage}`);
+      throw error;
+    }
+  },
 };

@@ -15,6 +15,7 @@
     VideoIcon,
     MusicIcon,
     LoaderIcon,
+    Share2Icon,
   } from "@lucide/svelte";
   import {
     closeFilePreviewDialog,
@@ -23,16 +24,40 @@
   } from "$lib/stores";
   import { formatFileSize } from "$lib/utils/format";
 
+  // Props for external control (used by shared files)
+  let {
+    open: externalOpen = undefined,
+    file: externalFile = undefined,
+    onClose: externalOnClose = undefined,
+    getFileUrl: externalGetFileUrl = undefined,
+    showActions = true,
+  }: {
+    open?: boolean;
+    file?: FileItem | null;
+    onClose?: () => void;
+    getFileUrl?: (file: FileItem) => string | null;
+    showActions?: boolean;
+  } = $props();
+
   let zoom = $state(100);
   let rotation = $state(0);
   let isLoading = $state(false);
   let error = $state<string | null>(null);
 
-  const file = $derived(filePreviewDialogData.file);
-  const open = $derived(filePreviewDialogData.open);
+  // Use external props if provided, otherwise fall back to store
+  const file = $derived(
+    externalFile !== undefined ? externalFile : filePreviewDialogData.file
+  );
+  const open = $derived(
+    externalOpen !== undefined ? externalOpen : filePreviewDialogData.open
+  );
 
   function handleClose() {
-    closeFilePreviewDialog();
+    if (externalOnClose) {
+      externalOnClose();
+    } else {
+      closeFilePreviewDialog();
+    }
     zoom = 100;
     rotation = 0;
     error = null;
@@ -58,10 +83,17 @@
 
   function handleDownload() {
     if (file && file.storageKey) {
-      window.open(
-        `/api/files/${encodeURIComponent(file.storageKey)}?download=true`,
-        "_blank"
-      );
+      let downloadUrl: string;
+
+      if (externalGetFileUrl) {
+        // For shared files, use the external URL with download parameter
+        downloadUrl = `${externalGetFileUrl(file)}?download=true`;
+      } else {
+        // For regular files
+        downloadUrl = `/api/files/${encodeURIComponent(file.storageKey)}?download=true`;
+      }
+
+      window.open(downloadUrl, "_blank");
     }
   }
 
@@ -105,6 +137,11 @@
   } as const;
 
   function getFileUrl(file: FileItem): string | null {
+    // Use external getFileUrl function if provided
+    if (externalGetFileUrl) {
+      return externalGetFileUrl(file);
+    }
+
     return file.storageKey
       ? `/api/files/${encodeURIComponent(file.storageKey)}`
       : null;
@@ -220,16 +257,28 @@
               <DownloadIcon class="size-4" />
               Download
             </Button>
-            <span class={styles.separator}></span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onclick={() => handleAction("delete")}
-              class="text-destructive hover:text-destructive h-9"
-            >
-              <TrashIcon class="size-4" />
-              Delete
-            </Button>
+            {#if showActions}
+              <span class={styles.separator}></span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onclick={() => handleAction("share")}
+                class="h-9"
+              >
+                <Share2Icon class="size-4" />
+                Share
+              </Button>
+              <span class={styles.separator}></span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onclick={() => handleAction("delete")}
+                class="text-destructive hover:text-destructive h-9"
+              >
+                <TrashIcon class="size-4" />
+                Delete
+              </Button>
+            {/if}
           </div>
 
           <Button

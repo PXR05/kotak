@@ -9,6 +9,7 @@
   import { goto } from "$app/navigation";
   import { toast } from "svelte-sonner";
   import { LoaderIcon } from "@lucide/svelte";
+  import { page } from "$app/state";
 
   let { form }: { form: ActionData } = $props();
 
@@ -19,7 +20,8 @@
     return async ({ result }) => {
       switch (result.type) {
         case "redirect":
-          goto(result.location, {
+        const target = page.url.searchParams.get("redirect");
+          goto(target ?? result.location, {
             invalidateAll: true,
           });
           break;
@@ -44,7 +46,7 @@
 <div class="min-h-screen flex items-center justify-center bg-background px-4">
   <Card.Root class="w-full max-w-md">
     <Card.Header class="text-center">
-      <Card.Title class="text-2xl">Sign In</Card.Title>
+      <Card.Title class="text-2xl font-serif font-normal">Sign In</Card.Title>
     </Card.Header>
     <Card.Content>
       <form method="post" use:enhance={handleSubmit} class="space-y-6">

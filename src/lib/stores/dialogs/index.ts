@@ -6,3 +6,4 @@ export * from "./createFolderDialog.svelte.js";
 export * from "./filePreviewDialog.svelte.js";
 export * from "./moveDialog.svelte.js";
 export * from "./renameDialog.svelte.js";
+export * from "./shareDialog.svelte.js";

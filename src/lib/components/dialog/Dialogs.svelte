@@ -4,6 +4,7 @@
   import FilePreviewDialog from "./FilePreviewDialog.svelte";
   import RenameDialog from "./RenameDialog.svelte";
   import MoveDialog from "./MoveDialog.svelte";
+  import ShareDialog from "./ShareDialog.svelte";
 </script>
 
 <FilePreviewDialog />
@@ -15,3 +16,5 @@
 <CreateFolderDialog />
 
 <MoveDialog />
+
+<ShareDialog />
