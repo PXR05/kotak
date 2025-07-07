@@ -280,4 +280,36 @@ export const fileAPI = {
       throw error;
     }
   },
+
+  /**
+   * Delete a share for a file or folder
+   */
+  async deleteShare(item: FileItem): Promise<void> {
+    try {
+      const endpoint =
+        item.type === "file"
+          ? `/api/files/${item.id}/share`
+          : `/api/folders/${item.id}/share`;
+
+      const response = await fetch(endpoint, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        return;
+      } else {
+        let errorText;
+        try {
+          const errorData = await response.json();
+          errorText = errorData.message || JSON.stringify(errorData);
+        } catch {
+          errorText = await response.text();
+        }
+        throw new Error(`Failed to delete share: ${errorText}`);
+      }
+    } catch (error) {
+      console.error("Failed to delete share:", error);
+      throw error;
+    }
+  },
 };

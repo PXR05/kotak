@@ -157,3 +157,62 @@ export const GET: RequestHandler = async ({ params, locals }) => {
     expiresAt: existingShare.expiresAt?.toISOString(),
   });
 };
+
+export const DELETE: RequestHandler = async ({ params, locals }) => {
+  if (!locals.user) {
+    throw error(401, "Unauthorized");
+  }
+
+  const folderId = params.id;
+  if (!folderId) {
+    throw error(400, "Missing folder ID");
+  }
+
+  const [folder] = await db
+    .select()
+    .from(table.folder)
+    .where(
+      and(
+        eq(table.folder.id, folderId),
+        eq(table.folder.ownerId, locals.user.id)
+      )
+    );
+
+  if (!folder) {
+    throw error(404, "Folder not found or access denied");
+  }
+
+  if (folder.name === "__root__" || folder.name === "__trash__") {
+    throw error(400, "Cannot delete shares for system folders");
+  }
+
+  try {
+    const [existingShare] = await db
+      .select()
+      .from(table.folderShare)
+      .where(
+        and(
+          eq(table.folderShare.folderId, folder.id),
+          eq(table.folderShare.sharedBy, locals.user.id)
+        )
+      );
+
+    if (!existingShare) {
+      throw error(404, "No share found to delete");
+    }
+
+    await db
+      .delete(table.folderShareRecipient)
+      .where(eq(table.folderShareRecipient.shareId, existingShare.id));
+
+    await db.delete(table.folderShare).where(eq(table.folderShare.id, existingShare.id));
+
+    return json({
+      success: true,
+      message: "Folder share deleted successfully",
+    });
+  } catch (err) {
+    console.error("Failed to delete folder share:", err);
+    throw error(500, "Failed to delete folder share");
+  }
+};

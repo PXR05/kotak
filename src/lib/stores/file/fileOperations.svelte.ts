@@ -139,8 +139,9 @@ export const fileOperations = {
         break;
       case "share":
         openShareDialog(item, async (shareData) => {
-          await this.handleShare(item, shareData);
+          const result = await this.handleShare(item, shareData);
           callback?.();
+          return result || { shareId: "", publicUrl: undefined };
         });
         break;
       default:
@@ -281,9 +282,8 @@ export const fileOperations = {
           toast.success(
             `${
               result.message || `${capitalize(item.type)} shared successfully`
-            }! Public link copied to clipboard.`
+            }`
           );
-          await navigator.clipboard.writeText(result.publicUrl);
         } else {
           toast.success(
             result.message ||
@@ -292,6 +292,7 @@ export const fileOperations = {
               )} shared successfully with specified users.`
           );
         }
+        return { shareId: result.shareId, publicUrl: result.publicUrl };
       }
     } catch (error) {
       console.error("Failed to share item:", error);

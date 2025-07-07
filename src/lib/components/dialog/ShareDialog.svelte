@@ -12,17 +12,29 @@
   import { Label } from "$lib/components/ui/label/index.js";
   import { Switch } from "$lib/components/ui/switch/index.js";
   import { Badge } from "$lib/components/ui/badge/index.js";
-  import { Share2Icon, XIcon, PlusIcon, LoaderIcon } from "@lucide/svelte";
+
+  import {
+    Share2Icon,
+    XIcon,
+    PlusIcon,
+    LoaderIcon,
+    ChevronRightIcon,
+    CopyIcon,
+    CheckIcon,
+  } from "@lucide/svelte";
   import {
     closeShareDialog,
     shareDialogData,
     type ShareData,
   } from "$lib/stores";
+  import { slide } from "svelte/transition";
+  import { page } from "$app/state";
 
   const open = $derived(shareDialogData.open);
   const item = $derived(shareDialogData.item);
   const loading = $derived(shareDialogData.loading);
   const existingShareId = $derived(shareDialogData.existingShareId);
+  const existingShareLink = $derived(shareDialogData.existingShareLink);
 
   let sharingEnabled = $state(false);
   let emails = $state<string[]>([]);
@@ -31,6 +43,9 @@
   let expirationInput = $state("");
   let isSubmitting = $state(false);
   let error = $state<string | null>(null);
+  let isCollapsibleOpen = $state(false);
+  let shareLink = $state<string | null>(null);
+  let copySuccess = $state(false);
 
   $effect(() => {
     if (open && !loading) {
@@ -42,6 +57,9 @@
       expirationInput = expiresAt ? expiresAt.toISOString().split("T")[0] : "";
       error = null;
       isSubmitting = false;
+      isCollapsibleOpen = false;
+      shareLink = existingShareLink;
+      copySuccess = false;
     }
   });
 
@@ -53,6 +71,10 @@
 
   function handleCancel() {
     closeShareDialog();
+    resetState();
+  }
+
+  function resetState() {
     sharingEnabled = false;
     emails = [];
     emailInput = "";
@@ -60,6 +82,14 @@
     expirationInput = "";
     error = null;
     isSubmitting = false;
+    isCollapsibleOpen = false;
+    shareLink = null;
+    copySuccess = false;
+  }
+
+  function isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   }
 
   function addEmail() {
@@ -85,17 +115,8 @@
     emails = emails.filter((email) => email !== emailToRemove);
   }
 
-  function isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  }
-
   function handleExpirationChange() {
-    if (expirationInput) {
-      expiresAt = new Date(expirationInput);
-    } else {
-      expiresAt = null;
-    }
+    expiresAt = expirationInput ? new Date(expirationInput) : null;
   }
 
   function handleKeyDown(event: KeyboardEvent) {
@@ -105,18 +126,60 @@
     }
   }
 
+  async function copyShareLink() {
+    if (!shareLink) return;
+
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      copySuccess = true;
+      setTimeout(() => {
+        copySuccess = false;
+      }, 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  }
+
   async function handleSubmit() {
     if (!item || !shareDialogData.callback) return;
 
     error = null;
+
+    if (!sharingEnabled && existingShareId) {
+      return await deleteShare();
+    }
 
     if (!sharingEnabled) {
       error = "Please enable sharing first";
       return;
     }
 
-    isSubmitting = true;
+    await createOrUpdateShare();
+  }
 
+  async function deleteShare() {
+    isSubmitting = true;
+    try {
+      const { fileAPI } = await import("$lib/stores/file/fileAPI.js");
+      await fileAPI.deleteShare(item!);
+      shareLink = null;
+      shareDialogData.existingShareId = null;
+      shareDialogData.existingShareLink = null;
+      shareDialogData.isPublic = false;
+      shareDialogData.emails = [];
+      shareDialogData.expiresAt = null;
+      isCollapsibleOpen = false;
+      error = null;
+    } catch (err) {
+      console.error("Failed to delete share:", err);
+      error = err instanceof Error ? err.message : "Failed to delete share";
+    } finally {
+      isSubmitting = false;
+    }
+  }
+
+  async function createOrUpdateShare() {
+    isSubmitting = true;
     try {
       const isPublic = emails.length === 0;
       const shareData: ShareData = {
@@ -125,8 +188,20 @@
         expiresAt,
       };
 
-      await shareDialogData.callback(shareData);
-      handleCancel();
+      const result = await shareDialogData.callback!(shareData);
+
+      isCollapsibleOpen = false;
+      shareLink = `${page.url.origin}/shared/${item?.type === "folder" ? "folders" : "files"}/${result.shareId}`;
+
+      if (result.shareId) {
+        shareDialogData.existingShareId = result.shareId;
+        shareDialogData.existingShareLink = shareLink;
+        shareDialogData.isPublic = isPublic;
+        shareDialogData.emails = emails;
+        shareDialogData.expiresAt = expiresAt;
+      }
+
+      error = null;
     } catch (err) {
       console.error("Failed to share:", err);
       error = err instanceof Error ? err.message : "Failed to share item";
@@ -146,8 +221,7 @@
       </DialogTitle>
       <DialogDescription>
         {#if item}
-          {existingShareId ? "Update sharing settings for" : "Share"} "{item.name}"
-          with others by email or create a public link.
+          {existingShareId ? "Update sharing settings for" : "Share"} "{item.name}".
         {/if}
       </DialogDescription>
     </DialogHeader>
@@ -162,7 +236,7 @@
         </div>
       </div>
     {:else}
-      <div class="space-y-4">
+      <div>
         <!-- Enable Sharing Toggle -->
         <div class="flex items-center justify-between">
           <div class="space-y-0.5">
@@ -174,64 +248,117 @@
           <Switch bind:checked={sharingEnabled} />
         </div>
 
-        {#if sharingEnabled}
-          <!-- Email Recipients -->
-          <div class="space-y-2">
-            <Label for="email-input">Share with specific people</Label>
+        {#if shareLink && sharingEnabled}
+          <div class="space-y-2 pt-4">
+            <Label>Share Link</Label>
             <div class="flex gap-2">
               <Input
-                id="email-input"
-                bind:value={emailInput}
-                onkeydown={handleKeyDown}
-                placeholder="Enter email address"
-                type="email"
+                value={shareLink}
+                readonly
+                class="font-mono text-sm"
+                placeholder="Share link will appear here..."
               />
               <Button
-                onclick={addEmail}
-                size="sm"
+                onclick={copyShareLink}
+                size="icon"
                 variant="outline"
-                disabled={!emailInput.trim()}
+                class="shrink-0"
               >
-                <PlusIcon class="size-4" />
+                {#if copySuccess}
+                  <CheckIcon class="size-4" />
+                {:else}
+                  <CopyIcon class="size-4" />
+                {/if}
               </Button>
             </div>
-
-            {#if emails.length > 0}
-              <div class="flex flex-wrap gap-2 mt-2">
-                {#each emails as email}
-                  <Badge variant="secondary" class="flex items-center gap-1">
-                    {email}
-                    <Button
-                      onclick={() => removeEmail(email)}
-                      size="sm"
-                      variant="ghost"
-                      class="h-4 w-4 p-0 hover:bg-transparent"
-                    >
-                      <XIcon class="size-3" />
-                    </Button>
-                  </Badge>
-                {/each}
-              </div>
-            {:else}
-              <p class="text-sm text-muted-foreground">
-                Leave empty to create a public link
+            {#if copySuccess}
+              <p
+                transition:slide={{ duration: 150 }}
+                class="text-sm text-muted-foreground"
+              >
+                Link copied to clipboard!
               </p>
             {/if}
           </div>
+        {/if}
 
-          <!-- Expiration Date -->
-          <div class="space-y-2">
-            <Label for="expiration">Expiration date (optional)</Label>
-            <Input
-              id="expiration"
-              bind:value={expirationInput}
-              onchange={handleExpirationChange}
-              type="date"
-              min={new Date().toISOString().split("T")[0]}
-            />
-            <p class="text-sm text-muted-foreground">
-              Leave empty for no expiration
-            </p>
+        {#if sharingEnabled}
+          <div transition:slide={{ duration: 150 }}>
+            <div>
+              <Button
+                onclick={() => (isCollapsibleOpen = !isCollapsibleOpen)}
+                variant="link"
+                class="w-full justify-start !px-0 py-7"
+              >
+                <ChevronRightIcon
+                  class="size-4 transition-transform duration-150 {isCollapsibleOpen
+                    ? 'rotate-90'
+                    : ''}"
+                />
+                Share Settings
+              </Button>
+
+              {#if isCollapsibleOpen}
+                <div transition:slide={{ duration: 150 }} class="space-y-4">
+                  <!-- Email Recipients -->
+                  <div class="space-y-2">
+                    <Label for="email-input"
+                      >Share with specific people (optional)</Label
+                    >
+                    <div class="flex gap-2">
+                      <Input
+                        id="email-input"
+                        bind:value={emailInput}
+                        onkeydown={handleKeyDown}
+                        placeholder="Enter email address"
+                        type="email"
+                      />
+                      <Button
+                        onclick={addEmail}
+                        size="icon"
+                        variant="outline"
+                        disabled={!emailInput.trim()}
+                      >
+                        <PlusIcon class="size-4" />
+                      </Button>
+                    </div>
+
+                    {#if emails.length > 0}
+                      <div class="flex flex-wrap gap-2 mt-2">
+                        {#each emails as email}
+                          <Badge
+                            variant="secondary"
+                            class="flex items-center gap-1"
+                          >
+                            {email}
+                            <Button
+                              onclick={() => removeEmail(email)}
+                              size="sm"
+                              variant="ghost"
+                              class="h-4 w-4 p-0 hover:bg-transparent"
+                            >
+                              <XIcon class="size-3" />
+                            </Button>
+                          </Badge>
+                        {/each}
+                      </div>
+                    {/if}
+                  </div>
+
+                  <!-- Expiration Date -->
+                  <div class="space-y-2">
+                    <Label for="expiration">Expiration date (optional)</Label>
+                    <Input
+                      id="expiration"
+                      bind:value={expirationInput}
+                      onchange={handleExpirationChange}
+                      type="date"
+                      min={new Date().toISOString().split("T")[0]}
+                    />
+                  </div>
+                </div>
+              {/if}
+            </div>
           </div>
         {/if}
 
@@ -249,14 +376,15 @@
       >
         Cancel
       </Button>
-      <Button
-        onclick={handleSubmit}
-        disabled={isSubmitting || !sharingEnabled || loading}
-      >
+      <Button onclick={handleSubmit} disabled={isSubmitting || loading}>
         {#if isSubmitting}
           <LoaderIcon class="animate-spin size-4" />
         {/if}
-        {existingShareId ? "Update" : "Share"}
+        {!sharingEnabled && existingShareId
+          ? "Remove Share"
+          : existingShareId
+            ? "Update"
+            : "Share"}
       </Button>
     </DialogFooter>
   </DialogContent>

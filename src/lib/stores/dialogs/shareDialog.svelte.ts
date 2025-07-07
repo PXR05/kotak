@@ -1,3 +1,4 @@
+import { page } from "$app/state";
 import type { FileItem } from "$lib/types/file.js";
 import { fileAPI } from "../file/fileAPI.js";
 
@@ -7,9 +8,14 @@ export interface ShareDialogState {
   isPublic: boolean;
   emails: string[];
   expiresAt: Date | null;
-  callback: ((shareData: ShareData) => Promise<void>) | null;
+  callback:
+    | ((
+        shareData: ShareData
+      ) => Promise<{ shareId: string; publicUrl?: string }>)
+    | null;
   loading: boolean;
   existingShareId: string | null;
+  existingShareLink: string | null;
 }
 
 export interface ShareData {
@@ -27,11 +33,22 @@ export const shareDialogData = $state<ShareDialogState>({
   callback: null,
   loading: false,
   existingShareId: null,
+  existingShareLink: null,
 });
+
+function resetShareDialogState() {
+  shareDialogData.isPublic = false;
+  shareDialogData.emails = [];
+  shareDialogData.expiresAt = null;
+  shareDialogData.existingShareId = null;
+  shareDialogData.existingShareLink = null;
+}
 
 export async function openShareDialog(
   item: FileItem,
-  callback: (shareData: ShareData) => Promise<void>
+  callback: (
+    shareData: ShareData
+  ) => Promise<{ shareId: string; publicUrl?: string }>
 ) {
   shareDialogData.open = true;
   shareDialogData.item = item;
@@ -45,18 +62,15 @@ export async function openShareDialog(
       shareDialogData.emails = existingShare.emails;
       shareDialogData.expiresAt = existingShare.expiresAt;
       shareDialogData.existingShareId = existingShare.shareId;
+      shareDialogData.existingShareLink = `${page.url.origin}/shared/${
+        item.type === "folder" ? "folders" : "files"
+      }/${existingShare.shareId}`;
     } else {
-      shareDialogData.isPublic = false;
-      shareDialogData.emails = [];
-      shareDialogData.expiresAt = null;
-      shareDialogData.existingShareId = null;
+      resetShareDialogState();
     }
   } catch (error) {
     console.error("Failed to load existing share data:", error);
-    shareDialogData.isPublic = false;
-    shareDialogData.emails = [];
-    shareDialogData.expiresAt = null;
-    shareDialogData.existingShareId = null;
+    resetShareDialogState();
   }
 
   shareDialogData.loading = false;
@@ -65,10 +79,7 @@ export async function openShareDialog(
 export function closeShareDialog() {
   shareDialogData.open = false;
   shareDialogData.item = null;
-  shareDialogData.isPublic = false;
-  shareDialogData.emails = [];
-  shareDialogData.expiresAt = null;
   shareDialogData.callback = null;
   shareDialogData.loading = false;
-  shareDialogData.existingShareId = null;
+  resetShareDialogState();
 }

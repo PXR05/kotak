@@ -119,7 +119,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
     const expirationDate = expiresAt ? new Date(expiresAt) : null;
     let shareId: string;
-    
+
     if (existingShare) {
       shareId = existingShare.id;
       await db
@@ -171,5 +171,53 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
     });
   } catch (err) {
     throw error(500, "Failed to share file");
+  }
+};
+
+export const DELETE: RequestHandler = async ({ params, locals }) => {
+  if (!locals.user) {
+    throw error(401, "Unauthorized");
+  }
+
+  const fileId = params.id;
+  if (!fileId) {
+    throw error(400, "Missing file ID");
+  }
+
+  const file = await findFileByIdOrStorageKey(fileId, locals.user.id);
+  if (!file) {
+    throw error(404, "File not found or access denied");
+  }
+
+  try {
+    const [existingShare] = await db
+      .select()
+      .from(table.fileShare)
+      .where(
+        and(
+          eq(table.fileShare.fileId, file.id),
+          eq(table.fileShare.sharedBy, locals.user.id)
+        )
+      );
+
+    if (!existingShare) {
+      throw error(404, "No share found to delete");
+    }
+
+    await db
+      .delete(table.fileShareRecipient)
+      .where(eq(table.fileShareRecipient.shareId, existingShare.id));
+
+    await db
+      .delete(table.fileShare)
+      .where(eq(table.fileShare.id, existingShare.id));
+
+    return json({
+      success: true,
+      message: "File share deleted successfully",
+    });
+  } catch (err) {
+    console.error("Failed to delete file share:", err);
+    throw error(500, "Failed to delete file share");
   }
 };
