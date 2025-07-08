@@ -10,17 +10,54 @@
   import { toast } from "svelte-sonner";
   import { LoaderIcon } from "@lucide/svelte";
   import { page } from "$app/state";
+  import { validateEmail, validateLoginPassword } from "$lib/validation";
 
   let { form }: { form: ActionData } = $props();
 
   let loading = $state(false);
+  let email = $state("");
+  let password = $state("");
+  let emailError = $state("");
+  let passwordError = $state("");
 
-  function handleSubmit(): ReturnType<SubmitFunction> {
+  let submitted = $state(false);
+
+  $effect(() => {
+    const serverError = (form as any)?.errors?.email?.[0];
+    emailError = serverError || (submitted ? validateEmail(email) : "");
+  });
+
+  $effect(() => {
+    const serverError = (form as any)?.errors?.password?.[0];
+    passwordError =
+      serverError || (submitted ? validateLoginPassword(password) : "");
+  });
+
+  const canSubmit = $derived(!loading);
+
+  function handleSubmit(input: {
+    action: URL;
+    formData: FormData;
+    formElement: HTMLFormElement;
+    controller: AbortController;
+    submitter: HTMLElement | null;
+    cancel: () => void;
+  }): ReturnType<SubmitFunction> {
+    submitted = true;
+
+    const emailValidation = validateEmail(email);
+    const passwordValidation = validateLoginPassword(password);
+
+    if (emailValidation || passwordValidation) {
+      input.cancel();
+      return ({ result }) => {};
+    }
+
     loading = true;
     return async ({ result }) => {
       switch (result.type) {
         case "redirect":
-        const target = page.url.searchParams.get("redirect");
+          const target = page.url.searchParams.get("redirect");
           goto(target ?? result.location, {
             invalidateAll: true,
           });
@@ -58,7 +95,12 @@
             type="email"
             required
             placeholder="Enter your email"
+            bind:value={email}
+            aria-invalid={!!emailError}
           />
+          {#if emailError}
+            <p class="text-xs text-destructive">{emailError}</p>
+          {/if}
         </div>
         <div class="space-y-2">
           <Label for="password">Password</Label>
@@ -68,12 +110,17 @@
             type="password"
             required
             placeholder="Enter your password"
+            bind:value={password}
+            aria-invalid={!!passwordError}
           />
+          {#if passwordError}
+            <p class="text-xs text-destructive">{passwordError}</p>
+          {/if}
         </div>
         {#if form?.message}
           <div class="text-sm text-destructive text-center">{form.message}</div>
         {/if}
-        <Button type="submit" class="w-full" disabled={loading}>
+        <Button type="submit" class="w-full" disabled={!canSubmit}>
           {#if loading}
             <LoaderIcon class="animate-spin size-4" />
           {/if}

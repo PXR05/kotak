@@ -10,19 +10,83 @@
   import { toast } from "svelte-sonner";
   import { LoaderIcon } from "@lucide/svelte";
   import { page } from "$app/state";
+  import {
+    validateEmail,
+    validatePassword,
+    validateConfirmPassword,
+  } from "$lib/validation";
 
   let { form }: { form: ActionData } = $props();
 
   let loading = $state(false);
+  let email = $state("");
   let password = $state("");
   let confirmPassword = $state("");
+  let emailError = $state("");
+  let passwordError = $state("");
+  let confirmPasswordError = $state("");
+
+  let submitted = $state(false);
+
+  $effect(() => {
+    const serverError = (form as any)?.errors?.email?.[0];
+    emailError = serverError || (submitted ? validateEmail(email) : "");
+  });
+
+  $effect(() => {
+    const serverError = (form as any)?.errors?.password?.[0];
+    passwordError =
+      serverError || (submitted ? validatePassword(password) : "");
+  });
+
+  $effect(() => {
+    const serverError = (form as any)?.errors?.confirmPassword?.[0];
+    confirmPasswordError =
+      serverError ||
+      (submitted ? validateConfirmPassword(password, confirmPassword) : "");
+  });
 
   const passwordsMatch = $derived(
-    password.length >= 6 && password === confirmPassword
+    password.length >= 8 && password === confirmPassword
   );
-  const canSubmit = $derived(passwordsMatch && !loading);
 
-  function handleSubmit(): ReturnType<SubmitFunction> {
+  const passwordStrength = $derived(() => {
+    if (!password) return 0;
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/\d/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+    return strength;
+  });
+
+  const strengthValue = $derived(passwordStrength());
+
+  const canSubmit = $derived(!loading);
+
+  function handleSubmit(input: {
+    action: URL;
+    formData: FormData;
+    formElement: HTMLFormElement;
+    controller: AbortController;
+    submitter: HTMLElement | null;
+    cancel: () => void;
+  }): ReturnType<SubmitFunction> {
+    submitted = true;
+
+    const emailValidation = validateEmail(email);
+    const passwordValidation = validatePassword(password);
+    const confirmPasswordValidation = validateConfirmPassword(
+      password,
+      confirmPassword
+    );
+
+    if (emailValidation || passwordValidation || confirmPasswordValidation) {
+      input.cancel();
+      return ({ result }) => {};
+    }
+
     loading = true;
     return async ({ result }) => {
       switch (result.type) {
@@ -67,7 +131,12 @@
             type="email"
             required
             placeholder="Enter your email"
+            bind:value={email}
+            aria-invalid={!!emailError}
           />
+          {#if emailError}
+            <p class="text-xs text-destructive">{emailError}</p>
+          {/if}
         </div>
         <div class="space-y-2">
           <Label for="password">Password</Label>
@@ -78,10 +147,39 @@
             required
             placeholder="Create a password"
             bind:value={password}
+            aria-invalid={!!passwordError}
           />
-          <p class="text-xs text-muted-foreground">
-            Password must be at least 6 characters long
-          </p>
+          {#if passwordError}
+            <p class="text-xs text-destructive">{passwordError}</p>
+          {:else if password}
+            <div class="text-xs">
+              <div class="flex gap-1 mb-1">
+                {#each Array(5) as _, i}
+                  <div
+                    class="h-1 w-full rounded-full bg-muted {i < strengthValue
+                      ? strengthValue <= 2
+                        ? '!bg-red-500'
+                        : strengthValue <= 3
+                          ? '!bg-yellow-500'
+                          : '!bg-green-500'
+                      : ''}"
+                  ></div>
+                {/each}
+              </div>
+              <p class="text-muted-foreground">
+                Password strength: {strengthValue <= 2
+                  ? "Weak"
+                  : strengthValue <= 3
+                    ? "Medium"
+                    : "Strong"}
+              </p>
+            </div>
+          {:else}
+            <p class="text-xs text-muted-foreground">
+              Password must be at least 8 characters and contain uppercase,
+              lowercase, and a number
+            </p>
+          {/if}
         </div>
         <div class="space-y-2">
           <Label for="confirm-password">Confirm Password</Label>
@@ -92,9 +190,10 @@
             required
             placeholder="Confirm your password"
             bind:value={confirmPassword}
+            aria-invalid={!!confirmPasswordError}
           />
-          {#if confirmPassword.length > 0 && !passwordsMatch}
-            <p class="text-xs text-destructive">Passwords do not match</p>
+          {#if confirmPasswordError}
+            <p class="text-xs text-destructive">{confirmPasswordError}</p>
           {/if}
         </div>
         {#if form?.message}

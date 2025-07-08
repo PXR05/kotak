@@ -6,6 +6,7 @@ import * as auth from "$lib/server/auth";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { ensureRootFolder, ensureTrashFolder } from "$lib/server/folderUtils";
+import { registerSchema } from "$lib/validation";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {
@@ -20,27 +21,39 @@ export const actions: Actions = {
     const formData = await event.request.formData();
     const email = formData.get("email");
     const password = formData.get("password");
+    const confirmPassword = formData.get("confirm-password");
 
-    if (!validateEmail(email)) {
-      return fail(400, { message: "Invalid email address" });
-    }
-    if (!validatePassword(password)) {
+    const validation = registerSchema.safeParse({
+      email,
+      password,
+      confirmPassword,
+    });
+
+    if (!validation.success) {
+      const errors = validation.error.flatten().fieldErrors;
       return fail(400, {
-        message: "Password must be between 6 and 255 characters",
+        message:
+          errors.email?.[0] ||
+          errors.password?.[0] ||
+          errors.confirmPassword?.[0] ||
+          "Invalid input",
+        errors: errors,
       });
     }
+
+    const { email: validEmail, password: validPassword } = validation.data;
 
     const existingUsers = await db
       .select()
       .from(table.user)
-      .where(eq(table.user.email, email));
+      .where(eq(table.user.email, validEmail));
 
     if (existingUsers.length > 0) {
       return fail(400, { message: "Email already registered" });
     }
 
     const userId = generateUserId();
-    const passwordHash = await hash(password, {
+    const passwordHash = await hash(validPassword, {
       memoryCost: 19456,
       timeCost: 2,
       outputLen: 32,
@@ -48,7 +61,9 @@ export const actions: Actions = {
     });
 
     try {
-      await db.insert(table.user).values({ id: userId, email, passwordHash });
+      await db
+        .insert(table.user)
+        .values({ id: userId, email: validEmail, passwordHash });
 
       const sessionToken = auth.generateSessionToken();
       const session = await auth.createSession(sessionToken, userId);
@@ -68,21 +83,4 @@ function generateUserId() {
   const bytes = crypto.getRandomValues(new Uint8Array(15));
   const id = encodeBase32LowerCase(bytes);
   return id;
-}
-
-function validateEmail(email: unknown): email is string {
-  return (
-    typeof email === "string" &&
-    email.length >= 3 &&
-    email.length <= 255 &&
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  );
-}
-
-function validatePassword(password: unknown): password is string {
-  return (
-    typeof password === "string" &&
-    password.length >= 6 &&
-    password.length <= 255
-  );
 }

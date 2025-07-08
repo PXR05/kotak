@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import * as auth from "$lib/server/auth";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
+import { loginSchema } from "$lib/validation";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {
@@ -19,32 +20,42 @@ export const actions: Actions = {
     const email = formData.get("email");
     const password = formData.get("password");
 
-    if (!validateEmail(email)) {
-      return fail(400, { message: "Invalid email address" });
-    }
-    if (!validatePassword(password)) {
+    const validation = loginSchema.safeParse({
+      email,
+      password,
+    });
+
+    if (!validation.success) {
+      const errors = validation.error.flatten().fieldErrors;
       return fail(400, {
-        message: "Invalid password (min 6, max 255 characters)",
+        message: errors.email?.[0] || errors.password?.[0] || "Invalid input",
+        errors: errors,
       });
     }
+
+    const { email: validEmail, password: validPassword } = validation.data;
 
     const results = await db
       .select()
       .from(table.user)
-      .where(eq(table.user.email, email));
+      .where(eq(table.user.email, validEmail));
 
     const existingUser = results.at(0);
     if (!existingUser) {
       return fail(400, { message: "Incorrect email or password" });
     }
 
-    const validPassword = await verify(existingUser.passwordHash, password, {
-      memoryCost: 19456,
-      timeCost: 2,
-      outputLen: 32,
-      parallelism: 1,
-    });
-    if (!validPassword) {
+    const validPasswordHash = await verify(
+      existingUser.passwordHash,
+      validPassword,
+      {
+        memoryCost: 19456,
+        timeCost: 2,
+        outputLen: 32,
+        parallelism: 1,
+      }
+    );
+    if (!validPasswordHash) {
       return fail(400, { message: "Incorrect email or password" });
     }
 
@@ -55,20 +66,3 @@ export const actions: Actions = {
     return redirect(302, "/");
   },
 };
-
-function validateEmail(email: unknown): email is string {
-  return (
-    typeof email === "string" &&
-    email.length >= 3 &&
-    email.length <= 255 &&
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  );
-}
-
-function validatePassword(password: unknown): password is string {
-  return (
-    typeof password === "string" &&
-    password.length >= 6 &&
-    password.length <= 255
-  );
-}

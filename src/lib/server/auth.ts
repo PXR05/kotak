@@ -86,9 +86,17 @@ export function setSessionTokenCookie(
   event.cookies.set(sessionCookieName, token, {
     expires: expiresAt,
     path: "/",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
   });
 }
 
 export function deleteSessionTokenCookie(event: RequestEvent) {
-  event.cookies.delete(sessionCookieName, { path: "/" });
+  event.cookies.delete(sessionCookieName, {
+    path: "/",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  });
 }

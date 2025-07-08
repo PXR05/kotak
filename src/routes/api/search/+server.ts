@@ -41,7 +41,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     throw error(400, "Limit must be between 1 and 100");
   }
 
-  const searchPattern = `%${trimmedQuery}%`;
+  const searchPattern = `%${trimmedQuery.replace(/[%_]/g, '\\$&')}%`;
   const results: { files: any[]; folders: any[] } = {
     files: [],
     folders: [],

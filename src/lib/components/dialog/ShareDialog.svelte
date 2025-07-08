@@ -24,6 +24,7 @@
   } from "@lucide/svelte";
   import {
     closeShareDialog,
+    fileAPI,
     shareDialogData,
     type ShareData,
   } from "$lib/stores";
@@ -160,7 +161,6 @@
   async function deleteShare() {
     isSubmitting = true;
     try {
-      const { fileAPI } = await import("$lib/stores/file/fileAPI.js");
       await fileAPI.deleteShare(item!);
       shareLink = null;
       shareDialogData.existingShareId = null;
