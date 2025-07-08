@@ -4,6 +4,25 @@
   import { formatFileSize } from "$lib/utils/format";
   import { CloudIcon, TrashIcon } from "@lucide/svelte";
   import Progress from "../ui/progress/progress.svelte";
+  import { Tween } from "svelte/motion";
+  import { quintInOut } from "svelte/easing";
+  import { onMount } from "svelte";
+
+  let loading = $state(true);
+  let status = $state<{ total: number; free: number; used: number } | null>(
+    null
+  );
+  let progress = new Tween(0, {
+    duration: 250,
+  });
+
+  $effect(() => {
+    page.data.storageStatus.then((s: any) => {
+      status = s;
+      progress.target = (status?.total ?? 0) - (status?.free ?? 0);
+      loading = false;
+    });
+  });
 </script>
 
 <Sidebar.Group class="p-0">
@@ -28,28 +47,27 @@
             <CloudIcon class="size-4" />
             <span class="text-sm font-medium">Storage</span>
           </div>
-          {#await page.data.storageStatus}
+          {#if loading}
             <Progress
-              value={50}
+              value={progress.current}
               max={100}
               class="h-1 mt-1 mb-0.5 animate-pulse"
             />
             <span class="text-xs text-muted-foreground animate-pulse">
               Loading storage...
             </span>
-          {:then status}
+          {:else}
             <Progress
-              value={status?.total - status?.free}
-              max={status?.total}
+              value={progress.current}
+              max={status?.total ?? 0}
               class="h-1 mt-1 mb-0.5"
             />
             <span class="text-xs text-muted-foreground">
-              {formatFileSize((status?.total ?? 0) - (status?.free ?? 0))}
-              / {formatFileSize(status?.total ?? 0)} ({formatFileSize(
-                status?.used ?? 0
-              )} used)
+              {formatFileSize((status?.total ?? 0) - (status?.free ?? 0))} /
+              {formatFileSize(status?.total ?? 0)} (
+              {formatFileSize(status?.used ?? 0)} used)
             </span>
-          {/await}
+          {/if}
         </div>
       </Sidebar.MenuItem>
     </Sidebar.Menu>

@@ -24,8 +24,6 @@ export const GET: RequestHandler = async ({ locals }) => {
       .where(eq(table.trashedItem.ownerId, locals.user.id))
       .orderBy(table.trashedItem.trashedAt);
 
-    console.log(trashedItems);
-
     return json(trashedItems);
   } catch (err) {
     console.error("Error fetching trashed items:", err);

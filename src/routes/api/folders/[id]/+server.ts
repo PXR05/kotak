@@ -21,7 +21,6 @@ async function recursivelyDeleteFolder(
     try {
       await deleteFile(file.storageKey);
       await db.delete(table.file).where(eq(table.file.id, file.id));
-      console.log(`Deleted file: ${file.name}`);
     } catch (err) {
       console.error(`Failed to delete file ${file.name}:`, err);
     }
@@ -42,7 +41,6 @@ async function recursivelyDeleteFolder(
   }
 
   await db.delete(table.folder).where(eq(table.folder.id, folderId));
-  console.log(`Deleted folder: ${folderId}`);
 }
 
 export const PATCH: RequestHandler = async ({ params, request, locals }) => {

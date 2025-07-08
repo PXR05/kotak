@@ -8,11 +8,13 @@
     dropZoneClass = "",
     onFilesDropped,
     children,
+    ...props
   }: {
     class?: string;
     dropZoneClass?: string;
     onFilesDropped?: (files: UploadableFile[]) => void;
     children: any;
+    props?: Record<string, any>;
   } = $props();
 
   let isDragOver = $state(false);
@@ -120,6 +122,7 @@
 </script>
 
 <div
+  {...props}
   class={className}
   ondragenter={handleDragEnter}
   ondragover={handleDragOver}

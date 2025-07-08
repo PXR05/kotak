@@ -65,10 +65,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   const files = formData.getAll("files") as File[];
   const relativePaths = formData.getAll("relativePaths") as string[];
 
-  console.log(
-    `Upload request: ${files.length} files, ${relativePaths.length} paths`
-  );
-
   if (!files || files.length === 0) {
     throw error(400, "No files found in form data.");
   }
@@ -79,8 +75,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     const relativePath = relativePaths[i] || file.name;
-
-    console.log(`Processing: ${file.name} (${relativePath})`);
 
     if (file instanceof File && file.size > 0) {
       try {
@@ -95,8 +89,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
           const fileName = relativePath.substring(
             relativePath.lastIndexOf("/") + 1
           );
-
-          console.log(`Creating folder path: ${pathWithoutFilename}`);
 
           targetFolderId = await ensureFolderPath(
             pathWithoutFilename,
@@ -128,12 +120,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       }
     }
   }
-
-  console.log(`Upload completed: ${uploadedFiles.length} files uploaded`);
-  console.log(
-    `Created ${createdFolders.size} folder paths:`,
-    Array.from(createdFolders)
-  );
 
   return json(
     {

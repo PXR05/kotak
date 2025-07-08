@@ -9,7 +9,7 @@
   import { Button } from "../ui/button";
   import Input from "../ui/input/input.svelte";
   import { quintOut } from "svelte/easing";
-  import { scale, fly } from "svelte/transition";
+  import { scale, fly, slide } from "svelte/transition";
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import { onDestroy, onMount } from "svelte";
@@ -261,7 +261,7 @@
     {#if searchOpen}
       <div
         class="w-full"
-        transition:fly={{ x: 50, duration: 150, easing: quintOut }}
+        transition:slide={{ axis: "x", duration: 150, easing: quintOut }}
       >
         <Input
           bind:ref={searchInput}
@@ -324,7 +324,7 @@
     <div
       bind:this={searchResultsContainer}
       class="absolute top-9 left-0 right-0 bg-sidebar shadow-md rounded-b-lg border border-input max-h-80 overflow-y-auto z-40"
-      transition:fly={{ y: -10, duration: 150, easing: quintOut }}
+      transition:slide={{ axis: "y", duration: 150, easing: quintOut }}
     >
       {#if isSearching}
         <div

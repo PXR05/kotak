@@ -11,6 +11,7 @@
   } from "$lib/stores";
   import { fileActions } from "$lib/utils/file-actions.svelte";
   import { preloadData } from "$app/navigation";
+  import FileContextMenu from "./FileContextMenu.svelte";
 
   let {
     row,
@@ -90,51 +91,33 @@
   }
 </script>
 
-<ContextMenu.Root>
-  <ContextMenu.Trigger>
-    {#snippet child({ props })}
-      <Table.Row
-        {...props}
-        data-state={row.getIsSelected() && "selected"}
-        class="hover:bg-muted/50 transition-none cursor-pointer"
-        onclick={handleRowClick}
-        ondblclick={handleRowDoubleClick}
-        onmouseenter={handleRowPreload}
-        onmouseleave={() => {
-          if (preloadTimeout) {
-            clearTimeout(preloadTimeout);
-            preloadTimeout = null;
-          }
-        }}
-      >
-        {#each row.getVisibleCells() as cell, i}
-          <Table.Cell
-            class="{cell.column.id !== 'name' ? 'text-muted-foreground' : ''} 
+<FileContextMenu item={row.original}>
+  {#snippet children({ props })}
+    <Table.Row
+      {...props}
+      data-state={row.getIsSelected() && "selected"}
+      class="hover:bg-muted/50 transition-none cursor-pointer"
+      onclick={handleRowClick}
+      ondblclick={handleRowDoubleClick}
+      onmouseenter={handleRowPreload}
+      onmouseleave={() => {
+        if (preloadTimeout) {
+          clearTimeout(preloadTimeout);
+          preloadTimeout = null;
+        }
+      }}
+    >
+      {#each row.getVisibleCells() as cell, i}
+        <Table.Cell
+          class="{cell.column.id !== 'name' ? 'text-muted-foreground' : ''} 
               {i === 0 ? 'pl-5' : ''}"
-          >
-            <FlexRender
-              content={cell.column.columnDef.cell}
-              context={cell.getContext()}
-            />
-          </Table.Cell>
-        {/each}
-      </Table.Row>
-    {/snippet}
-  </ContextMenu.Trigger>
-  <ContextMenu.Content class="w-52">
-    {#each fileActions() as action, index}
-      {#if action.separator && index > 0}
-        <ContextMenu.Separator />
-      {/if}
-      <ContextMenu.Item
-        onclick={() =>
-          fileOperations.handleContextMenuAction(action.id, row.original)}
-        disabled={action.disabled}
-        variant={action.variant}
-      >
-        <action.icon class="mr-2 size-4" />
-        {action.label}
-      </ContextMenu.Item>
-    {/each}
-  </ContextMenu.Content>
-</ContextMenu.Root>
+        >
+          <FlexRender
+            content={cell.column.columnDef.cell}
+            context={cell.getContext()}
+          />
+        </Table.Cell>
+      {/each}
+    </Table.Row>
+  {/snippet}
+</FileContextMenu>

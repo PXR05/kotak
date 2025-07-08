@@ -151,7 +151,7 @@
           <div class="text-center p-8">
             <FileIcon class="size-16 text-muted-foreground mx-auto mb-4" />
             <h3 class="text-lg font-semibold mb-2">PDF Preview Unavailable</h3>
-            <p class="text-sm text-muted-foreground mb-4">
+            <p class="text-sm dark:text-muted-foreground mb-4">
               Your browser doesn't support inline PDF viewing.
             </p>
             <Button onclick={onDownload}>
@@ -180,7 +180,7 @@
           <FileIcon class="size-16 text-muted-foreground mx-auto mb-4" />
         {/if}
         <h3 class="text-lg font-semibold mb-2">Preview not available</h3>
-        <p class="text-sm text-muted-foreground mb-4">
+        <p class="text-sm dark:text-muted-foreground mb-4">
           {#if !file.storageKey}
             File not found in storage.
           {:else}

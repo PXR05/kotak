@@ -2,7 +2,7 @@ import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
-import { and, eq, ilike, ne } from "drizzle-orm";
+import { and, eq, like, ne } from "drizzle-orm";
 
 type SearchResult = {
   id: string;
@@ -51,7 +51,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     if (!type || type === "files") {
       let fileWhereConditions = [
         eq(table.file.ownerId, locals.user.id),
-        ilike(table.file.name, searchPattern),
+        like(table.file.name, searchPattern),
       ];
 
       if (folderId) {
@@ -78,7 +78,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     if (!type || type === "folders") {
       let folderWhereConditions = [
         eq(table.folder.ownerId, locals.user.id),
-        ilike(table.folder.name, searchPattern),
+        like(table.folder.name, searchPattern),
         ne(table.folder.name, "__root__"),
         ne(table.folder.name, "__trash__"),
       ];
