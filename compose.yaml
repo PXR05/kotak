@@ -5,16 +5,35 @@ services:
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
-      POSTGRES_DB: drive
+      POSTGRES_DB: kotak
     ports:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U root -d drive"]
+      test: ["CMD-SHELL", "pg_isready -U root -d kotak"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  traefik:
+    image: "traefik:latest"
+    command:
+      - "--providers.docker"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.resolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.resolver.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.resolver.acme.storage=/letsencrypt/acme.json"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - letsencrypt:/letsencrypt
+      - "/var/run/docker.sock:/var/run/docker.sock"
 
   migrator:
     build:
@@ -31,11 +50,9 @@ services:
       context: .
       dockerfile: Dockerfile
     command: ["bun", "--bun", "run", "."]
-    ports:
-      - "3000:3000"
     environment:
       BODY_SIZE_LIMIT: Infinity
-      ORIGIN: http://localhost:3000
+      ORIGIN: ${PROTOCOL}://${DOMAIN}
       DATABASE_URL: ${DATABASE_URL}
       LIMITER_SECRET: ${LIMITER_SECRET}
     volumes:
@@ -46,3 +63,4 @@ services:
 volumes:
   pg_data:
   web_data:
+  letsencrypt:

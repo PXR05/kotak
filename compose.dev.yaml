@@ -1,17 +1,18 @@
 services:
   db:
+    container_name: "dev_db"
     image: postgres:alpine
     restart: always
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
-      POSTGRES_DB: drive
+      POSTGRES_DB: kotak
     ports:
       - "5432:5432"
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/dev_data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U root -d drive"]
+      test: ["CMD-SHELL", "pg_isready -U root -d kotak"]
       interval: 5s
       timeout: 5s
       retries: 5
