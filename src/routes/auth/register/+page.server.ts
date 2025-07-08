@@ -8,16 +8,36 @@ import * as table from "$lib/server/db/schema";
 import { ensureRootFolder, ensureTrashFolder } from "$lib/server/folderUtils";
 import { registerSchema } from "$lib/validation";
 import type { Actions, PageServerLoad } from "./$types";
+import { RateLimiter } from "sveltekit-rate-limiter/server";
+
+const limiter = new RateLimiter({
+  IP: [10, "h"],
+  IPUA: [3, "h"],
+  cookie: {
+    name: "register-limiter",
+    secret: process.env.LIMITER_SECRET || "defaultsecret",
+    rate: [2, "h"],
+    preflight: true,
+  },
+});
 
 export const load: PageServerLoad = async (event) => {
   if (event.locals.user) {
     return redirect(302, "/");
   }
+  await limiter.cookieLimiter?.preflight(event);
   return {};
 };
 
 export const actions: Actions = {
   default: async (event) => {
+    const status = await limiter.check(event);
+    if (status.limited) {
+      return fail(429, {
+        message: "Too many requests, please try again later",
+      });
+    }
+
     const formData = await event.request.formData();
     const email = formData.get("email");
     const password = formData.get("password");

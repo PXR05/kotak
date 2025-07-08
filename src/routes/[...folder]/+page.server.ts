@@ -159,6 +159,6 @@ export const actions = {
       }
     }
     auth.deleteSessionTokenCookie(event);
-    redirect(303, "/auth/login");
+    return redirect(303, "/auth/login");
   },
 };

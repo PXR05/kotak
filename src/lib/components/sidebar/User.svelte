@@ -12,6 +12,8 @@
   import { page } from "$app/state";
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import { settings, updateSidebarSide } from "$lib/stores";
+  import { toast } from "svelte-sonner";
+  import { goto } from "$app/navigation";
 
   const user = $derived(page.data?.user);
   const sidebar = useSidebar();
@@ -113,12 +115,19 @@
       <DropdownMenu.Item
         variant="destructive"
         onclick={async () => {
-          await fetch("/?/logout", {
+          const res = await fetch("/?/logout", {
             method: "POST",
             headers: {
               "Content-Type": "application/x-www-form-urlencoded",
             },
           });
+          if (!res.ok) {
+            toast.error("Failed to log out. Please try again.");
+          } else {
+            await goto("/auth/login", {
+              invalidateAll: true,
+            });
+          }
         }}
       >
         <LogOutIcon />
