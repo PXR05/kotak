@@ -4,9 +4,9 @@
   import DragDropZone from "$lib/components/shared/DragDropZone.svelte";
   import { fileTree } from "$lib/stores";
   import type { FileItem } from "$lib/types/file.js";
-  import { HardDriveIcon } from "@lucide/svelte";
   import { page } from "$app/state";
   import TableContextMenu from "../table/TableContextMenu.svelte";
+  import AppIcon from "../shared/AppIcon.svelte";
 
   let { rootItems }: { rootItems: FileItem[] } = $props();
 
@@ -29,8 +29,8 @@
                 >
                   {#snippet child({ props })}
                     <a href="/files" {...props}>
-                      <HardDriveIcon class="size-4" />
-                      Drive
+                      <AppIcon strokeWidth={2.5} />
+                      Kotak
                     </a>
                   {/snippet}
                 </Sidebar.MenuButton>

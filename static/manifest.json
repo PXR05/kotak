@@ -1,0 +1,53 @@
+{
+  "id": "/",
+  "scope": "/",
+  "handle_links": "preferred",
+  "orientation": "portrait",
+  "dir": "ltr",
+  "name": "Kotak",
+  "short_name": "Kotak",
+  "description": "Personal cloud storage",
+  "start_url": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    {
+      "sizes": "192x192",
+      "src": "icon-192.png",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "sizes": "192x192",
+      "src": "icon-192.png",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "sizes": "192x192",
+      "src": "icon-192.png",
+      "type": "image/png",
+      "purpose": "monochrome"
+    },
+    {
+      "sizes": "512x512",
+      "src": "icon-512.png",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "sizes": "512x512",
+      "src": "icon-512.png",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "sizes": "512x512",
+      "src": "icon-512.png",
+      "type": "image/png",
+      "purpose": "monochrome"
+    }
+  ]
+}

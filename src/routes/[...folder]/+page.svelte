@@ -43,18 +43,4 @@
       </CardContent>
     </Card>
   {/await}
-{:else}
-  <div class="flex items-center justify-center min-h-[400px]">
-    <Card class="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Welcome to LocalDrive</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p class="text-muted-foreground mb-4">
-          Please sign in to access your files and folders.
-        </p>
-        <Button href="/auth/login" class="w-full">Sign In</Button>
-      </CardContent>
-    </Card>
-  </div>
 {/if}

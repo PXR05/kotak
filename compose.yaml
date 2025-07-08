@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:alpine
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: drive
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d drive"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["bun", "run", "db:migrate"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      - db
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["bun", "--bun", "run", "."]
+    ports:
+      - "3000:3000"
+    environment:
+      BODY_SIZE_LIMIT: Infinity
+      ORIGIN: http://localhost:3000
+      DATABASE_URL: ${DATABASE_URL}
+      LIMITER_SECRET: ${LIMITER_SECRET}
+    volumes:
+      - web_data:/var/lib/localdrive
+    depends_on:
+      - db
+
+volumes:
+  pg_data:
+  web_data:

@@ -1,5 +1,5 @@
 {
-	"name": "localdrive",
+	"name": "kotak",
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
@@ -12,6 +12,7 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"db:push": "drizzle-kit push",
 		"db:migrate": "drizzle-kit migrate",
+		"db:generate": "drizzle-kit generate",
 		"db:studio": "drizzle-kit studio"
 	},
 	"devDependencies": {
@@ -49,6 +50,7 @@
 		"@node-rs/argon2": "^2.0.2",
 		"@oslojs/crypto": "^1.0.1",
 		"@oslojs/encoding": "^1.1.0",
+		"dotenv": "^17.1.0",
 		"drizzle-orm": "^0.40.0",
 		"jszip": "^3.10.1",
 		"mode-watcher": "^1.1.0",

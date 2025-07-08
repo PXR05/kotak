@@ -1,13 +1,17 @@
-import { relations, sql } from "drizzle-orm";
-import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core";
+import { relations } from "drizzle-orm";
+import {
+  pgTable,
+  integer,
+  text,
+  timestamp,
+  boolean,
+} from "drizzle-orm/pg-core";
 
-export const user = sqliteTable("user", {
+export const user = pgTable("user", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const userRelations = relations(user, ({ many }) => ({
@@ -19,12 +23,12 @@ export const userRelations = relations(user, ({ many }) => ({
   trashedItems: many(trashedItem),
 }));
 
-export const session = sqliteTable("session", {
+export const session = pgTable("session", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
 });
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -34,7 +38,7 @@ export const sessionRelations = relations(session, ({ one }) => ({
   }),
 }));
 
-export const folder = sqliteTable("folder", {
+export const folder = pgTable("folder", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   ownerId: text("owner_id")
@@ -43,12 +47,8 @@ export const folder = sqliteTable("folder", {
   parentId: text("parent_id").references((): any => folder.id, {
     onDelete: "cascade",
   }),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const folderRelations = relations(folder, ({ one, many }) => ({
@@ -68,7 +68,7 @@ export const folderRelations = relations(folder, ({ one, many }) => ({
   shares: many(folderShare),
 }));
 
-export const file = sqliteTable("file", {
+export const file = pgTable("file", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   storageKey: text("storage_key").notNull().unique(),
@@ -78,12 +78,8 @@ export const file = sqliteTable("file", {
   folderId: text("folder_id")
     .notNull()
     .references(() => folder.id, { onDelete: "cascade" }),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
   size: integer("size").notNull().default(0),
   mimeType: text("mime_type").notNull(),
 });
@@ -100,7 +96,7 @@ export const fileRelations = relations(file, ({ one, many }) => ({
   shares: many(fileShare),
 }));
 
-export const folderShare = sqliteTable("folder_share", {
+export const folderShare = pgTable("folder_share", {
   id: text("id").primaryKey(),
   folderId: text("folder_id")
     .notNull()
@@ -109,11 +105,9 @@ export const folderShare = sqliteTable("folder_share", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   permissions: text("permissions").notNull().default("read"),
-  isPublic: integer("is_public", { mode: "boolean" }).notNull().default(false),
-  expiresAt: integer("expires_at", { mode: "timestamp" }),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  isPublic: boolean("is_public").notNull().default(false),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const folderShareRelations = relations(folderShare, ({ one, many }) => ({
@@ -128,7 +122,7 @@ export const folderShareRelations = relations(folderShare, ({ one, many }) => ({
   recipients: many(folderShareRecipient),
 }));
 
-export const fileShare = sqliteTable("file_share", {
+export const fileShare = pgTable("file_share", {
   id: text("id").primaryKey(),
   fileId: text("file_id")
     .notNull()
@@ -137,11 +131,9 @@ export const fileShare = sqliteTable("file_share", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   permissions: text("permissions").notNull().default("read"),
-  isPublic: integer("is_public", { mode: "boolean" }).notNull().default(false),
-  expiresAt: integer("expires_at", { mode: "timestamp" }),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  isPublic: boolean("is_public").notNull().default(false),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const fileShareRelations = relations(fileShare, ({ one, many }) => ({
@@ -156,15 +148,13 @@ export const fileShareRelations = relations(fileShare, ({ one, many }) => ({
   recipients: many(fileShareRecipient),
 }));
 
-export const folderShareRecipient = sqliteTable("folder_share_recipient", {
+export const folderShareRecipient = pgTable("folder_share_recipient", {
   id: text("id").primaryKey(),
   shareId: text("share_id")
     .notNull()
     .references(() => folderShare.id, { onDelete: "cascade" }),
   email: text("email").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const folderShareRecipientRelations = relations(
@@ -177,15 +167,13 @@ export const folderShareRecipientRelations = relations(
   })
 );
 
-export const fileShareRecipient = sqliteTable("file_share_recipient", {
+export const fileShareRecipient = pgTable("file_share_recipient", {
   id: text("id").primaryKey(),
   shareId: text("share_id")
     .notNull()
     .references(() => fileShare.id, { onDelete: "cascade" }),
   email: text("email").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const fileShareRecipientRelations = relations(
@@ -198,7 +186,7 @@ export const fileShareRecipientRelations = relations(
   })
 );
 
-export const trashedItem = sqliteTable("trashed_item", {
+export const trashedItem = pgTable("trashed_item", {
   id: text("id").primaryKey(),
   itemId: text("item_id").notNull(),
   itemType: text("item_type").notNull(),
@@ -207,9 +195,7 @@ export const trashedItem = sqliteTable("trashed_item", {
   ownerId: text("owner_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  trashedAt: integer("trashed_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  trashedAt: timestamp("trashed_at").notNull().defaultNow(),
   name: text("name").notNull(),
 });
 

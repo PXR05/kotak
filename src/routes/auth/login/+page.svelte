@@ -11,6 +11,7 @@
   import { LoaderIcon } from "@lucide/svelte";
   import { page } from "$app/state";
   import { validateEmail, validateLoginPassword } from "$lib/validation";
+  import AppIcon from "$lib/components/shared/AppIcon.svelte";
 
   let { form }: { form: ActionData } = $props();
 
@@ -82,8 +83,9 @@
 
 <div class="min-h-screen flex items-center justify-center bg-background px-4">
   <Card.Root class="w-full max-w-md">
-    <Card.Header class="text-center">
+    <Card.Header class="items-center justify-between flex flex-row">
       <Card.Title class="text-2xl font-serif font-normal">Sign In</Card.Title>
+      <AppIcon class="size-8" />
     </Card.Header>
     <Card.Content>
       <form method="post" use:enhance={handleSubmit} class="space-y-6">

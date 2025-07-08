@@ -158,10 +158,10 @@
                   <div
                     class="h-1 w-full rounded-full bg-muted {i < strengthValue
                       ? strengthValue <= 2
-                        ? '!bg-red-500'
+                        ? '!bg-red-500 dark:!bg-red-400'
                         : strengthValue <= 3
-                          ? '!bg-yellow-500'
-                          : '!bg-green-500'
+                          ? '!bg-yellow-500 dark:!bg-yellow-400'
+                          : '!bg-green-500 dark:!bg-green-400'
                       : ''}"
                   ></div>
                 {/each}
