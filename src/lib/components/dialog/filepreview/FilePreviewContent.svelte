@@ -10,6 +10,7 @@
     MusicIcon,
     LoaderIcon,
   } from "@lucide/svelte";
+  import { fade } from "svelte/transition";
 
   let {
     file,
@@ -96,7 +97,12 @@
 <div class="flex-1 -z-1 relative">
   <div class="absolute inset-0 flex items-center justify-center">
     {#if isLoading}
-      <div class="text-center grid place-items-center">
+      <div
+        transition:fade={{
+          duration: 150,
+        }}
+        class="text-center grid place-items-center absolute m-auto"
+      >
         <LoaderIcon class="size-6 animate-spin" />
         <p class="text-muted-foreground mt-2">Loading</p>
       </div>
@@ -110,7 +116,7 @@
         <img
           src={fileUrl}
           alt={file.name}
-          class="object-contain transition-transform duration-200"
+          class="max-w-screen max-h-screen object-contain transition-transform duration-150"
           style="scale: {zoom}%; transform: rotate({rotation}deg);"
           onload={onMediaLoad}
           onerror={() => onMediaError("image")}

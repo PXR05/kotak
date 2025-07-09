@@ -74,7 +74,11 @@
     ) {
       return;
     }
-    fileOperations.handleItemClick?.(row.original);
+    fileOperations.handleItemClick?.(
+      row.original,
+      table.getRowModel().rows.map((r) => r.original),
+      table.getRowModel().rows.findIndex((r) => r.id === row.id)
+    );
   }
 
   let preloadTimeout: ReturnType<typeof setTimeout> | null = $state(null);

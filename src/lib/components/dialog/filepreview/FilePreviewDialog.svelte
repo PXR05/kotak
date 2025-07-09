@@ -9,6 +9,7 @@
   import FilePreviewHeader from "./FilePreviewHeader.svelte";
   import FilePreviewContent from "./FilePreviewContent.svelte";
   import FilePreviewFooter from "./FilePreviewFooter.svelte";
+  import FilePreviewFloating from "./FilePreviewFloating.svelte";
 
   let {
     open: externalOpen = undefined,
@@ -35,6 +36,15 @@
   const open = $derived(
     externalOpen !== undefined ? externalOpen : filePreviewDialogData.open
   );
+
+  $effect(() => {
+    if (file && file.storageKey) {
+      isLoading = true;
+      error = null;
+    } else {
+      isLoading = false;
+    }
+  });
 
   function handleClose() {
     if (externalOnClose) {
@@ -89,6 +99,11 @@
       : null;
   }
 
+  function supportsZoom(mimeType: string | undefined): boolean {
+    if (!mimeType) return false;
+    return mimeType.startsWith("image/");
+  }
+
   const fileUrl = $derived(file ? getFileUrl(file) : null);
 
   function handleMediaLoad() {
@@ -97,6 +112,7 @@
 
   function handleMediaError(type: string) {
     error = `Failed to load ${type}`;
+    isLoading = false;
   }
 </script>
 
@@ -108,12 +124,8 @@
     {#if file}
       <FilePreviewHeader
         {file}
-        {zoom}
         onClose={handleClose}
         onAction={handleAction}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onRotate={handleRotate}
         onDownload={handleDownload}
         {showActions}
       />
@@ -128,6 +140,14 @@
         onDownload={handleDownload}
         onMediaLoad={handleMediaLoad}
         onMediaError={handleMediaError}
+      />
+
+      <FilePreviewFloating
+        {zoom}
+        supportsZoom={supportsZoom(file.mimeType)}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onRotate={handleRotate}
       />
 
       <FilePreviewFooter {file} />

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
   import * as Collapsible from "$lib/components/ui/collapsible/index.js";
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
@@ -7,7 +6,6 @@
   import FolderIcon from "@lucide/svelte/icons/folder";
   import LoaderIcon from "@lucide/svelte/icons/loader";
   import { type FileTreeNode, fileTree, fileOperations } from "$lib/stores";
-  import { fileActions } from "$lib/utils/file-actions.svelte";
   import FileTreeItem from "./FileTreeItem.svelte";
   import { page } from "$app/state";
   import { preloadData } from "$app/navigation";
@@ -16,6 +14,7 @@
   let { node }: { node: FileTreeNode } = $props();
 
   const handleFileClick = () => {
+    // TODO: file list
     fileOperations.handleItemClick(node.item);
   };
 
