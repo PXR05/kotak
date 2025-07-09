@@ -25,7 +25,7 @@
     showActions?: boolean;
   } = $props();
 
-  let zoom = $state(100);
+  let zoom = $state(1);
   let rotation = $state(0);
   let isLoading = $state(false);
   let error = $state<string | null>(null);
@@ -52,7 +52,7 @@
     } else {
       closeFilePreviewDialog();
     }
-    zoom = 100;
+    zoom = 1;
     rotation = 0;
     error = null;
   }
@@ -61,14 +61,6 @@
     if (file) {
       fileOperations.handleAction(action, file, handleClose);
     }
-  }
-
-  function handleZoomIn() {
-    zoom = Math.min(zoom + 25, 300);
-  }
-
-  function handleZoomOut() {
-    zoom = Math.max(zoom - 25, 25);
   }
 
   function handleRotate() {
@@ -133,7 +125,7 @@
       <FilePreviewContent
         {file}
         {fileUrl}
-        {zoom}
+        bind:zoom
         {rotation}
         {isLoading}
         {error}
@@ -143,10 +135,8 @@
       />
 
       <FilePreviewFloating
-        {zoom}
+        bind:zoom
         supportsZoom={supportsZoom(file.mimeType)}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
         onRotate={handleRotate}
       />
 

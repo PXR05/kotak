@@ -26,7 +26,7 @@
   >
     <AppSidebar {side} />
     <Sidebar.Inset
-      class="py-2 gap-2 
+      class="py-2 gap-2 max-md:px-2
       {side === 'left' ? 'pr-2' : 'pl-2'} 
       {Sidebar.useSidebar()?.state === 'collapsed' ? 'px-2' : ''}"
     >

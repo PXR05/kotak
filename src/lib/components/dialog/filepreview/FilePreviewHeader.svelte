@@ -9,6 +9,7 @@
     Share2Icon,
     MoreHorizontalIcon,
   } from "@lucide/svelte";
+  import styles from "./styles";
 
   let {
     file,
@@ -23,16 +24,11 @@
     onDownload: () => void;
     showActions?: boolean;
   } = $props();
-
-  const styles = {
-    background:
-      "flex items-center gap-2 bg-sidebar/75 border border-sidebar-border backdrop-blur-sm rounded-lg p-2",
-    separator:
-      "w-px dark:w-0.5 h-6 dark:bg-border bg-muted-foreground rounded-full",
-  } as const;
 </script>
 
-<div class="w-full flex items-start justify-between p-2 gap-2">
+<div
+  class="absolute top-0 left-0 right-0 w-full flex items-start justify-between gap-2 p-2"
+>
   <div
     class="flex items-center gap-2 max-w-[calc(100vw-4.5rem)] sm:max-w-[calc(100vw-11rem)]"
   >

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input";
   import { filePreviewDialogData } from "$lib/stores";
   import {
     ZoomInIcon,
@@ -9,19 +10,16 @@
     ChevronRightIcon,
   } from "@lucide/svelte";
   import { onMount, onDestroy } from "svelte";
+  import styles from "./styles";
 
   let {
-    zoom,
+    zoom = $bindable(1),
     supportsZoom,
-    onZoomIn,
-    onZoomOut,
     onRotate,
     hideTimeout = 3000,
   }: {
     zoom: number;
     supportsZoom: boolean;
-    onZoomIn: () => void;
-    onZoomOut: () => void;
     onRotate: () => void;
     hideTimeout?: number;
   } = $props();
@@ -35,12 +33,13 @@
   );
   let timeoutId: NodeJS.Timeout | number | null = null;
 
-  const styles = {
-    background:
-      "flex items-center gap-2 bg-sidebar/75 border border-sidebar-border backdrop-blur-sm rounded-lg p-2",
-    separator:
-      "w-px dark:w-0.5 h-6 dark:bg-border bg-muted-foreground rounded-full",
-  } as const;
+  function handleZoomIn() {
+    zoom = Math.min(zoom + 0.25, 3.0);
+  }
+
+  function handleZoomOut() {
+    zoom = Math.max(zoom - 0.25, 0.25);
+  }
 
   function resetTimer() {
     if (timeoutId) {
@@ -87,6 +86,10 @@
   }
 
   function handleKeydown(event: KeyboardEvent) {
+    const target = event.target as HTMLElement;
+    if (target.closest("input")) {
+      return;
+    }
     if (event.key === "ArrowLeft" && canGoPrevious) {
       handlePrevious();
     } else if (event.key === "ArrowRight" && canGoNext) {
@@ -114,7 +117,7 @@
 >
   {#if showNavigation}
     <div
-      class="absolute z-10 flex items-center justify-between gap-2 left-4 right-4 top-1/2 -translate-y-1/2"
+      class="absolute z-10 flex items-center justify-between gap-2 left-2 right-2 top-1/2 -translate-y-1/2"
     >
       <Button
         variant="ghost"
@@ -143,21 +146,33 @@
       <Button
         variant="ghost"
         size="icon"
-        onclick={onZoomOut}
-        disabled={zoom <= 25}
+        onclick={handleZoomOut}
+        disabled={zoom <= 0.25}
       >
         <ZoomOutIcon class="size-4" />
       </Button>
-      <span
-        class="justify-center text-sm font-medium text-muted-foreground w-14 text-center"
-      >
-        {zoom}%
-      </span>
+      <Input
+        type="number"
+        inputmode="numeric"
+        value={Math.round(zoom * 100)}
+        min="25"
+        max="300"
+        step="25"
+        oninput={(e) => {
+          resetTimer();
+          const target = e.currentTarget;
+          const value = parseFloat(target.value);
+          if (!isNaN(value)) {
+            zoom = Math.max(0.25, Math.min(value / 100, 3.0));
+          }
+        }}
+        class="w-14 text-center px-2 bg-input/50 dark:border-input border-input/50"
+      />
       <Button
         variant="ghost"
         size="icon"
-        onclick={onZoomIn}
-        disabled={zoom >= 300}
+        onclick={handleZoomIn}
+        disabled={zoom >= 3.0}
       >
         <ZoomInIcon class="size-4" />
       </Button>

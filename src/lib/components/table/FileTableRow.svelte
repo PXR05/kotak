@@ -74,10 +74,14 @@
     ) {
       return;
     }
+    const files = table
+      .getRowModel()
+      .rows.filter((r) => r.original.type === "file")
+      .map((r) => r.original);
     fileOperations.handleItemClick?.(
       row.original,
-      table.getRowModel().rows.map((r) => r.original),
-      table.getRowModel().rows.findIndex((r) => r.id === row.id)
+      files,
+      files.findIndex((r) => r.id === row.id)
     );
   }
 

@@ -11,11 +11,13 @@
     LoaderIcon,
   } from "@lucide/svelte";
   import { fade } from "svelte/transition";
+  import { Viewer } from "svelte-image-viewer";
+  import { expoOut } from "svelte/easing";
 
   let {
     file,
     fileUrl,
-    zoom,
+    zoom = $bindable(1),
     rotation,
     isLoading,
     error,
@@ -96,7 +98,7 @@
 
 <div class="flex-1 -z-1 relative">
   <div class="absolute inset-0 flex items-center justify-center">
-    {#if isLoading}
+    {#if isLoading && fileType && !error}
       <div
         transition:fade={{
           duration: 150,
@@ -113,14 +115,24 @@
       </div>
     {:else if file.storageKey && fileType}
       {#if fileType === "image"}
-        <img
-          src={fileUrl}
-          alt={file.name}
-          class="max-w-screen max-h-screen object-contain transition-transform duration-150"
-          style="scale: {zoom}%; transform: rotate({rotation}deg);"
-          onload={onMediaLoad}
-          onerror={() => onMediaError("image")}
-        />
+        <Viewer
+          bind:targetScale={zoom}
+          minScale={0.25}
+          maxScale={3.0}
+          tweenOptions={{
+            duration: 0,
+          }}
+        >
+          <img
+            src={fileUrl}
+            alt={file.name}
+            draggable="false"
+            class="select-none max-w-screen max-h-screen object-contain transition-transform duration-150"
+            style="scale: {zoom}; transform: rotate({rotation}deg);"
+            onload={onMediaLoad}
+            onerror={() => onMediaError("image")}
+          />
+        </Viewer>
       {:else if fileType === "video"}
         <video
           controls
