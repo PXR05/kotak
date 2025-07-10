@@ -31,11 +31,13 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
   default: async (event) => {
-    const status = await limiter.check(event);
-    if (status.limited) {
-      return fail(429, {
-        message: "Too many requests, please try again later",
-      });
+    if (event.url.protocol === "https:") {
+      const status = await limiter.check(event);
+      if (status.limited) {
+        return fail(429, {
+          message: "Too many requests, please try again later",
+        });
+      }
     }
 
     const formData = await event.request.formData();
