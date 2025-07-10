@@ -7,7 +7,7 @@ WORKDIR /app
 COPY . .
 
 RUN bun i
-RUN bun --bun run build
+RUN bun run build
 
 FROM oven/bun:latest
 
