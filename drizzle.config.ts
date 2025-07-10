@@ -5,7 +5,7 @@ const dbUrl =
     ? process.env.DATABASE_URL
     : process.env.DATABASE_URL_DEV;
 
-if (!dbUrl) throw new Error("DATABASE_URL is not set");
+if (!dbUrl) throw new Error("[CONFIG] DATABASE_URL is not set");
 
 export default defineConfig({
   schema: "./src/lib/server/db/schema.ts",
