@@ -23,7 +23,9 @@ export const load: PageServerLoad = async (event) => {
   if (event.locals.user) {
     return redirect(302, "/");
   }
-  await limiter.cookieLimiter?.preflight(event);
+  if (event.url.protocol === "https:") {
+    await limiter.cookieLimiter?.preflight(event);
+  }
   return {};
 };
 
