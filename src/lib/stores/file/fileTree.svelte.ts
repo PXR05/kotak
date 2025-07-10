@@ -1,4 +1,5 @@
 import type { FileItem } from "$lib/types/file.js";
+import { browser } from "$app/environment";
 
 export interface FileTreeNode {
   item: FileItem;
@@ -13,9 +14,37 @@ export interface FileTreeState {
   expandedFolders: Set<string>;
 }
 
+const STORAGE_KEY = "file-tree:expandedFolders";
+
+function saveExpandedFolders(expandedFolders: Set<string>) {
+  if (!browser) return;
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(Array.from(expandedFolders))
+    );
+  } catch (error) {
+    console.warn("Failed to save file tree state:", error);
+  }
+}
+
+function loadExpandedFolders(): Set<string> {
+  if (!browser) return new Set();
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const folderIds = JSON.parse(saved);
+      return new Set(Array.isArray(folderIds) ? folderIds : []);
+    }
+  } catch (error) {
+    console.warn("Failed to load file tree state:", error);
+  }
+  return new Set();
+}
+
 let fileTreeState = $state<FileTreeState>({
   nodes: [],
-  expandedFolders: new Set(),
+  expandedFolders: loadExpandedFolders(),
 });
 
 export const fileTree = {
@@ -28,13 +57,37 @@ export const fileTree = {
   },
 
   setRootItems(items: FileItem[]) {
+    const currentItemIds = fileTreeState.nodes
+      .map((node) => node.item.id)
+      .sort();
+    const newItemIds = items.map((item) => item.id).sort();
+
+    if (
+      currentItemIds.length === newItemIds.length &&
+      currentItemIds.every((id, index) => id === newItemIds[index])
+    ) {
+      return;
+    }
+
     fileTreeState.nodes = items.map((item) => ({
       item,
-      expanded: false,
+      expanded: fileTreeState.expandedFolders.has(item.id),
       loading: false,
       childrenLoaded: item.type === "file",
       children: item.type === "file" ? undefined : [],
     }));
+
+    items.forEach((item) => {
+      if (
+        item.type === "folder" &&
+        fileTreeState.expandedFolders.has(item.id)
+      ) {
+        const node = this.findNode(item.id);
+        if (node && !node.childrenLoaded && !node.loading) {
+          this.loadFolderChildren(item.id);
+        }
+      }
+    });
   },
 
   toggleFolder(folderId: string) {
@@ -50,12 +103,19 @@ export const fileTree = {
         this.loadFolderChildren(folderId);
       }
     }
+    saveExpandedFolders(fileTreeState.expandedFolders);
   },
 
   setFolderExpanded(folderId: string, expanded: boolean) {
     const node = this.findNode(folderId);
     if (node) {
       node.expanded = expanded;
+      if (expanded) {
+        fileTreeState.expandedFolders.add(folderId);
+      } else {
+        fileTreeState.expandedFolders.delete(folderId);
+      }
+      saveExpandedFolders(fileTreeState.expandedFolders);
     }
   },
 
@@ -71,12 +131,24 @@ export const fileTree = {
         const children: FileItem[] = await response.json();
         node.children = children.map((child) => ({
           item: child,
-          expanded: false,
+          expanded: fileTreeState.expandedFolders.has(child.id),
           loading: false,
           childrenLoaded: child.type === "file",
           children: child.type === "file" ? undefined : [],
         }));
         node.childrenLoaded = true;
+
+        // Load children for any nested folders that should be expanded
+        children.forEach((child) => {
+          if (
+            child.type === "folder" &&
+            fileTreeState.expandedFolders.has(child.id)
+          ) {
+            setTimeout(() => {
+              this.loadFolderChildren(child.id);
+            }, 0);
+          }
+        });
       }
     } catch (error) {
       console.error("Failed to load folder children:", error);
@@ -144,6 +216,7 @@ export const fileTree = {
 
     removeFromNodes(fileTreeState.nodes);
     fileTreeState.expandedFolders.delete(itemId);
+    saveExpandedFolders(fileTreeState.expandedFolders);
   },
 
   updateItem(itemId: string, updates: Partial<FileItem>) {
@@ -180,6 +253,16 @@ export const fileTree = {
       if (node.expanded) {
         this.loadFolderChildren(node.item.id);
       }
+    }
+  },
+
+  clearPersistedState() {
+    if (!browser) return;
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      fileTreeState.expandedFolders.clear();
+    } catch (error) {
+      console.warn("Failed to clear file tree state:", error);
     }
   },
 };
