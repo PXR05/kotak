@@ -56,29 +56,27 @@
     </DropdownMenu.Trigger>
     <DropdownMenu.Content
       class="w-(--bits-dropdown-menu-anchor-width) min-w-56 rounded-lg"
-      side={sidebar.isMobile ? "bottom" : "right"}
+      side="bottom"
       align="start"
       sideOffset={4}
     >
-      <DropdownMenu.Label class="p-0 font-normal">
-        <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-          <Avatar.Root class="size-9 rounded-md">
-            <Avatar.Fallback
-              class="bg-sidebar-primary text-sidebar-primary-foreground font-serif rounded-md"
-            >
-              {user?.email.charAt(0).toUpperCase()}
-            </Avatar.Fallback>
-          </Avatar.Root>
-          <div class="grid flex-1 text-left text-sm leading-tight">
-            <span class="font-serif truncate font-medium"
-              >{user?.email.split("@")[0].toUpperCase()}</span
-            >
-            <span class="truncate text-xs text-muted-foreground"
-              >{user?.email}</span
-            >
-          </div>
+      <div class="flex items-center gap-2 p-1 text-left text-sm">
+        <Avatar.Root class="size-9 rounded-md">
+          <Avatar.Fallback
+            class="bg-sidebar-primary text-sidebar-primary-foreground font-serif rounded-md"
+          >
+            {user?.email.charAt(0).toUpperCase()}
+          </Avatar.Fallback>
+        </Avatar.Root>
+        <div class="grid flex-1 text-left text-sm leading-tight">
+          <span class="font-serif truncate font-medium"
+            >{user?.email.split("@")[0].toUpperCase()}</span
+          >
+          <span class="truncate text-xs text-muted-foreground"
+            >{user?.email}</span
+          >
         </div>
-      </DropdownMenu.Label>
+      </div>
       <DropdownMenu.Separator />
       <DropdownMenu.Group>
         <DropdownMenu.Item

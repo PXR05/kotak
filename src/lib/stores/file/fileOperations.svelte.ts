@@ -43,7 +43,11 @@ export const fileOperations = {
   /**
    * Handle clicking on a file or folder item
    */
-  handleItemClick(item: FileItem, fileList: FileItem[] = [], currentIndex: number = 0) {
+  handleItemClick(
+    item: FileItem,
+    fileList: FileItem[] = [],
+    currentIndex: number = 0
+  ) {
     if (item.type === "folder") {
       goto(`/${item.id}`);
     } else {

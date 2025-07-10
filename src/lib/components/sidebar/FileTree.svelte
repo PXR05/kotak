@@ -15,15 +15,16 @@
   });
 </script>
 
-<TableContextMenu>
-  {#snippet children({ props })}
-    <DragDropZone {...props} class="flex flex-col flex-1 h-full relative">
-      {#snippet children()}
-        <Sidebar.Group class="flex flex-col h-full pb-0">
-          <div class="flex-shrink-0">
-            <Sidebar.Menu>
-              <Sidebar.MenuItem>
+<DragDropZone class="flex flex-col flex-1 h-full relative">
+  {#snippet children()}
+    <Sidebar.Group class="flex flex-col h-full pb-0">
+      <div class="flex-shrink-0">
+        <Sidebar.Menu>
+          <Sidebar.MenuItem>
+            <TableContextMenu>
+              {#snippet children({ props })}
                 <Sidebar.MenuButton
+                  {...props}
                   data-active={page.url.pathname === "/"}
                   class="font-medium"
                 >
@@ -34,23 +35,23 @@
                     </a>
                   {/snippet}
                 </Sidebar.MenuButton>
-              </Sidebar.MenuItem>
-            </Sidebar.Menu>
-          </div>
+              {/snippet}
+            </TableContextMenu>
+          </Sidebar.MenuItem>
+        </Sidebar.Menu>
+      </div>
 
-          <div class="flex-1 overflow-hidden">
-            <Sidebar.Menu class="h-full">
-              <div class="h-full overflow-y-auto">
-                <Sidebar.MenuSub>
-                  {#each fileTree.nodes as node (node.item.id)}
-                    <FileTreeItem {node} />
-                  {/each}
-                </Sidebar.MenuSub>
-              </div>
-            </Sidebar.Menu>
+      <div class="flex-1 overflow-hidden">
+        <Sidebar.Menu class="h-full">
+          <div class="h-full overflow-y-auto">
+            <Sidebar.MenuSub>
+              {#each fileTree.nodes as node (node.item.id)}
+                <FileTreeItem {node} />
+              {/each}
+            </Sidebar.MenuSub>
           </div>
-        </Sidebar.Group>
-      {/snippet}
-    </DragDropZone>
+        </Sidebar.Menu>
+      </div>
+    </Sidebar.Group>
   {/snippet}
-</TableContextMenu>
+</DragDropZone>

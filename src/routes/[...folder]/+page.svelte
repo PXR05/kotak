@@ -29,9 +29,7 @@
   {:catch}
     <Card class="w-full max-w-md m-auto">
       <CardHeader>
-        <CardTitle class="font-serif text-xl"
-          >Error Loading Files</CardTitle
-        >
+        <CardTitle class="font-serif text-xl">Error Loading Files</CardTitle>
       </CardHeader>
       <CardContent>
         <p class="text-muted-foreground mb-8">

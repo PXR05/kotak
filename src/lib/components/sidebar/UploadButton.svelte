@@ -4,11 +4,17 @@
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
+    DropdownMenuSeparator,
   } from "$lib/components/ui/dropdown-menu/index.js";
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import { fileOperations } from "$lib/stores";
   import type { UploadableFile } from "$lib/types/file";
-  import { FolderPlusIcon, PlusIcon, UploadIcon } from "@lucide/svelte";
+  import {
+    FolderEditIcon,
+    FolderPlusIcon,
+    PlusIcon,
+    UploadIcon,
+  } from "@lucide/svelte";
 
   let fileInputRef: HTMLInputElement;
   let folderInputRef: HTMLInputElement;
@@ -70,7 +76,7 @@
         </Sidebar.MenuButton>
       {/snippet}
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="center" class="w-56">
+    <DropdownMenuContent align="center" class="w-52">
       <DropdownMenuItem onclick={() => fileInputRef.click()}>
         <UploadIcon class="mr-2 size-4" />
         Upload Files
@@ -78,6 +84,13 @@
       <DropdownMenuItem onclick={() => folderInputRef.click()}>
         <FolderPlusIcon class="mr-2 size-4" />
         Upload Folder
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        onclick={() => fileOperations.handleContextMenuAction("create-folder")}
+      >
+        <FolderEditIcon class="mr-2 size-4" />
+        Create Folder
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>

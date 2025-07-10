@@ -6,6 +6,7 @@
   import { Toaster } from "$lib/components/ui/sonner/index.js";
   import AppSidebar from "$lib/components/sidebar/AppSidebar.svelte";
   import Dialogs from "$lib/components/dialog/Dialogs.svelte";
+  import UploadProgressPopup from "$lib/components/shared/UploadProgressPopup.svelte";
   import Breadcrumb from "$lib/components/sidebar/Breadcrumb.svelte";
   import Search from "$lib/components/sidebar/Search.svelte";
   import { page } from "$app/state";
@@ -16,9 +17,10 @@
   const side = $derived(settings.getSetting("sidebarSide"));
 </script>
 
-<Toaster />
+<Toaster position="top-right" richColors />
 <ModeWatcher />
 <Dialogs />
+<UploadProgressPopup />
 
 {#if page.data.user}
   <Sidebar.Provider

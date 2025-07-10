@@ -108,7 +108,8 @@
         <LoaderIcon class="size-6 animate-spin" />
         <p class="text-muted-foreground mt-2">Loading</p>
       </div>
-    {:else if error}
+    {/if}
+    {#if error}
       <div class="text-center">
         <FileIcon class="size-12 text-muted-foreground mx-auto mb-2" />
         <p class="text-sm text-muted-foreground">{error}</p>
