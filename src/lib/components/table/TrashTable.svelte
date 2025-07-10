@@ -14,7 +14,7 @@
   import TrashTableRow from "./TrashTableRow.svelte";
   import { openConfirmationDialog } from "$lib/stores/dialogs/confirmationDialog.svelte.js";
   import { openFilePreviewDialog } from "$lib/stores/dialogs/filePreviewDialog.svelte.js";
-  import { fileOperations } from "$lib/stores";
+  import { fileOperations, selectedItems } from "$lib/stores";
   import { toast } from "svelte-sonner";
   import { TrashIcon } from "@lucide/svelte";
   import TrashTableContextMenu from "./TrashTableContextMenu.svelte";
@@ -178,6 +178,7 @@
         !target.closest('[role="menuitem"]'))
     ) {
       table.toggleAllPageRowsSelected(false);
+      selectedItems.length = 0;
     }
   }
 

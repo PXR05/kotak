@@ -21,6 +21,7 @@
     fileOperations,
     filePreviewDialogData,
     renameDialogData,
+    selectedItems,
   } from "$lib/stores";
 
   import { lastSelectedIndex } from "$lib/stores";
@@ -122,22 +123,24 @@
     } else if (e.key === "Escape") {
       e.preventDefault();
       table.toggleAllPageRowsSelected(false);
+      selectedItems.length = 0;
     }
   }
-
+  
   function handleOutsideClick(e: MouseEvent) {
     const target = e.target as HTMLElement;
     if (
       !e ||
       !target ||
       (!target.closest("tr") &&
-        !target.closest("button") &&
-        !target.closest('[data-slot="button"]') &&
-        !target.closest('[data-slot="dropdown-menu-trigger"]') &&
-        !target.closest("input") &&
-        !target.closest('[role="menuitem"]'))
+      !target.closest("button") &&
+      !target.closest('[data-slot="button"]') &&
+      !target.closest('[data-slot="dropdown-menu-trigger"]') &&
+      !target.closest("input") &&
+      !target.closest('[role="menuitem"]'))
     ) {
       table.toggleAllPageRowsSelected(false);
+      selectedItems.length = 0;
     }
   }
 </script>

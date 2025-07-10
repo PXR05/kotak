@@ -32,16 +32,17 @@
 
     updateSelectedItems(selectedFiles);
     fileOperations.bulkMove();
-    table.toggleAllPageRowsSelected(false);
+    handleDeselectAll();
   }
 
   function handleBulkDelete() {
     fileOperations.bulkDelete();
-    table.toggleAllPageRowsSelected(false);
+    handleDeselectAll();
   }
 
   function handleDeselectAll() {
     table.toggleAllPageRowsSelected(false);
+    selectedItems.length = 0;
   }
 
   function getSelectedItems(): FileItem[] {
@@ -80,16 +81,18 @@
       onclick={handleBulkDownload}
       disabled={isDownloading.value}
     >
-      <DownloadIcon class="size-4 mr-2" />
-      {isDownloading.value ? "Creating Zip..." : `Download selected`}
+      <DownloadIcon class="size-4 lg:mr-2" />
+      <span class="max-lg:hidden">
+        {isDownloading.value ? "Creating Zip..." : `Download selected`}
+      </span>
     </Button>
     <Button variant="outline" size="sm" onclick={handleBulkMove}>
-      <MoveIcon class="size-4 mr-2" />
-      Move selected
+      <MoveIcon class="size-4 lg:mr-2" />
+      <span class="max-lg:hidden">Move selected</span>
     </Button>
-    <Button variant="outline" size="sm" onclick={handleBulkDelete}>
-      <TrashIcon class="size-4 mr-2" />
-      Delete selected
+    <Button variant="destructive" size="sm" onclick={handleBulkDelete}>
+      <TrashIcon class="size-4 lg:mr-2" />
+      <span class="max-lg:hidden">Delete selected</span>
     </Button>
   </div>
 </div>

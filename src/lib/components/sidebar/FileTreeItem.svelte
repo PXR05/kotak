@@ -13,9 +13,12 @@
 
   let { node }: { node: FileTreeNode } = $props();
 
+  const sidebar = Sidebar.useSidebar();
+
   const handleFileClick = () => {
     // TODO: file list
     fileOperations.handleItemClick(node.item);
+    sidebar.setOpenMobile(false);
   };
 
   const handleFolderToggle = (e: MouseEvent) => {

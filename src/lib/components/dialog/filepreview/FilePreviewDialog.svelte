@@ -110,7 +110,7 @@
 
 <Dialog {open} onOpenChange={handleClose}>
   <DialogContent
-    class="!max-w-screen w-screen h-screen flex flex-col p-0 gap-0 rounded-none border-none bg-background/25 backdrop-blur"
+    class="max-w-[100dvw] max-h-[100dvh] w-[100dvw] h-[100dvh] flex flex-col p-0 gap-0 rounded-none border-none bg-background/25 backdrop-blur"
     showCloseButton={false}
   >
     {#if file}

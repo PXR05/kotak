@@ -256,7 +256,7 @@
 
 <svelte:window onkeydown={handleKeyDown} />
 
-<div class="a relative z-20 flex flex-col flex-1 max-w-1/2">
+<div class="relative z-20 flex flex-col flex-1 md:max-w-1/2">
   <div class="flex items-center justify-end z-50">
     {#if searchOpen}
       <div

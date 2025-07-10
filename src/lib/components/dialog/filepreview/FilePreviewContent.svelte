@@ -128,7 +128,7 @@
             src={fileUrl}
             alt={file.name}
             draggable="false"
-            class="select-none max-w-screen max-h-screen object-contain transition-transform duration-150"
+            class="select-none max-w-[100dvw] max-h-[100dvh] object-contain transition-transform duration-150"
             style="scale: {zoom}; transform: rotate({rotation}deg);"
             onload={onMediaLoad}
             onerror={() => onMediaError("image")}

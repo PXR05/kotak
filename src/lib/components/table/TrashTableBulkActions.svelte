@@ -5,6 +5,7 @@
   import { fly } from "svelte/transition";
   import type { Table } from "@tanstack/table-core";
   import type { TrashedItem } from "$lib/types/file.js";
+  import { selectedItems } from "$lib/stores";
 
   let {
     table,
@@ -25,18 +26,19 @@
     const selectedItems = getSelectedItems();
     if (selectedItems.length === 0) return;
     onBulkRestore(selectedItems);
-    table.toggleAllPageRowsSelected(false);
+    handleDeselectAll();
   }
 
   function handleBulkDelete() {
     const selectedItems = getSelectedItems();
     if (selectedItems.length === 0) return;
     onBulkDelete(selectedItems);
-    table.toggleAllPageRowsSelected(false);
+    handleDeselectAll();
   }
 
   function handleDeselectAll() {
     table.toggleAllPageRowsSelected(false);
+    selectedItems.length = 0;
   }
 
   function getSelectedItems(): TrashedItem[] {

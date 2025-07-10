@@ -5,6 +5,7 @@
   import type { Row, Table as TanStackTable } from "@tanstack/table-core";
   import type { TrashedItem } from "$lib/types/file.js";
   import { UndoIcon, EyeIcon, Trash2Icon } from "@lucide/svelte";
+  import { selectedItems } from "$lib/stores";
 
   let {
     row,
@@ -54,6 +55,7 @@
     } else {
       table.toggleAllPageRowsSelected(false);
       row.toggleSelected(true);
+      selectedItems.length = 0;
     }
   }
 
