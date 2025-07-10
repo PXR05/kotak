@@ -11,12 +11,12 @@ import type { Actions, PageServerLoad } from "./$types";
 import { RateLimiter } from "sveltekit-rate-limiter/server";
 
 const limiter = new RateLimiter({
-  IP: [10, "h"],
-  IPUA: [3, "h"],
+  IP: [15, "h"],
+  IPUA: [8, "h"],
   cookie: {
     name: "register-limiter",
     secret: process.env.LIMITER_SECRET || "defaultsecret",
-    rate: [2, "h"],
+    rate: [5, "h"],
     preflight: true,
   },
 });

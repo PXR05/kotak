@@ -9,7 +9,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - ./pg_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U root -d kotak"]
       interval: 5s
@@ -33,9 +33,9 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       LIMITER_SECRET: ${LIMITER_SECRET}
     ports:
-      - "4321:4321"
+      - "4321:3000"
     volumes:
-      - web_data:/var/lib/localdrive
+      - ./web_data:/var/lib/localdrive
     depends_on:
       - db
 
