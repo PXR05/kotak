@@ -16,29 +16,8 @@ services:
       timeout: 5s
       retries: 5
 
-  traefik:
-    image: "traefik:latest"
-    command:
-      - "--providers.docker"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.resolver.acme.tlschallenge=true"
-      - "--certificatesresolvers.resolver.acme.email=${ACME_EMAIL}"
-      - "--certificatesresolvers.resolver.acme.storage=/letsencrypt/acme.json"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - letsencrypt:/letsencrypt
-      - "/var/run/docker.sock:/var/run/docker.sock"
-
   migrator:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/pxr05/kotak:latest
     command: ["bun", "run", "db:migrate"]
     environment:
       DATABASE_URL: ${DATABASE_URL}
@@ -46,15 +25,15 @@ services:
       - db
 
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/pxr05/kotak:latest
     command: ["bun", "--bun", "run", "."]
     environment:
       BODY_SIZE_LIMIT: Infinity
       ORIGIN: ${PROTOCOL}://${DOMAIN}
       DATABASE_URL: ${DATABASE_URL}
       LIMITER_SECRET: ${LIMITER_SECRET}
+    ports:
+      - "4321:4321"
     volumes:
       - web_data:/var/lib/localdrive
     depends_on:
