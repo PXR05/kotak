@@ -122,17 +122,19 @@
         {showActions}
       />
 
-      <FilePreviewContent
-        {file}
-        {fileUrl}
-        bind:zoom
-        {rotation}
-        {isLoading}
-        {error}
-        onDownload={handleDownload}
-        onMediaLoad={handleMediaLoad}
-        onMediaError={handleMediaError}
-      />
+      {#key file.id}
+        <FilePreviewContent
+          {file}
+          {fileUrl}
+          bind:zoom
+          {rotation}
+          {isLoading}
+          {error}
+          onDownload={handleDownload}
+          onMediaLoad={handleMediaLoad}
+          onMediaError={handleMediaError}
+        />
+      {/key}
 
       <FilePreviewFloating
         bind:zoom

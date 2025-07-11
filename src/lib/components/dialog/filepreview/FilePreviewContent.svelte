@@ -103,7 +103,7 @@
         transition:fade={{
           duration: 150,
         }}
-        class="text-center grid place-items-center absolute m-auto"
+        class="text-center grid place-items-center absolute m-auto z-20"
       >
         <LoaderIcon class="size-6 animate-spin" />
         <p class="text-muted-foreground mt-2">Loading</p>
