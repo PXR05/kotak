@@ -9,7 +9,9 @@ COPY . .
 RUN bun i
 RUN bun run build
 
-FROM oven/bun:latest
+FROM oven/bun:latest AS production
+
+WORKDIR /usr/src/app
 
 COPY --from=builder /app/build .
 COPY --from=builder /app/drizzle ./drizzle
