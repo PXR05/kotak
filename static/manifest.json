@@ -49,5 +49,18 @@
       "type": "image/png",
       "purpose": "monochrome"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
   ]
 }

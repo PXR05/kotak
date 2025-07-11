@@ -7,6 +7,7 @@
   import { Tween } from "svelte/motion";
   import { quintInOut } from "svelte/easing";
   import { onMount } from "svelte";
+  import UpdatePopup from "../shared/UpdatePopup.svelte";
 
   let loading = $state(true);
   let status = $state<{ total: number; free: number; used: number } | null>(
@@ -69,6 +70,10 @@
             </span>
           {/if}
         </div>
+      </Sidebar.MenuItem>
+
+      <Sidebar.MenuItem>
+        <UpdatePopup />
       </Sidebar.MenuItem>
     </Sidebar.Menu>
   </Sidebar.GroupContent>

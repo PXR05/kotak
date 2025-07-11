@@ -102,7 +102,7 @@
     fileOperations.handleItemClick?.(
       row.original,
       files,
-      files.findIndex((r) => r.id === row.id)
+      files.findIndex((r) => r.id === row.original.id)
     );
   }
 

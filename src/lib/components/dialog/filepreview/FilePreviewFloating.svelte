@@ -66,23 +66,25 @@
   });
 
   function handlePrevious() {
-    filePreviewDialogData.currentIndex =
-      (filePreviewDialogData.currentIndex -
-        1 +
-        filePreviewDialogData.fileList.length) %
-      filePreviewDialogData.fileList.length;
-    filePreviewDialogData.file =
-      filePreviewDialogData.fileList[filePreviewDialogData.currentIndex];
-    filePreviewDialogData.open = true;
+    if (filePreviewDialogData.fileList.length <= 1) {
+      return;
+    }
+    const newIndex = Math.max(filePreviewDialogData.currentIndex - 1, 0);
+    filePreviewDialogData.currentIndex = newIndex;
+    filePreviewDialogData.file = filePreviewDialogData.fileList[newIndex];
   }
 
   function handleNext() {
-    filePreviewDialogData.currentIndex =
-      (filePreviewDialogData.currentIndex + 1) %
-      filePreviewDialogData.fileList.length;
-    filePreviewDialogData.file =
-      filePreviewDialogData.fileList[filePreviewDialogData.currentIndex];
-    filePreviewDialogData.open = true;
+    console.log("Handling next file");
+    if (filePreviewDialogData.fileList.length <= 1) {
+      return;
+    }
+    const newIndex = Math.min(
+      filePreviewDialogData.currentIndex + 1,
+      filePreviewDialogData.fileList.length - 1
+    );
+    filePreviewDialogData.currentIndex = newIndex;
+    filePreviewDialogData.file = filePreviewDialogData.fileList[newIndex];
   }
 
   function handleKeydown(event: KeyboardEvent) {
