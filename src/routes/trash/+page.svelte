@@ -5,10 +5,36 @@
   import { Trash2Icon } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
   import TrashTable from "$lib/components/table/TrashTable.svelte";
+  import {
+    initPreviewFromUrl,
+    handleUrlChange,
+  } from "$lib/stores/dialogs/filePreviewDialog.svelte.js";
+  import { afterNavigate } from "$app/navigation";
 
   let { data } = $props();
 
   let trashedItems = $state(data.trashedItems);
+
+  $effect(() => {
+    if (trashedItems.length > 0) {
+      initPreviewFromUrl(trashedItems);
+    }
+  });
+
+  afterNavigate(() => {
+    handleUrlChange(trashedItems);
+  });
+
+  $effect(() => {
+    const handlePopState = () => {
+      handleUrlChange(trashedItems);
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("popstate", handlePopState);
+      return () => window.removeEventListener("popstate", handlePopState);
+    }
+  });
   let isLoading = $state(false);
 
   const refreshTrash = async () => {

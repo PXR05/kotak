@@ -26,7 +26,7 @@
 {#if uploadProgressStore.isVisible && uploadProgressStore.uploadProgress}
   <div
     transition:slide={{ duration: 150, axis: "y" }}
-    class="fixed bottom-4 right-4 z-50 w-96"
+    class="fixed bottom-4 right-4 z-50 md:w-96 w-full max-w-[calc(100dvw-2rem)]"
   >
     <div
       class="flex flex-col bg-sidebar rounded-lg border border-sidebar-border shadow-sm overflow-clip"

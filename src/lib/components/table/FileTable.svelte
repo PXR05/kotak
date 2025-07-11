@@ -119,6 +119,8 @@
       if (e.key === "a") {
         e.preventDefault();
         table.toggleAllPageRowsSelected(true);
+        selectedItems.length = 0;
+        selectedItems.push(...table.getRowModel().rows.map((r) => r.original));
       }
     } else if (e.key === "Escape") {
       e.preventDefault();
@@ -126,18 +128,18 @@
       selectedItems.length = 0;
     }
   }
-  
+
   function handleOutsideClick(e: MouseEvent) {
     const target = e.target as HTMLElement;
     if (
       !e ||
       !target ||
       (!target.closest("tr") &&
-      !target.closest("button") &&
-      !target.closest('[data-slot="button"]') &&
-      !target.closest('[data-slot="dropdown-menu-trigger"]') &&
-      !target.closest("input") &&
-      !target.closest('[role="menuitem"]'))
+        !target.closest("button") &&
+        !target.closest('[data-slot="button"]') &&
+        !target.closest('[data-slot="dropdown-menu-trigger"]') &&
+        !target.closest("input") &&
+        !target.closest('[role="menuitem"]'))
     ) {
       table.toggleAllPageRowsSelected(false);
       selectedItems.length = 0;
@@ -157,7 +159,6 @@
       class="flex flex-col relative w-full h-full"
       onclick={handleOutsideClick}
     >
-      <!-- Hidden file input for upload -->
       <input
         type="file"
         multiple
@@ -165,7 +166,6 @@
         onchange={handleFileInputChange}
       />
 
-      <!-- Hidden folder input for folder upload -->
       <input
         type="file"
         webkitdirectory

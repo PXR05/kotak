@@ -16,6 +16,8 @@
     UploadIcon,
   } from "@lucide/svelte";
 
+  const sidebar = Sidebar.useSidebar();
+
   let fileInputRef: HTMLInputElement;
   let folderInputRef: HTMLInputElement;
 
@@ -44,7 +46,6 @@
   }
 </script>
 
-<!-- Hidden file input for upload -->
 <input
   bind:this={fileInputRef}
   type="file"
@@ -53,7 +54,6 @@
   onchange={handleFileInputChange}
 />
 
-<!-- Hidden folder input for folder upload -->
 <input
   bind:this={folderInputRef}
   type="file"
@@ -77,17 +77,30 @@
       {/snippet}
     </DropdownMenuTrigger>
     <DropdownMenuContent align="center" class="w-52">
-      <DropdownMenuItem onclick={() => fileInputRef.click()}>
+      <DropdownMenuItem
+        onclick={() => {
+          sidebar.setOpenMobile(false);
+          fileInputRef.click();
+        }}
+      >
         <UploadIcon class="mr-2 size-4" />
         Upload Files
       </DropdownMenuItem>
-      <DropdownMenuItem onclick={() => folderInputRef.click()}>
+      <DropdownMenuItem
+        onclick={() => {
+          sidebar.setOpenMobile(false);
+          folderInputRef.click();
+        }}
+      >
         <FolderPlusIcon class="mr-2 size-4" />
         Upload Folder
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem
-        onclick={() => fileOperations.handleContextMenuAction("create-folder")}
+        onclick={() => {
+          sidebar.setOpenMobile(false);
+          fileOperations.handleContextMenuAction("create-folder");
+        }}
       >
         <FolderEditIcon class="mr-2 size-4" />
         Create Folder

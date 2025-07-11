@@ -65,7 +65,7 @@ export function createFileTableColumns(
         return getDisplayType(item);
       },
       enableSorting: true,
-      sortingFn: (rowA, rowB, columnId) => {
+      sortingFn: (rowA, rowB) => {
         const a = getDisplayType(rowA.original);
         const b = getDisplayType(rowB.original);
         return a.localeCompare(b);

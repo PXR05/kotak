@@ -127,7 +127,12 @@
       data-state={row.getIsSelected() && "selected"}
       class="hover:bg-muted/50 transition-none cursor-pointer"
       onclick={handleRowClick}
-      ondblclick={handleRowDoubleClick}
+      ondblclick={(e) => {
+        if (isMobile) {
+          return;
+        }
+        handleRowDoubleClick(e);
+      }}
       onmouseenter={handleRowPreload}
       onmouseleave={() => {
         if (preloadTimeout) {

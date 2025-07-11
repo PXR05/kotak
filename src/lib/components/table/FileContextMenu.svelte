@@ -8,7 +8,7 @@
   } from "$lib/stores";
   import { fileActions } from "$lib/utils/file-actions.svelte";
   import type { Snippet } from "svelte";
-  import { CheckCircleIcon } from "@lucide/svelte";
+  import { CheckCircle2Icon } from "@lucide/svelte";
   import type { Row } from "@tanstack/table-core";
 
   let {
@@ -38,7 +38,7 @@
           lastSelectedIndex.value = currentIndex;
         }}
       >
-        <CheckCircleIcon class="mr-2 size-4" />
+        <CheckCircle2Icon class="mr-2 size-4" />
         Select
       </ContextMenu.Item>
       <ContextMenu.Separator />

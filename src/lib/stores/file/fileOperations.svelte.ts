@@ -5,6 +5,7 @@ import { openRenameDialog } from "../dialogs/renameDialog.svelte.js";
 import { openCreateFolderDialog } from "../dialogs/createFolderDialog.svelte.js";
 import { openFilePreviewDialog } from "../dialogs/filePreviewDialog.svelte.js";
 import { openMoveDialog } from "../dialogs/moveDialog.svelte.js";
+import { openInfoDialog } from "../dialogs/infoDialog.svelte.js";
 import {
   openShareDialog,
   type ShareData,
@@ -118,6 +119,9 @@ export const fileOperations = {
     switch (action) {
       case "open":
         this.handleItemClick(item);
+        break;
+      case "info":
+        openInfoDialog(item);
         break;
       case "download":
         this.downloadFile(item);

@@ -1,6 +1,7 @@
 import { page } from "$app/state";
 import type { FileItem } from "$lib/types/file.js";
 import { fileAPI } from "../file/fileAPI.js";
+import { createUrlStateManager } from "./urlStateHelper.js";
 
 export interface ShareDialogState {
   open: boolean;
@@ -23,6 +24,11 @@ export interface ShareData {
   emails: string[];
   expiresAt: Date | null;
 }
+
+const urlStateManager = createUrlStateManager({
+  paramName: "share",
+  stateName: "shareDialog",
+});
 
 export const shareDialogData = $state<ShareDialogState>({
   open: false,
@@ -54,6 +60,7 @@ export async function openShareDialog(
   shareDialogData.item = item;
   shareDialogData.callback = callback;
   shareDialogData.loading = true;
+  urlStateManager.pushUrlState(item.id);
 
   try {
     const existingShare = await fileAPI.getExistingShare(item);
@@ -82,4 +89,29 @@ export function closeShareDialog() {
   shareDialogData.callback = null;
   shareDialogData.loading = false;
   resetShareDialogState();
+  urlStateManager.clearUrlState();
+}
+
+export function initShareFromUrl(currentFileList: FileItem[] = []) {
+  const fileId = urlStateManager.getFileIdFromUrl();
+  if (fileId) {
+    const file = urlStateManager.findFileById(fileId, currentFileList);
+    if (file) {
+      openShareDialog(file, async () => ({ shareId: "" }));
+    }
+  }
+}
+
+export function handleShareUrlChange(currentFileList: FileItem[] = []) {
+  const fileId = urlStateManager.getFileIdFromUrl();
+
+  if (!fileId && shareDialogData.open) {
+    shareDialogData.open = false;
+    shareDialogData.item = null;
+    shareDialogData.callback = null;
+    shareDialogData.loading = false;
+    resetShareDialogState();
+  } else if (fileId && !shareDialogData.open) {
+    initShareFromUrl(currentFileList);
+  }
 }

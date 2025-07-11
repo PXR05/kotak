@@ -16,6 +16,7 @@ export type FileItem = {
 
 export type FileAction =
   | "open"
+  | "info"
   | "download"
   | "rename"
   | "move"

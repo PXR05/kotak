@@ -1,11 +1,18 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button/index.js";
   import { isDownloading, selectedItems, fileOperations } from "$lib/stores";
-  import { DownloadIcon, TrashIcon, XIcon, MoveIcon } from "@lucide/svelte";
+  import {
+    DownloadIcon,
+    TrashIcon,
+    XIcon,
+    MoveIcon,
+    LoaderIcon,
+  } from "@lucide/svelte";
   import { quintOut } from "svelte/easing";
   import { fly } from "svelte/transition";
   import type { Table } from "@tanstack/table-core";
   import type { FileItem } from "$lib/types/file.js";
+  import { is } from "drizzle-orm";
 
   let {
     table,
@@ -18,40 +25,32 @@
   );
   const totalCount = $derived(table.getFilteredRowModel().rows.length);
 
-  function handleBulkDownload() {
-    const selectedFiles = getSelectedItems();
-    if (selectedFiles.length === 0) return;
-
-    updateSelectedItems(selectedFiles);
-    fileOperations.bulkDownload();
-  }
-
-  function handleBulkMove() {
-    const selectedFiles = getSelectedItems();
-    if (selectedFiles.length === 0) return;
-
-    updateSelectedItems(selectedFiles);
-    fileOperations.bulkMove();
-    handleDeselectAll();
-  }
-
-  function handleBulkDelete() {
-    fileOperations.bulkDelete();
-    handleDeselectAll();
-  }
-
   function handleDeselectAll() {
     table.toggleAllPageRowsSelected(false);
     selectedItems.length = 0;
   }
 
-  function getSelectedItems(): FileItem[] {
-    return table.getFilteredSelectedRowModel().rows.map((row) => row.original);
-  }
-
-  function updateSelectedItems(items: FileItem[]) {
-    selectedItems.splice(0, selectedItems.length, ...items);
-  }
+  const actions = $derived([
+    {
+      icon: DownloadIcon,
+      label: "Download selected",
+      action: () => fileOperations.bulkDownload(),
+      loadingIcon: LoaderIcon,
+      loadingText: "Creating Zip",
+      isLoading: isDownloading.value,
+    },
+    {
+      icon: MoveIcon,
+      label: "Move selected",
+      action: () => fileOperations.bulkMove(),
+    },
+    {
+      icon: TrashIcon,
+      label: "Delete selected",
+      action: () => fileOperations.bulkDelete(),
+      destructive: true,
+    },
+  ]);
 </script>
 
 <div
@@ -75,24 +74,24 @@
     </span>
   </div>
   <div class="flex items-center gap-2">
-    <Button
-      variant="outline"
-      size="sm"
-      onclick={handleBulkDownload}
-      disabled={isDownloading.value}
-    >
-      <DownloadIcon class="size-4 lg:mr-2" />
-      <span class="max-lg:hidden">
-        {isDownloading.value ? "Creating Zip..." : `Download selected`}
-      </span>
-    </Button>
-    <Button variant="outline" size="sm" onclick={handleBulkMove}>
-      <MoveIcon class="size-4 lg:mr-2" />
-      <span class="max-lg:hidden">Move selected</span>
-    </Button>
-    <Button variant="destructive" size="sm" onclick={handleBulkDelete}>
-      <TrashIcon class="size-4 lg:mr-2" />
-      <span class="max-lg:hidden">Delete selected</span>
-    </Button>
+    {#each actions as action}
+      <Button
+        variant={action.destructive ? "destructive" : "outline"}
+        size="sm"
+        onclick={action.action}
+        disabled={action.isLoading}
+      >
+        {#if action.isLoading && action.loadingIcon}
+          <action.loadingIcon class="size-4 mr-2 animate-spin" />
+        {:else}
+          <action.icon class="size-4 mr-2" />
+        {/if}
+        <span class="max-lg:hidden">
+          {action.isLoading && action.loadingText
+            ? action.loadingText
+            : action.label}
+        </span>
+      </Button>
+    {/each}
   </div>
 </div>

@@ -44,10 +44,16 @@
     return getIconFromMimeType(item.mimeType);
   }
 
-  let IconComponent = $derived(getIcon(item));
+  const IconComponent = $derived(getIcon(item));
 </script>
 
 <div class="flex items-center gap-3 font-medium">
-  <IconComponent class="size-5 text-muted-foreground" />
-  <span>{item.name}</span>
+  <IconComponent
+    class="size-5 text-muted-foreground"
+    absoluteStrokeWidth
+    strokeWidth={1.5}
+  />
+  <span class="max-w-[calc(100dvw-5rem)] md:max-w-[calc(100dvw-20rem)] truncate"
+    >{item.name}</span
+  >
 </div>

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input";
-  import { filePreviewDialogData } from "$lib/stores";
+  import { filePreviewDialogData, navigateToFile } from "$lib/stores";
   import {
     ZoomInIcon,
     ZoomOutIcon,
@@ -70,12 +70,10 @@
       return;
     }
     const newIndex = Math.max(filePreviewDialogData.currentIndex - 1, 0);
-    filePreviewDialogData.currentIndex = newIndex;
-    filePreviewDialogData.file = filePreviewDialogData.fileList[newIndex];
+    navigateToFile(newIndex);
   }
 
   function handleNext() {
-    console.log("Handling next file");
     if (filePreviewDialogData.fileList.length <= 1) {
       return;
     }
@@ -83,8 +81,7 @@
       filePreviewDialogData.currentIndex + 1,
       filePreviewDialogData.fileList.length - 1
     );
-    filePreviewDialogData.currentIndex = newIndex;
-    filePreviewDialogData.file = filePreviewDialogData.fileList[newIndex];
+    navigateToFile(newIndex);
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -96,6 +93,10 @@
       handlePrevious();
     } else if (event.key === "ArrowRight" && canGoNext) {
       handleNext();
+    } else if (event.key === "Escape") {
+      if (typeof window !== "undefined") {
+        window.history.back();
+      }
     }
   }
 </script>

@@ -10,6 +10,8 @@
   import FilePreviewContent from "./FilePreviewContent.svelte";
   import FilePreviewFooter from "./FilePreviewFooter.svelte";
   import FilePreviewFloating from "./FilePreviewFloating.svelte";
+  import { browser } from "$app/environment";
+  import { page } from "$app/state";
 
   let {
     open: externalOpen = undefined,
@@ -50,6 +52,14 @@
     if (externalOnClose) {
       externalOnClose();
     } else {
+      if (browser && !externalOnClose) {
+        const hasPreviewParam = page.url.searchParams.has("preview");
+
+        if (hasPreviewParam) {
+          window.history.back();
+          return;
+        }
+      }
       closeFilePreviewDialog();
     }
     zoom = 1;

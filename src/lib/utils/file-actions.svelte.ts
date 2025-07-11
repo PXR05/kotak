@@ -6,6 +6,7 @@ import {
   Icon,
   Share2Icon,
   MoveIcon,
+  InfoIcon,
 } from "@lucide/svelte";
 import type { FileAction } from "$lib/types/file.js";
 
@@ -25,9 +26,15 @@ const actions: FileActionConfig[] = $derived([
     icon: EyeIcon,
   },
   {
+    id: "info",
+    label: "Info",
+    icon: InfoIcon,
+  },
+  {
     id: "download",
     label: "Download",
     icon: DownloadIcon,
+    separator: true,
   },
   {
     id: "share",
