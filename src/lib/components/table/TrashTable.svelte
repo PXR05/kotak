@@ -18,14 +18,13 @@
   import { toast } from "svelte-sonner";
   import { TrashIcon } from "@lucide/svelte";
   import TrashTableContextMenu from "./TrashTableContextMenu.svelte";
+  import { invalidateAll } from "$app/navigation";
 
   let {
     items,
-    onRefresh,
     onEmptyTrash,
   }: {
     items: TrashedItem[];
-    onRefresh: () => Promise<void>;
     onEmptyTrash?: () => void;
   } = $props();
 
@@ -34,8 +33,8 @@
 
   const handleRestore = async (item: TrashedItem) => {
     try {
-      await fileOperations.restoreItem(item.itemId);
-      await onRefresh();
+      await fileOperations.restoreItem(item);
+      invalidateAll();
     } catch (error) {
       console.error("Failed to restore item:", error);
     }
@@ -44,7 +43,7 @@
   const handlePermanentDelete = async (item: TrashedItem) => {
     openConfirmationDialog(
       {
-        title: `Permanently delete ${item.itemType}`,
+        title: `Permanently delete ${item.type}`,
         description: `Are you sure you want to permanently delete "${item.name}"? This action cannot be undone.`,
         confirmText: "Permanently Delete",
         cancelText: "Cancel",
@@ -52,8 +51,8 @@
       },
       async () => {
         try {
-          await fileOperations.permanentlyDeleteItem(item.itemId);
-          await onRefresh();
+          await fileOperations.permanentlyDeleteItem(item);
+          invalidateAll();
         } catch (error) {
           console.error("Failed to permanently delete item:", error);
         }
@@ -62,7 +61,7 @@
   };
 
   const handlePreview = (item: TrashedItem) => {
-    if (item.itemType === "file") {
+    if (item.type === "file") {
       const fileItem = {
         id: item.itemId,
         name: item.name,
@@ -81,11 +80,10 @@
   const handleBulkRestore = async (selectedItems: TrashedItem[]) => {
     try {
       const restorePromises = selectedItems.map((item) =>
-        fileOperations.restoreItem(item.itemId)
+        fileOperations.restoreItem(item)
       );
       await Promise.all(restorePromises);
-      await onRefresh();
-      toast.success(`Restored ${selectedItems.length} item(s)`);
+      invalidateAll();
     } catch (error) {
       console.error("Failed to bulk restore:", error);
       toast.error("Failed to restore some items");
@@ -104,11 +102,10 @@
       async () => {
         try {
           const deletePromises = selectedItems.map((item) =>
-            fileOperations.permanentlyDeleteItem(item.itemId)
+            fileOperations.permanentlyDeleteItem(item)
           );
           await Promise.all(deletePromises);
-          await onRefresh();
-          toast.success(`Permanently deleted ${selectedItems.length} item(s)`);
+          invalidateAll();
         } catch (error) {
           console.error("Failed to bulk delete:", error);
           toast.error("Failed to delete some items");
@@ -185,7 +182,7 @@
   function handleContextAction(actionId: string) {
     switch (actionId) {
       case "refresh":
-        onRefresh();
+        invalidateAll();
         break;
       case "empty-trash":
         if (onEmptyTrash) {
@@ -213,7 +210,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class="flex flex-col relative w-full h-[calc(100dvh-10.75rem-2px)]"
+  class="flex flex-col relative w-full h-[calc(100dvh-10.75rem-2px)] md:max-w-[calc(100dvw-16.75rem)] max-w-[calc(100dvw-1rem)] overflow-hidden"
   onclick={handleOutsideClick}
 >
   {#if table.getFilteredSelectedRowModel().rows.length > 0}

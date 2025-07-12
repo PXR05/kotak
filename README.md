@@ -53,7 +53,9 @@ The codebase follows SvelteKit conventions with a clear separation of concerns:
 
 **Frontend Components**: Located in `src/lib/components/`, organized by feature areas including dialogs, file tables, sidebar navigation, and reusable UI components.
 
-**API Routes**: RESTful endpoints in `src/routes/api/` handle file operations, folder management, search, and sharing functionality.
+**Telefunc API**: The main application logic uses [Telefunc](https://telefunc.com) for type-safe server functions. Core functionality like file operations, folder management, search, and sharing is handled through telefunc functions in `src/lib/stores/*/` directories.
+
+**API Routes**: Traditional REST endpoints in `src/routes/api/` are used specifically for file streaming, downloads, and XHR file uploads. These handle the binary file operations that require traditional HTTP endpoints.
 
 **Database Layer**: Drizzle ORM manages the PostgreSQL database with schemas defined in `src/lib/server/db/`. The system tracks users, files, folders, shares, and trash items.
 

@@ -4,7 +4,6 @@ import type { TrashedItem } from "$lib/types/file.js";
 import FileTableName from "./FileTableName.svelte";
 import TrashTableActions from "./TrashTableActions.svelte";
 import FileTableSortableHeader from "./FileTableSortableHeader.svelte";
-import { formatDate } from "$lib/utils/format";
 
 export function createTrashTableColumns(
   onRestore: (item: TrashedItem) => void,
@@ -26,7 +25,7 @@ export function createTrashTableColumns(
         const fileItem = {
           id: item.itemId,
           name: item.name,
-          type: item.itemType,
+          type: item.type,
           ownerId: "",
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -52,7 +51,7 @@ export function createTrashTableColumns(
       },
       cell: ({ row }) => {
         const item = row.original;
-        return item.itemType === "folder" ? "Folder" : "File";
+        return item.type === "folder" ? "Folder" : "File";
       },
       enableSorting: true,
     },
@@ -66,9 +65,7 @@ export function createTrashTableColumns(
       },
       cell: ({ row }) => {
         const item = row.original;
-        return item.originalFolderId || item.originalParentId
-          ? "Folder"
-          : "Root";
+        return item.originalFolderId || item.originalParentId;
       },
       enableSorting: true,
     },
@@ -77,7 +74,7 @@ export function createTrashTableColumns(
       header: ({ column }) => {
         return renderComponent(FileTableSortableHeader, {
           column,
-          title: "Date Deleted",
+          title: "Deleted At",
         });
       },
       cell: ({ row }) => {

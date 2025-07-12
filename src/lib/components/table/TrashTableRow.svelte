@@ -70,7 +70,7 @@
     }
 
     const item = row.original;
-    if (item.itemType === "file") {
+    if (item.type === "file") {
       onPreview(item);
     }
   }
@@ -101,7 +101,7 @@
     {/snippet}
   </ContextMenu.Trigger>
   <ContextMenu.Content class="w-52">
-    {#if row.original.itemType === "file"}
+    {#if row.original.type === "file"}
       <ContextMenu.Item onclick={() => onPreview(row.original)}>
         <EyeIcon class="mr-2 size-4" />
         Preview

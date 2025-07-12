@@ -15,6 +15,8 @@
   import { onDestroy, onMount } from "svelte";
   import { fileOperations } from "$lib/stores";
   import { formatFileSize } from "$lib/utils/format";
+  import { onSearch } from "./Search.telefunc";
+  import { toast } from "svelte-sonner";
 
   type SearchResult = {
     id: string;
@@ -28,13 +30,6 @@
     mimeType?: string;
     createdAt: Date;
     updatedAt: Date;
-  };
-
-  type SearchResponse = {
-    query: string;
-    results: SearchResult[];
-    total: number;
-    hasMore: boolean;
   };
 
   let searchOpen = $state(false);
@@ -69,26 +64,16 @@
     isSearching = true;
     hasSearched = true;
     selectedIndex = -1;
-    try {
-      const response = await fetch(
-        `/api/search?q=${encodeURIComponent(query)}&limit=10`
-      );
-      if (response.ok) {
-        const data: SearchResponse = await response.json();
-        searchResults = data.results;
-        resultElements = new Array(data.results.length);
-      } else {
-        console.error("Search failed:", response.statusText);
-        searchResults = [];
-        resultElements = [];
-      }
-    } catch (error) {
-      console.error("Search error:", error);
+    const { data, error } = await onSearch({ query, limit: 10 });
+    if (error || !data) {
+      toast.error(`Search failed: ${error ?? "Unknown error"}`);
       searchResults = [];
       resultElements = [];
-    } finally {
-      isSearching = false;
+    } else {
+      searchResults = data.results;
+      resultElements = new Array(data.results.length);
     }
+    isSearching = false;
   }
 
   function debouncedSearch(query: string) {

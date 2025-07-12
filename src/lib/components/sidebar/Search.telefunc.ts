@@ -1,10 +1,9 @@
-import { json, error } from "@sveltejs/kit";
-import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { and, eq, ilike, ne } from "drizzle-orm";
+import { getContext } from "telefunc";
 
-type SearchResult = {
+export type SearchResult = {
   id: string;
   name: string;
   type: "file" | "folder";
@@ -18,30 +17,38 @@ type SearchResult = {
   updatedAt: Date;
 };
 
-export const GET: RequestHandler = async ({ url, locals }) => {
-  if (!locals.user) {
-    throw error(401, "Unauthorized");
+export async function onSearch(data: {
+  query: string;
+  folderId?: string | null;
+  type?: string | null;
+  limit?: number | null;
+}) {
+  const context = getContext();
+  const { user } = context;
+  if (!user) {
+    return {
+      error: "User not authenticated",
+    };
   }
 
-  const query = url.searchParams.get("q");
-  const type = url.searchParams.get("type");
-  const limit = parseInt(url.searchParams.get("limit") || "50");
-  const folderId = url.searchParams.get("folderId");
+  const DEFAULT_LIMIT = 20;
+
+  const { query, folderId, type, limit } = data;
 
   if (!query || typeof query !== "string") {
-    throw error(400, "Missing or invalid search query");
+    return {
+      error: "Missing or invalid search query",
+    };
   }
 
   const trimmedQuery = query.trim();
   if (!trimmedQuery) {
-    throw error(400, "Search query cannot be empty");
+    return {
+      error: "Search query cannot be empty",
+    };
   }
 
-  if (limit < 1 || limit > 100) {
-    throw error(400, "Limit must be between 1 and 100");
-  }
-
-  const searchPattern = `%${trimmedQuery.replace(/[%_]/g, '\\$&')}%`;
+  const searchPattern = `%${trimmedQuery.replace(/[%_]/g, "\\$&")}%`;
   const results: { files: any[]; folders: any[] } = {
     files: [],
     folders: [],
@@ -50,7 +57,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   try {
     if (!type || type === "files") {
       let fileWhereConditions = [
-        eq(table.file.ownerId, locals.user.id),
+        eq(table.file.ownerId, user.id),
         ilike(table.file.name, searchPattern),
       ];
 
@@ -72,12 +79,12 @@ export const GET: RequestHandler = async ({ url, locals }) => {
         })
         .from(table.file)
         .where(and(...fileWhereConditions))
-        .limit(Math.ceil(limit / 2));
+        .limit(limit || DEFAULT_LIMIT);
     }
 
     if (!type || type === "folders") {
       let folderWhereConditions = [
-        eq(table.folder.ownerId, locals.user.id),
+        eq(table.folder.ownerId, user.id),
         ilike(table.folder.name, searchPattern),
         ne(table.folder.name, "__root__"),
         ne(table.folder.name, "__trash__"),
@@ -98,7 +105,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
         })
         .from(table.folder)
         .where(and(...folderWhereConditions))
-        .limit(Math.ceil(limit / 2));
+        .limit(limit || DEFAULT_LIMIT);
     }
 
     const allResults = [
@@ -119,18 +126,23 @@ export const GET: RequestHandler = async ({ url, locals }) => {
         }
         return a.name.localeCompare(b.name);
       })
-      .slice(0, limit);
+      .slice(0, limit || DEFAULT_LIMIT);
 
-    return json({
-      query: trimmedQuery,
-      results: allResults.map(
-        ({ relevance, ...item }) => item
-      ) as SearchResult[],
-      total: allResults.length,
-      hasMore: allResults.length === limit,
-    });
+    return {
+      data: {
+        query: trimmedQuery,
+        results: allResults.map(
+          ({ relevance, ...item }) => item
+        ) as SearchResult[],
+        total: allResults.length,
+        hasMore: allResults.length === limit,
+      },
+    };
   } catch (err) {
     console.error("Search error:", err);
-    throw error(500, "Search failed");
+    return {
+      error:
+        err instanceof Error ? err.message : "Unknown search error occurred",
+    };
   }
-};
+}

@@ -34,7 +34,7 @@ export interface UploadableFile {
 export interface TrashedItem {
   id: string;
   itemId: string;
-  itemType: "file" | "folder";
+  type: "file" | "folder";
   originalFolderId?: string | null;
   originalParentId?: string | null;
   trashedAt: Date;

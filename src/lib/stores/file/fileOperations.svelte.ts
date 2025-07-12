@@ -1,5 +1,10 @@
 import { invalidateAll, goto } from "$app/navigation";
-import type { FileItem, FileAction, UploadableFile } from "$lib/types/file.js";
+import type {
+  FileItem,
+  FileAction,
+  UploadableFile,
+  TrashedItem,
+} from "$lib/types/file.js";
 import { openConfirmationDialog } from "../dialogs/confirmationDialog.svelte.js";
 import { openRenameDialog } from "../dialogs/renameDialog.svelte.js";
 import { openCreateFolderDialog } from "../dialogs/createFolderDialog.svelte.js";
@@ -18,10 +23,24 @@ import {
   selectionUtils,
   contextUtils,
 } from "./fileState.svelte.js";
-import { fileAPI, type CreateFolderOptions } from "./fileAPI.js";
 import { uploadUtils } from "./uploadUtils.js";
 import { downloadUtils } from "./downloadUtils.js";
 import { capitalize } from "$lib/utils/format.js";
+import {
+  onCreateFolder,
+  onEmptyTrash,
+  onMoveFile,
+  onMoveFolder,
+  onPermanentDeleteFile,
+  onPermanentDeleteFolder,
+  onRenameFile,
+  onRenameFolder,
+  onRestoreFile,
+  onRestoreFolder,
+  onShareFile,
+  onShareFolder,
+  onTrashItem,
+} from "./fileAPI.telefunc.js";
 
 export {
   selectedItems,
@@ -34,16 +53,8 @@ export {
 } from "./fileState.svelte.js";
 
 export type { UploadOptions } from "./uploadUtils.js";
-export { type CreateFolderOptions };
-
-/**
- * Main file operations interface
- */
 
 export const fileOperations = {
-  /**
-   * Handle clicking on a file or folder item
-   */
   handleItemClick(
     item: FileItem,
     fileList: FileItem[] = [],
@@ -56,61 +67,71 @@ export const fileOperations = {
     }
   },
 
-  /**
-   * Handle renaming an item
-   */
   async handleRename(item: FileItem, newName: string) {
-    await fileAPI.renameItem(item, newName);
-  },
-
-  /**
-   * Handle deleting an item
-   */
-  async handleDelete(item: FileItem) {
-    await fileAPI.deleteItem(item);
-    selectionUtils.removeFromSelection(item);
-  },
-
-  /**
-   * Handle moving an item to trash
-   */
-  async handleTrash(item: FileItem) {
-    await fileAPI.trashItem(item);
-    selectionUtils.removeFromSelection(item);
-  },
-
-  /**
-   * Handle creating a new folder
-   */
-  async handleCreateFolder(name: string) {
-    try {
-      await fileAPI.createFolder({
-        name,
-        parentId: currentFolderId.value || undefined,
+    if (item.type === "file") {
+      const { data, error } = await onRenameFile({
+        fileId: item.id,
+        newName,
       });
-    } catch (error) {
-      console.error("Failed to create folder:", error);
-      throw error;
+      if (error || !data) {
+        toast.error(`Failed to rename file: ${error || "Unknown error"}`);
+        return;
+      }
+      toast.success(`File renamed to "${data.name}" successfully`);
+    } else {
+      const { data, error } = await onRenameFolder({
+        folderId: item.id,
+        newName,
+      });
+      if (error || !data) {
+        toast.error(`Failed to rename folder: ${error || "Unknown error"}`);
+        return;
+      }
+      toast.success(`Folder renamed to "${data.name}" successfully`);
     }
+    invalidateAll();
   },
 
-  /**
-   * Handle uploading files
-   */
+  async handleTrash(item: FileItem) {
+    const trashRecord = {
+      itemId: item.id,
+      itemType: item.type,
+      originalFolderId: item.type === "file" ? item.folderId : undefined,
+      originalParentId: item.type === "folder" ? item.parentId : undefined,
+      name: item.name,
+    };
+
+    const { data, error } = await onTrashItem(trashRecord);
+    if (error || !data) {
+      toast.error(`Failed to move item to trash: ${error || "Unknown error"}`);
+      return;
+    }
+    toast.success(`"${item.name}" moved to trash successfully`);
+    invalidateAll();
+    this.clearSelection();
+  },
+
+  async handleCreateFolder(name: string) {
+    const { data, error } = await onCreateFolder({
+      name,
+      parentId: currentFolderId.value || undefined,
+    });
+    if (error || !data) {
+      toast.error(`Failed to create folder: ${error || "Unknown error"}`);
+      return;
+    }
+    toast.success(`Folder "${data.name}" created successfully`);
+    invalidateAll();
+  },
+
   async handleFilesUpload(uploadableFiles: UploadableFile[]) {
     await uploadUtils.handleFilesUpload(uploadableFiles, currentFolderId.value);
   },
 
-  /**
-   * Download a single file or folder
-   */
   async downloadFile(item: FileItem) {
     await downloadUtils.downloadFile(item);
   },
 
-  /**
-   * Handle various file actions
-   */
   async handleAction(
     action: FileAction,
     item: FileItem,
@@ -165,38 +186,44 @@ export const fileOperations = {
     }
   },
 
-  /**
-   * Selection management
-   */
   selectAll: selectionUtils.selectAll,
   clearSelection: selectionUtils.clearSelection,
   toggleSelection: selectionUtils.toggleSelection,
 
-  /**
-   * Move items to a different folder
-   */
   async moveItems(items: FileItem[], targetFolderId: string | null) {
     try {
       const movePromises = items.map((item) =>
-        fileAPI.moveItemToFolder(item, targetFolderId)
+        item.type === "file"
+          ? onMoveFile({
+              fileId: item.id,
+              targetFolderId,
+              skipConflicts: true,
+            })
+          : onMoveFolder({
+              folderId: item.id,
+              targetParentId: targetFolderId,
+              skipConflicts: true,
+            })
       );
       const results = await Promise.all(movePromises);
 
-      const successful = results.filter((r) => r.success);
-      const skipped = results.filter((r) => r.skipped);
+      const skipped = results.filter((r) => r.data && r.data.skipped);
 
-      if (successful.length > 0) {
-        toast.success(`Successfully moved ${successful.length} item(s)`);
+      if (items.length - skipped.length > 0) {
+        toast.success(
+          `Successfully moved ${items.length - skipped.length} item(s)`
+        );
       }
 
       if (skipped.length > 0) {
-        const skippedNames = skipped.map((r) => r.itemName).join(", ");
+        const skippedNames = skipped.map((r) => r.data?.item.name).join(", ");
         toast.warning(
           `Skipped ${skipped.length} item(s) due to name conflicts: ${skippedNames}`
         );
       }
 
-      await invalidateAll();
+      invalidateAll();
+      this.clearSelection();
     } catch (error) {
       console.error("Failed to move items:", error);
       const errorMessage =
@@ -206,19 +233,15 @@ export const fileOperations = {
     }
   },
 
-  /**
-   * Bulk operations
-   */
   async bulkMove() {
     if (selectedItems.length === 0) return;
 
     openMoveDialog(selectedItems, async (targetFolderId: string | null) => {
       await this.moveItems(selectedItems, targetFolderId);
-      this.clearSelection();
     });
   },
 
-  async bulkDelete() {
+  async bulkTrash() {
     if (selectedItems.length === 0) return;
 
     const itemCount = selectedItems.length;
@@ -236,7 +259,6 @@ export const fileOperations = {
             this.handleTrash(item)
           );
           await Promise.all(trashPromises);
-          this.clearSelection();
         } catch (error) {
           console.error("Failed to trash items:", error);
         }
@@ -248,9 +270,6 @@ export const fileOperations = {
     await downloadUtils.bulkDownload(selectedItems);
   },
 
-  /**
-   * Handle context menu actions
-   */
   handleContextMenuAction(action: string, item?: FileItem | null) {
     switch (action) {
       case "upload":
@@ -281,87 +300,93 @@ export const fileOperations = {
     }
   },
 
-  /**
-   * Context management
-   */
   setCurrentFolder: contextUtils.setCurrentFolder,
   setCurrentUser: contextUtils.setCurrentUser,
 
-  /**
-   * Handle sharing an item
-   */
   async handleShare(item: FileItem, shareData: ShareData) {
-    try {
-      const result = await fileAPI.shareItem(item, shareData);
-      if (result.success) {
-        if (result.publicUrl) {
-          toast.success(
-            `${
-              result.message || `${capitalize(item.type)} shared successfully`
-            }`
-          );
-        } else {
-          toast.success(
-            result.message ||
-              `${capitalize(
-                item.type
-              )} shared successfully with specified users.`
-          );
-        }
-        return { shareId: result.shareId, publicUrl: result.publicUrl };
+    const { data: result, error } =
+      item.type === "file"
+        ? await onShareFile({
+            ...shareData,
+            itemId: item.id,
+          })
+        : await onShareFolder({
+            ...shareData,
+            itemId: item.id,
+          });
+    if (error || !result) {
+      toast.error(`Failed to share ${item.type}: ${error || "Unknown error"}`);
+      return;
+    }
+    if (result.success) {
+      if (result.publicUrl) {
+        toast.success(
+          `${result.message || `${capitalize(item.type)} shared successfully`}`
+        );
+      } else {
+        toast.success(
+          result.message ||
+            `${capitalize(item.type)} shared successfully with specified users.`
+        );
       }
-    } catch (error) {
-      console.error("Failed to share item:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      toast.error(`Failed to share ${item.type}: ${errorMessage}`);
-      throw error;
+      return { shareId: result.shareId, publicUrl: result.publicUrl };
     }
   },
 
-  /**
-   * Trash operations
-   */
-  async getTrashedItems() {
-    return await fileAPI.getTrashedItems();
-  },
-
-  async restoreItem(itemId: string) {
-    try {
-      await fileAPI.restoreItem(itemId);
-      toast.success("Item restored successfully");
-    } catch (error) {
-      console.error("Failed to restore item:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      toast.error(`Failed to restore item: ${errorMessage}`);
-      throw error;
+  async restoreItem(item: TrashedItem) {
+    if (item.type === "file") {
+      const { data, error } = await onRestoreFile({
+        itemId: item.itemId,
+      });
+      if (error || !data) {
+        toast.error(`Failed to restore file: ${error || "Unknown error"}`);
+        return;
+      }
+      toast.success(`File "${item.name}" restored successfully`);
+    } else {
+      const { data, error } = await onRestoreFolder({
+        itemId: item.itemId,
+      });
+      if (error || !data) {
+        toast.error(`Failed to restore folder: ${error || "Unknown error"}`);
+        return;
+      }
+      toast.success(`Folder "${item.name}" restored successfully`);
     }
   },
 
-  async permanentlyDeleteItem(itemId: string) {
-    try {
-      await fileAPI.permanentlyDeleteItem(itemId);
-      toast.success("Item permanently deleted");
-    } catch (error) {
-      console.error("Failed to permanently delete item:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      toast.error(`Failed to permanently delete item: ${errorMessage}`);
-      throw error;
+  async permanentlyDeleteItem(item: TrashedItem) {
+    if (item.type === "file") {
+      const { data, error } = await onPermanentDeleteFile({
+        itemId: item.itemId,
+      });
+      if (error || !data) {
+        toast.error(
+          `Failed to permanently delete file: ${error || "Unknown error"}`
+        );
+        return;
+      }
+      toast.success(`File "${item.name}" permanently deleted`);
+    } else {
+      const { data, error } = await onPermanentDeleteFolder({
+        itemId: item.itemId,
+      });
+      if (error || !data) {
+        toast.error(
+          `Failed to permanently delete folder: ${error || "Unknown error"}`
+        );
+        return;
+      }
+      toast.success(`Folder "${item.name}" permanently deleted`);
     }
   },
 
   async emptyTrash() {
-    try {
-      await fileAPI.emptyTrash();
-      toast.success("Trash emptied successfully");
-    } catch (error) {
-      console.error("Failed to empty trash:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      toast.error(`Failed to empty trash: ${errorMessage}`);
-      throw error;
+    const { data, error } = await onEmptyTrash();
+    if (error || !data) {
+      toast.error(`Failed to empty trash: ${error || "Unknown error"}`);
+      return;
     }
+    toast.success("Trash emptied successfully");
   },
 };

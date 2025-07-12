@@ -24,12 +24,15 @@
   } from "@lucide/svelte";
   import {
     closeShareDialog,
-    fileAPI,
     shareDialogData,
     type ShareData,
   } from "$lib/stores";
   import { slide } from "svelte/transition";
   import { page } from "$app/state";
+  import {
+    onDeleteFileShare,
+    onDeleteFolderShare,
+  } from "$lib/stores/file/fileAPI.telefunc";
 
   const open = $derived(shareDialogData.open);
   const item = $derived(shareDialogData.item);
@@ -159,9 +162,19 @@
   }
 
   async function deleteShare() {
+    if (!item) return;
     isSubmitting = true;
     try {
-      await fileAPI.deleteShare(item!);
+      const { error: err } = await (item.type === "file"
+        ? onDeleteFileShare({
+            itemId: item.id,
+          })
+        : onDeleteFolderShare({
+            itemId: item.id,
+          }));
+      if (err) {
+        throw new Error(err);
+      }
       shareLink = null;
       shareDialogData.existingShareId = null;
       shareDialogData.existingShareLink = null;

@@ -1,17 +1,33 @@
 import { redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
+import { db } from "$lib/server/db";
+import * as table from "$lib/server/db/schema";
+import { eq } from "drizzle-orm";
 
-export const load: PageServerLoad = async ({ locals, fetch }) => {
+export const load: PageServerLoad = async ({ locals }) => {
   if (!locals.user) {
     throw redirect(302, "/auth/login");
   }
 
   try {
-    const response = await fetch("/api/trash");
-    if (!response.ok) {
-      throw new Error("Failed to fetch trashed items");
-    }
-    const trashedItems = await response.json();
+    const trashedItems = (
+      await db
+        .select()
+        .from(table.trashedItem)
+        .where(eq(table.trashedItem.ownerId, locals.user.id))
+        .orderBy(table.trashedItem.trashedAt)
+    ).map((item) => ({
+      id: item.id,
+      name: item.name,
+      itemId: item.itemId,
+      type: item.itemType as "file" | "folder",
+      ownerId: item.ownerId,
+      originalFolderId: item.originalFolderId,
+      originalParentId: item.originalParentId,
+      trashedAt: item.trashedAt,
+      updatedAt: item.trashedAt,
+      createdAt: item.trashedAt,
+    }));
 
     return {
       user: locals.user,

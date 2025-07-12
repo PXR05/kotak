@@ -9,11 +9,10 @@
     initPreviewFromUrl,
     handleUrlChange,
   } from "$lib/stores/dialogs/filePreviewDialog.svelte.js";
-  import { afterNavigate } from "$app/navigation";
+  import { afterNavigate, invalidateAll } from "$app/navigation";
 
-  let { data } = $props();
-
-  let trashedItems = $state(data.trashedItems);
+  const { data } = $props();
+  const { trashedItems } = $derived(data);
 
   $effect(() => {
     if (trashedItems.length > 0) {
@@ -35,19 +34,6 @@
       return () => window.removeEventListener("popstate", handlePopState);
     }
   });
-  let isLoading = $state(false);
-
-  const refreshTrash = async () => {
-    try {
-      isLoading = true;
-      trashedItems = await fileOperations.getTrashedItems();
-    } catch (error) {
-      console.error("Failed to refresh trash:", error);
-      toast.error("Failed to refresh trash");
-    } finally {
-      isLoading = false;
-    }
-  };
 
   const handleEmptyTrash = () => {
     if (trashedItems.length === 0) {
@@ -66,7 +52,7 @@
       async () => {
         try {
           await fileOperations.emptyTrash();
-          await refreshTrash();
+          invalidateAll();
         } catch (error) {
           console.error("Failed to empty trash:", error);
         }
@@ -98,10 +84,6 @@
   </div>
 
   <div class="flex-1 overflow-hidden">
-    <TrashTable
-      items={trashedItems}
-      onRefresh={refreshTrash}
-      onEmptyTrash={handleEmptyTrash}
-    />
+    <TrashTable items={trashedItems} onEmptyTrash={handleEmptyTrash} />
   </div>
 </div>

@@ -47,7 +47,7 @@
     {
       icon: TrashIcon,
       label: "Delete selected",
-      action: () => fileOperations.bulkDelete(),
+      action: () => fileOperations.bulkTrash(),
       destructive: true,
     },
   ]);
@@ -84,7 +84,7 @@
         {#if action.isLoading && action.loadingIcon}
           <action.loadingIcon class="size-4 mr-2 animate-spin" />
         {:else}
-          <action.icon class="size-4 mr-2" />
+          <action.icon class="size-4 lg:mr-2" />
         {/if}
         <span class="max-lg:hidden">
           {action.isLoading && action.loadingText

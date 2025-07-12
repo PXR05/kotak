@@ -35,6 +35,12 @@ export const registerSchema = z
     path: ["confirmPassword"],
   });
 
+export const nameSchema = z
+  .string()
+  .min(1, "Name is required")
+  .max(255, "Name must be less than 255 characters")
+  .regex(/^[^<>:"/\\|?*\x00-\x1f]+$/, "Name contains invalid characters");
+
 export function validateEmail(email: string): string {
   try {
     emailSchema.parse(email);
@@ -71,6 +77,18 @@ export function validateConfirmPassword(
   if (!confirmPassword) return "Please confirm your password";
   if (password !== confirmPassword) return "Passwords do not match";
   return "";
+}
+
+export function validateName(name: string): string {
+  try {
+    nameSchema.parse(name);
+    return "";
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return error.errors[0]?.message || "Invalid name";
+    }
+    return "Invalid name";
+  }
 }
 
 export type LoginFormData = z.infer<typeof loginSchema>;

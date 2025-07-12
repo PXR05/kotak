@@ -1,5 +1,7 @@
 import type { FileItem } from "$lib/types/file.js";
 import { browser } from "$app/environment";
+import { onGetFolderChildren } from "./fileAPI.telefunc";
+import { toast } from "svelte-sonner";
 
 export interface FileTreeNode {
   item: FileItem;
@@ -126,30 +128,34 @@ export const fileTree = {
     node.loading = true;
 
     try {
-      const response = await fetch(`/api/folders/${folderId}/children`);
-      if (response.ok) {
-        const children: FileItem[] = await response.json();
-        node.children = children.map((child) => ({
-          item: child,
-          expanded: fileTreeState.expandedFolders.has(child.id),
-          loading: false,
-          childrenLoaded: child.type === "file",
-          children: child.type === "file" ? undefined : [],
-        }));
-        node.childrenLoaded = true;
-
-        // Load children for any nested folders that should be expanded
-        children.forEach((child) => {
-          if (
-            child.type === "folder" &&
-            fileTreeState.expandedFolders.has(child.id)
-          ) {
-            setTimeout(() => {
-              this.loadFolderChildren(child.id);
-            }, 0);
-          }
-        });
+      const { data, error } = await onGetFolderChildren({
+        folderId,
+      });
+      if (error || !data) {
+        toast.error(
+          `Failed to load folder children: ${error || "Unknown error"}`
+        );
+        return;
       }
+      node.children = data.map((child) => ({
+        item: child,
+        expanded: fileTreeState.expandedFolders.has(child.id),
+        loading: false,
+        childrenLoaded: child.type === "file",
+        children: child.type === "file" ? undefined : [],
+      }));
+      node.childrenLoaded = true;
+
+      data.forEach((child) => {
+        if (
+          child.type === "folder" &&
+          fileTreeState.expandedFolders.has(child.id)
+        ) {
+          setTimeout(() => {
+            this.loadFolderChildren(child.id);
+          }, 0);
+        }
+      });
     } catch (error) {
       console.error("Failed to load folder children:", error);
     } finally {

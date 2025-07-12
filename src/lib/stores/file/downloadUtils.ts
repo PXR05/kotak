@@ -1,8 +1,8 @@
 import type { FileItem } from "$lib/types/file.js";
-import { fileAPI } from "./fileAPI.js";
 import { isDownloading } from "./fileState.svelte.js";
 import { toast } from "svelte-sonner";
 import JSZip from "jszip";
+import { onGetFolderChildren } from "./fileAPI.telefunc.js";
 
 /**
  * Download and ZIP utilities
@@ -20,10 +20,16 @@ export const downloadUtils = {
         if (item.type === "file") {
           allFiles.push({ ...item, relativePath: item.name });
         } else if (item.type === "folder") {
-          const folderFiles = await fileAPI.fetchFolderContentsRecursively(
-            item.id,
-            item.name
-          );
+          const { data: folderFiles, error } = await onGetFolderChildren({
+            folderId: item.id,
+            path: item.name,
+          });
+          if (error || !folderFiles) {
+            toast.error(
+              `Failed to fetch folder contents: ${error || "Unknown error"}`
+            );
+            continue;
+          }
           allFiles.push(...folderFiles);
         }
       }

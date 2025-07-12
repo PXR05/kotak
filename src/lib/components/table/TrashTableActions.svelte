@@ -29,7 +29,7 @@
     </Button>
   </DropdownMenu.Trigger>
   <DropdownMenu.Content align="end">
-    {#if item.itemType === "file"}
+    {#if item.type === "file"}
       <DropdownMenu.Item onclick={() => onPreview(item)}>
         <EyeIcon class="size-4 mr-2" />
         Preview

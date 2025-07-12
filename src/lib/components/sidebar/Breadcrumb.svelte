@@ -9,7 +9,7 @@
   import type { PageData } from "../../../routes/[...folder]/$types";
 
   const breadcrumbsPromise = $derived(
-    (page.data as PageData)?.breadcrumbs ?? []
+    (page.data as PageData)?.breadcrumbs ?? Promise.resolve([])
   );
   const isMobile = new IsMobile();
   const isTrashPage = $derived(page.route?.id === "/trash");

@@ -1,51 +1,9 @@
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
-import { ensureRootFolder } from "$lib/server/folderUtils";
-import { deleteFile, getFileStream } from "$lib/server/storage";
-import { error, json } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import type { RequestHandler } from "./$types";
-
-async function findFileByIdOrStorageKey(fileId: string, userId: string) {
-  const UUID_V4_PATTERN =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  if (UUID_V4_PATTERN.test(fileId)) {
-    return (
-      (
-        await db
-          .select({
-            id: table.file.id,
-            folderId: table.file.folderId,
-            storageKey: table.file.storageKey,
-            name: table.file.name,
-            mimeType: table.file.mimeType,
-          })
-          .from(table.file)
-          .where(
-            and(
-              eq(table.file.storageKey, fileId),
-              eq(table.file.ownerId, userId)
-            )
-          )
-      )[0] ?? null
-    );
-  }
-
-  return (
-    (
-      await db
-        .select({
-          id: table.file.id,
-          folderId: table.file.folderId,
-          storageKey: table.file.storageKey,
-          name: table.file.name,
-          mimeType: table.file.mimeType,
-        })
-        .from(table.file)
-        .where(and(eq(table.file.id, fileId), eq(table.file.ownerId, userId)))
-    )[0] ?? null
-  );
-}
+import { getFileStream } from "$lib/server/storage";
 
 export const GET: RequestHandler = async ({ params, url, locals }) => {
   if (!locals.user) {
@@ -60,7 +18,21 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
     throw error(400, "Missing file ID");
   }
 
-  const file = await findFileByIdOrStorageKey(fileId, locals.user.id);
+  const [file] = await db
+    .select({
+      id: table.file.id,
+      folderId: table.file.folderId,
+      storageKey: table.file.storageKey,
+      name: table.file.name,
+      mimeType: table.file.mimeType,
+    })
+    .from(table.file)
+    .where(
+      and(
+        eq(table.file.storageKey, fileId),
+        eq(table.file.ownerId, locals.user.id)
+      )
+    );
 
   if (!file) {
     throw error(404, "File not found");
@@ -96,181 +68,4 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
     console.error(err);
     throw error(404, "File not found");
   }
-};
-
-export const PATCH: RequestHandler = async ({ params, request, locals }) => {
-  if (!locals.user) {
-    throw error(401, "Unauthorized");
-  }
-
-  const fileId = params.id;
-  if (!fileId) {
-    throw error(400, "Missing file ID");
-  }
-
-  const { name, folderId, skipConflicts = false } = await request.json();
-
-  if (!name && folderId === undefined) {
-    throw error(400, "Either name or folderId must be provided");
-  }
-
-  const file = await findFileByIdOrStorageKey(fileId, locals.user.id);
-  if (!file) {
-    throw error(404, "File not found or access denied");
-  }
-
-  const updateData: { name?: string; folderId?: string; updatedAt: Date } = {
-    updatedAt: new Date(),
-  };
-
-  if (name) {
-    const trimmedName = validateFileName(name);
-    const targetFolderId = folderId || file.folderId;
-
-    const hasConflict = await hasFileNameConflict(
-      trimmedName,
-      targetFolderId,
-      locals.user.id,
-      file.id
-    );
-    if (hasConflict) {
-      if (skipConflicts) {
-        return json(
-          { skipped: true, reason: "Name conflict", fileName: file.name },
-          { status: 200 }
-        );
-      } else {
-        throw error(409, "A file with this name already exists in this folder");
-      }
-    }
-    updateData.name = trimmedName;
-  }
-
-  if (folderId !== undefined) {
-    const targetFolderId = await resolveTargetFolder(folderId, locals.user.id);
-
-    if (!name) {
-      const hasConflict = await hasFileNameConflict(
-        file.name,
-        targetFolderId,
-        locals.user.id,
-        file.id
-      );
-      if (hasConflict) {
-        if (skipConflicts) {
-          return json(
-            {
-              skipped: true,
-              reason: "Name conflict in target folder",
-              fileName: file.name,
-            },
-            { status: 200 }
-          );
-        } else {
-          throw error(
-            409,
-            "A file with this name already exists in the target folder"
-          );
-        }
-      }
-    }
-
-    updateData.folderId = targetFolderId;
-  }
-
-  const [updatedFile] = await db
-    .update(table.file)
-    .set(updateData)
-    .where(eq(table.file.id, file.id))
-    .returning();
-
-  return json({ success: true, file: updatedFile });
-};
-
-function validateFileName(name: string): string {
-  if (typeof name !== "string") {
-    throw error(400, "Invalid name type");
-  }
-
-  const trimmedName = name.trim();
-  if (!trimmedName) {
-    throw error(400, "Name cannot be empty");
-  }
-
-  if (trimmedName.length > 255) {
-    throw error(400, "Name is too long (maximum 255 characters)");
-  }
-
-  const invalidChars = /[<>:"/\\|?*\x00-\x1f]/;
-  if (invalidChars.test(trimmedName)) {
-    throw error(400, "Name contains invalid characters");
-  }
-
-  return trimmedName;
-}
-
-async function resolveTargetFolder(
-  folderId: string | null,
-  userId: string
-): Promise<string> {
-  if (folderId === null) {
-    const rootFolder = await ensureRootFolder(userId);
-    return rootFolder.id;
-  }
-
-  const [targetFolder] = await db
-    .select()
-    .from(table.folder)
-    .where(
-      and(eq(table.folder.id, folderId), eq(table.folder.ownerId, userId))
-    );
-
-  if (!targetFolder) {
-    throw error(404, "Target folder not found or access denied");
-  }
-
-  return folderId;
-}
-
-async function hasFileNameConflict(
-  fileName: string,
-  folderId: string,
-  userId: string,
-  excludeFileId?: string
-): Promise<boolean> {
-  const [existingFile] = await db
-    .select()
-    .from(table.file)
-    .where(
-      and(
-        eq(table.file.folderId, folderId),
-        eq(table.file.name, fileName),
-        eq(table.file.ownerId, userId)
-      )
-    );
-
-  return existingFile !== undefined && existingFile.id !== excludeFileId;
-}
-
-export const DELETE: RequestHandler = async ({ params, locals }) => {
-  if (!locals.user) {
-    throw error(401, "Unauthorized");
-  }
-
-  const fileId = params.id;
-  if (!fileId) {
-    throw error(400, "Missing file ID");
-  }
-
-  const file = await findFileByIdOrStorageKey(fileId, locals.user.id);
-
-  if (!file) {
-    throw error(404, "File not found or access denied");
-  }
-
-  await deleteFile(file.storageKey);
-
-  await db.delete(table.file).where(eq(table.file.id, file.id));
-
-  return json({ message: "File deleted successfully" }, { status: 200 });
 };

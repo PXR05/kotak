@@ -1,6 +1,7 @@
 import { page } from "$app/state";
 import type { FileItem } from "$lib/types/file.js";
-import { fileAPI } from "../file/fileAPI.js";
+import { toast } from "svelte-sonner";
+import { onGetFileShare, onGetFolderShare } from "../file/fileAPI.telefunc.js";
 import { createUrlStateManager } from "./urlStateHelper.js";
 
 export interface ShareDialogState {
@@ -62,23 +63,31 @@ export async function openShareDialog(
   shareDialogData.loading = true;
   urlStateManager.pushUrlState(item.id);
 
-  try {
-    const existingShare = await fileAPI.getExistingShare(item);
-    if (existingShare) {
-      shareDialogData.isPublic = existingShare.isPublic;
-      shareDialogData.emails = existingShare.emails;
-      shareDialogData.expiresAt = existingShare.expiresAt;
-      shareDialogData.existingShareId = existingShare.shareId;
-      shareDialogData.existingShareLink = `${page.url.origin}/shared/${
-        item.type === "folder" ? "folders" : "files"
-      }/${existingShare.shareId}`;
-    } else {
-      resetShareDialogState();
-    }
-  } catch (error) {
-    console.error("Failed to load existing share data:", error);
+  const { data: existingShare, error } = await (item.type === "file"
+    ? onGetFileShare({
+        itemId: item.id,
+      })
+    : onGetFolderShare({
+        itemId: item.id,
+      }));
+  if (error) {
+    toast.error(`Failed to load share data: ${error || "Unknown error"}`);
+    shareDialogData.loading = false;
     resetShareDialogState();
+    return;
   }
+  if (!existingShare) {
+    shareDialogData.loading = false;
+    resetShareDialogState();
+    return;
+  }
+  shareDialogData.isPublic = existingShare.isPublic;
+  shareDialogData.emails = existingShare.emails;
+  shareDialogData.expiresAt = new Date(existingShare.expiresAt || Date.now());
+  shareDialogData.existingShareId = existingShare.shareId;
+  shareDialogData.existingShareLink = `${page.url.origin}/shared/${
+    item.type === "folder" ? "folders" : "files"
+  }/${existingShare.shareId}`;
 
   shareDialogData.loading = false;
 }

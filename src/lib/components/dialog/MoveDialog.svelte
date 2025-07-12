@@ -17,7 +17,7 @@
     SearchIcon,
     LoaderIcon,
   } from "@lucide/svelte";
-  import { closeMoveDialog, moveDialogData } from "$lib/stores";
+  import { closeMoveDialog, moveDialogData, onGetFolders } from "$lib/stores";
   import { currentFolderId } from "$lib/stores";
   import type { FileItem } from "$lib/types/file.js";
 
@@ -49,19 +49,19 @@
     isLoading = true;
     error = null;
 
-    try {
-      const response = await fetch("/api/folders");
-      if (!response.ok) {
-        throw new Error("Failed to load folders");
-      }
-
-      const allFolders = await response.json();
-      folders = filterAvailableFolders(allFolders, items);
-    } catch (err) {
-      error = err instanceof Error ? err.message : "Failed to load folders";
-    } finally {
+    const { data, error: err } = await onGetFolders();
+    if (err) {
+      error = err || "Failed to load folders";
       isLoading = false;
+      return;
     }
+    if (!data || !Array.isArray(data)) {
+      error = "Invalid folder data";
+      isLoading = false;
+      return;
+    }
+    folders = filterAvailableFolders(data, items);
+    isLoading = false;
   }
 
   function filterAvailableFolders(
@@ -183,7 +183,7 @@
           </div>
 
           <ScrollArea class="h-64 w-full rounded border">
-            <div class="p-2">
+            <div class="p-2 space-y-1">
               <!-- Root folder option -->
               <button
                 type="button"
