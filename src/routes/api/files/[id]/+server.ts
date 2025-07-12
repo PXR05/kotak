@@ -1,10 +1,10 @@
-import { json, error } from "@sveltejs/kit";
-import type { RequestHandler } from "./$types";
-import { createFile, deleteFile, getFileStream } from "$lib/server/storage";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
+import { ensureRootFolder } from "$lib/server/folderUtils";
+import { deleteFile, getFileStream } from "$lib/server/storage";
+import { error, json } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
-import { ensureFolderPath, ensureRootFolder } from "$lib/server/folderUtils";
+import type { RequestHandler } from "./$types";
 
 async function findFileByIdOrStorageKey(fileId: string, userId: string) {
   const UUID_V4_PATTERN =
@@ -13,7 +13,13 @@ async function findFileByIdOrStorageKey(fileId: string, userId: string) {
     return (
       (
         await db
-          .select()
+          .select({
+            id: table.file.id,
+            folderId: table.file.folderId,
+            storageKey: table.file.storageKey,
+            name: table.file.name,
+            mimeType: table.file.mimeType,
+          })
           .from(table.file)
           .where(
             and(
@@ -28,107 +34,18 @@ async function findFileByIdOrStorageKey(fileId: string, userId: string) {
   return (
     (
       await db
-        .select()
+        .select({
+          id: table.file.id,
+          folderId: table.file.folderId,
+          storageKey: table.file.storageKey,
+          name: table.file.name,
+          mimeType: table.file.mimeType,
+        })
         .from(table.file)
         .where(and(eq(table.file.id, fileId), eq(table.file.ownerId, userId)))
     )[0] ?? null
   );
 }
-
-export const POST: RequestHandler = async ({ request, locals }) => {
-  if (!locals.user) {
-    throw error(401, "Unauthorized");
-  }
-
-  const formData = await request.formData();
-  let folderId = formData.get("folderId") as string;
-
-  if (!folderId) {
-    const rootFolder = await ensureRootFolder(locals.user.id);
-    folderId = rootFolder.id;
-  }
-
-  const [folder] = await db
-    .select()
-    .from(table.folder)
-    .where(
-      and(
-        eq(table.folder.id, folderId),
-        eq(table.folder.ownerId, locals.user.id)
-      )
-    );
-
-  if (!folder) {
-    throw error(403, "Forbidden: You don't have access to this folder.");
-  }
-
-  const files = formData.getAll("files") as File[];
-  const relativePaths = formData.getAll("relativePaths") as string[];
-
-  if (!files || files.length === 0) {
-    throw error(400, "No files found in form data.");
-  }
-
-  const uploadedFiles = [];
-  const createdFolders = new Set<string>();
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const relativePath = relativePaths[i] || file.name;
-
-    if (file instanceof File && file.size > 0) {
-      try {
-        let targetFolderId = folderId;
-        let actualFileName = file.name;
-
-        if (relativePath && relativePath.includes("/")) {
-          const pathWithoutFilename = relativePath.substring(
-            0,
-            relativePath.lastIndexOf("/")
-          );
-          const fileName = relativePath.substring(
-            relativePath.lastIndexOf("/") + 1
-          );
-
-          targetFolderId = await ensureFolderPath(
-            pathWithoutFilename,
-            folderId,
-            locals.user.id
-          );
-
-          actualFileName = fileName;
-          createdFolders.add(pathWithoutFilename);
-        }
-
-        const fileMetadata = await createFile(file);
-        const [dbFile] = await db
-          .insert(table.file)
-          .values({
-            ...fileMetadata,
-            name: actualFileName,
-            updatedAt: new Date(file.lastModified),
-            createdAt: new Date(file.lastModified),
-            id: fileMetadata.storageKey,
-            ownerId: locals.user.id,
-            folderId: targetFolderId,
-          })
-          .returning();
-
-        uploadedFiles.push(dbFile);
-      } catch (err) {
-        console.error(`Failed to upload file ${file.name}:`, err);
-      }
-    }
-  }
-
-  return json(
-    {
-      message: `Successfully uploaded ${uploadedFiles.length} files`,
-      files: uploadedFiles,
-    },
-    { status: 201 }
-  );
-};
 
 export const GET: RequestHandler = async ({ params, url, locals }) => {
   if (!locals.user) {
@@ -137,6 +54,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 
   const fileId = params.id;
   const download = url.searchParams.get("download");
+  const placeholder = url.searchParams.get("placeholder");
 
   if (!fileId) {
     throw error(400, "Missing file ID");
@@ -149,7 +67,9 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
   }
 
   try {
-    const fileStream = getFileStream(file.storageKey);
+    const fileStream = getFileStream(
+      file.storageKey + (placeholder === "true" ? ".webp" : "")
+    );
 
     const encodedFilename = encodeURIComponent(file.name);
     const asciiFilename = file.name.replace(/[^\x20-\x7E]/g, "");
@@ -162,7 +82,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
     }
 
     const headers: Record<string, string> = {
-      "Content-Type": file.mimeType,
+      "Content-Type": placeholder === "true" ? "image/webp" : file.mimeType,
       "Content-Disposition": contentDisposition,
     };
 
@@ -330,23 +250,6 @@ async function hasFileNameConflict(
     );
 
   return existingFile !== undefined && existingFile.id !== excludeFileId;
-}
-
-async function checkFileNameConflict(
-  fileName: string,
-  folderId: string,
-  userId: string,
-  excludeFileId?: string
-): Promise<void> {
-  const hasConflict = await hasFileNameConflict(
-    fileName,
-    folderId,
-    userId,
-    excludeFileId
-  );
-  if (hasConflict) {
-    throw error(409, "A file with this name already exists in this folder");
-  }
 }
 
 export const DELETE: RequestHandler = async ({ params, locals }) => {

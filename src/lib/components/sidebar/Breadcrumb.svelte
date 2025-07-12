@@ -6,19 +6,24 @@
   import { page } from "$app/state";
   import { HomeIcon } from "@lucide/svelte";
   import { IsMobile } from "$lib/hooks/is-mobile.svelte.js";
+  import type { PageData } from "../../../routes/[...folder]/$types";
 
-  const breadcrumbs = $derived(page.data?.breadcrumbs || []);
+  const breadcrumbsPromise = $derived(
+    (page.data as PageData)?.breadcrumbs ?? []
+  );
   const isMobile = new IsMobile();
   const isTrashPage = $derived(page.route?.id === "/trash");
 
-  const items = $derived([
-    { href: "/", label: "", isHome: true },
-    ...breadcrumbs.map((b: any) => ({
-      href: `/${b.id}`,
-      label: b.name,
-      isHome: false,
-    })),
-  ]);
+  let breadcrumbs: {
+    id: string;
+    name: string;
+  }[] = $state([]);
+
+  $effect(() => {
+    breadcrumbsPromise.then((data) => {
+      breadcrumbs = data;
+    });
+  });
 
   const ITEMS_TO_DISPLAY = 3;
   let open = $state(false);
@@ -27,7 +32,7 @@
 <Breadcrumb.Root>
   <Breadcrumb.List>
     <Breadcrumb.Item>
-      <Breadcrumb.Link href={items[0].href}>
+      <Breadcrumb.Link href="/">
         <HomeIcon class="size-4" />
       </Breadcrumb.Link>
     </Breadcrumb.Item>
@@ -35,9 +40,7 @@
     {#if isTrashPage}
       <Breadcrumb.Separator />
       <Breadcrumb.Item>
-        <Breadcrumb.Page class="flex items-center gap-2">
-          Trash
-        </Breadcrumb.Page>
+        <Breadcrumb.Page class="flex items-center gap-2">Trash</Breadcrumb.Page>
       </Breadcrumb.Item>
     {:else if breadcrumbs.length > 0}
       <Breadcrumb.Separator />

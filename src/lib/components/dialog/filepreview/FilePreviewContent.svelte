@@ -12,7 +12,6 @@
   } from "@lucide/svelte";
   import { fade } from "svelte/transition";
   import { Viewer } from "svelte-image-viewer";
-  import { expoOut } from "svelte/easing";
 
   let {
     file,
@@ -116,6 +115,14 @@
       </div>
     {:else if file.storageKey && fileType}
       {#if fileType === "image"}
+        {#if isLoading}
+          <img
+            src="{fileUrl}?placeholder=true"
+            alt={file.name}
+            draggable="false"
+            class="absolute inset-0 m-auto select-none max-w-[100dvw] max-h-[100dvh] object-contain blur w-full h-full"
+          />
+        {/if}
         <Viewer
           bind:targetScale={zoom}
           minScale={0.25}
@@ -128,7 +135,7 @@
             src={fileUrl}
             alt={file.name}
             draggable="false"
-            class="select-none max-w-[100dvw] max-h-[100dvh] object-contain transition-transform duration-150"
+            class="select-none max-w-[100dvw] max-h-[100dvh] object-contain"
             style="scale: {zoom}; transform: rotate({rotation}deg);"
             onload={onMediaLoad}
             onerror={() => onMediaError("image")}
@@ -137,7 +144,7 @@
       {:else if fileType === "video"}
         <video
           controls
-          class="max-w-full max-h-full"
+          class="max-w-full h-full max-h-[calc(100dvh-7.5rem)] m-auto"
           onloadstart={onMediaLoad}
           onerror={() => onMediaError("video")}
         >
@@ -162,7 +169,7 @@
         <object
           data={fileUrl}
           type="application/pdf"
-          class="w-full h-full"
+          class="w-full h-full max-h-[calc(100dvh-7.5rem)] m-auto"
           title={file.name}
           onload={onMediaLoad}
           onerror={() => onMediaError("PDF")}
@@ -180,7 +187,7 @@
           </div>
         </object>
       {:else if fileType === "text"}
-        <div class="w-full h-full max-w-4xl mx-auto">
+        <div class="w-full max-w-4xl h-full max-h-[calc(100dvh-7.5rem)] m-auto">
           <iframe
             src={fileUrl}
             class="w-full h-full border border-border rounded-lg bg-background"

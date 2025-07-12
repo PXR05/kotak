@@ -23,6 +23,11 @@
   const isMobile = $derived(new IsMobile().current);
 
   function handleSingleSelect(currentIndex: number) {
+    if (row.getIsSelected()) {
+      selectedItems.splice(selectedItems.indexOf(row.original), 1);
+      row.toggleSelected(false);
+      return;
+    }
     row.toggleSelected(true);
     selectedItems.push(row.original);
     lastSelectedIndex.value = currentIndex;
@@ -31,9 +36,6 @@
   function handleRangeSelect(currentIndex: number) {
     const start = Math.min(lastSelectedIndex.value ?? 0, currentIndex);
     const end = Math.max(lastSelectedIndex.value ?? 0, currentIndex);
-
-    selectedItems.length = 0;
-    table.toggleAllPageRowsSelected(false);
 
     for (let i = start; i <= end; i++) {
       const targetRow = table.getRowModel().rows[i];

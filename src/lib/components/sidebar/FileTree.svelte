@@ -29,7 +29,7 @@
                   class="font-medium"
                 >
                   {#snippet child({ props })}
-                    <a href="/files" {...props}>
+                    <a href="/" {...props}>
                       <AppIcon strokeWidth={2.5} />
                       Kotak
                     </a>

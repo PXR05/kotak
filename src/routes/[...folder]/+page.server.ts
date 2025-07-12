@@ -7,7 +7,7 @@ import * as auth from "$lib/server/auth.js";
 
 export const load: PageServerLoad = async ({
   locals: { user },
-  params: { folder },
+  params: { folder }
 }) => {
   if (!user) {
     redirect(302, "/auth/login");
@@ -22,62 +22,13 @@ export const load: PageServerLoad = async ({
     }
   }
 
-  const [rootFolder] = await db
-    .select()
-    .from(table.folder)
-    .where(
-      and(eq(table.folder.ownerId, user.id), eq(table.folder.name, "__root__"))
-    );
+  const currentFolderPromise = currentFolderId
+    ? getCurrentFolder(currentFolderId, user.id)
+    : Promise.resolve(null);
 
-  if (!rootFolder && folder.trim() !== "") {
-    redirect(302, "/");
-  }
-
-  let currentFolder = null;
-  let breadcrumbs: Array<{ id: string; name: string }> = [];
-
-  if (currentFolderId) {
-    const [folder] = await db
-      .select()
-      .from(table.folder)
-      .where(
-        and(
-          eq(table.folder.id, currentFolderId),
-          eq(table.folder.ownerId, user.id)
-        )
-      );
-
-    if (!folder) {
-      redirect(302, "/");
-    }
-
-    currentFolder = { ...folder, type: "folder" as const };
-
-    const allFolders = await db
-      .select()
-      .from(table.folder)
-      .where(eq(table.folder.ownerId, user.id));
-
-    const folderMap = new Map(allFolders.map((f) => [f.id, f]));
-
-    let currentBreadcrumb: typeof folder | null = folder;
-    const tempBreadcrumbs: Array<{ id: string; name: string }> = [];
-
-    while (currentBreadcrumb && currentBreadcrumb.name !== "__root__") {
-      tempBreadcrumbs.unshift({
-        id: currentBreadcrumb.id,
-        name: currentBreadcrumb.name,
-      });
-
-      if (currentBreadcrumb.parentId) {
-        currentBreadcrumb = folderMap.get(currentBreadcrumb.parentId) || null;
-      } else {
-        break;
-      }
-    }
-
-    breadcrumbs = tempBreadcrumbs;
-  }
+  const breadcrumbsPromise = currentFolderId
+    ? getBreadcrumbs(currentFolderId, user.id)
+    : Promise.resolve([]);
 
   const currentFolderItemsPromise = currentFolderId
     ? db
@@ -142,12 +93,79 @@ export const load: PageServerLoad = async ({
 
   return {
     user,
-    currentFolder,
     currentFolderId,
-    breadcrumbs,
+    currentFolder: currentFolderPromise,
+    breadcrumbs: breadcrumbsPromise,
     items: itemsPromise,
   };
 };
+
+async function getBreadcrumbs(
+  folderId: string,
+  userId: string
+): Promise<Array<{ id: string; name: string }>> {
+  const [folder] = await db
+    .select()
+    .from(table.folder)
+    .where(
+      and(eq(table.folder.id, folderId), eq(table.folder.ownerId, userId))
+    );
+
+  if (!folder) {
+    return [];
+  }
+
+  const allFolders = await db
+    .select()
+    .from(table.folder)
+    .where(eq(table.folder.ownerId, userId));
+
+  const folderMap = new Map(allFolders.map((f) => [f.id, f]));
+
+  let currentBreadcrumb: typeof folder | null = folder;
+  const tempBreadcrumbs: Array<{ id: string; name: string }> = [];
+
+  while (currentBreadcrumb && currentBreadcrumb.name !== "__root__") {
+    tempBreadcrumbs.unshift({
+      id: currentBreadcrumb.id,
+      name: currentBreadcrumb.name,
+    });
+
+    if (currentBreadcrumb.parentId) {
+      currentBreadcrumb = folderMap.get(currentBreadcrumb.parentId) || null;
+    } else {
+      break;
+    }
+  }
+
+  return tempBreadcrumbs;
+}
+
+async function getCurrentFolder(
+  folderId: string,
+  userId: string
+): Promise<{
+  id: string;
+  name: string;
+  type: "folder";
+  ownerId: string;
+  parentId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+} | null> {
+  const [folder] = await db
+    .select()
+    .from(table.folder)
+    .where(
+      and(eq(table.folder.id, folderId), eq(table.folder.ownerId, userId))
+    );
+
+  if (!folder) {
+    return null;
+  }
+
+  return { ...folder, type: "folder" as const };
+}
 
 export const actions = {
   logout: async (event) => {
