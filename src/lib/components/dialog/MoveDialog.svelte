@@ -17,7 +17,8 @@
     SearchIcon,
     LoaderIcon,
   } from "@lucide/svelte";
-  import { closeMoveDialog, moveDialogData, onGetFolders } from "$lib/stores";
+  import { closeMoveDialog, moveDialogData } from "$lib/stores";
+  import { onGetFolders } from "$lib/telefunc/folders.telefunc.js";
   import { currentFolderId } from "$lib/stores";
   import type { FileItem } from "$lib/types/file.js";
 

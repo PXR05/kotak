@@ -9,13 +9,13 @@
   import { Button } from "../ui/button";
   import Input from "../ui/input/input.svelte";
   import { quintOut } from "svelte/easing";
-  import { scale, fly, slide } from "svelte/transition";
+  import { scale, slide } from "svelte/transition";
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import { onDestroy, onMount } from "svelte";
   import { fileOperations } from "$lib/stores";
   import { formatFileSize } from "$lib/utils/format";
-  import { onSearch } from "./Search.telefunc";
+  import { onSearch } from "$lib/telefunc/search.telefunc";
   import { toast } from "svelte-sonner";
 
   type SearchResult = {

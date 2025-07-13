@@ -1,6 +1,6 @@
 <script lang="ts">
   import { UploadIcon } from "@lucide/svelte";
-  import TableContextMenu from "./TableContextMenu.svelte";
+  import TableContextMenu from "../TableContextMenu.svelte";
 
   const {
     isEmpty,

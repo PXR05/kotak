@@ -1,9 +1,9 @@
 import type { ColumnDef } from "@tanstack/table-core";
 import { renderComponent } from "$lib/components/ui/data-table/index.js";
 import type { TrashedItem } from "$lib/types/file.js";
-import FileTableName from "./FileTableName.svelte";
+import FileTableName from "../file/FileTableName.svelte";
 import TrashTableActions from "./TrashTableActions.svelte";
-import FileTableSortableHeader from "./FileTableSortableHeader.svelte";
+import FileTableSortableHeader from "../file/FileTableSortableHeader.svelte";
 
 export function createTrashTableColumns(
   onRestore: (item: TrashedItem) => void,

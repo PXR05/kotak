@@ -1,5 +1,5 @@
 <script lang="ts">
-  import FileTable from "$lib/components/table/FileTable.svelte";
+  import FileTable from "$lib/components/table/file/FileTable.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import {
     Card,

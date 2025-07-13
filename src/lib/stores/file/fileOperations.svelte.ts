@@ -26,21 +26,21 @@ import {
 import { uploadUtils } from "./uploadUtils.js";
 import { downloadUtils } from "./downloadUtils.js";
 import { capitalize } from "$lib/utils/format.js";
+import { onRenameFile, onMoveFile } from "$lib/telefunc/files.telefunc.js";
 import {
-  onCreateFolder,
-  onEmptyTrash,
-  onMoveFile,
-  onMoveFolder,
-  onPermanentDeleteFile,
-  onPermanentDeleteFolder,
-  onRenameFile,
   onRenameFolder,
+  onCreateFolder,
+  onMoveFolder,
+} from "$lib/telefunc/folders.telefunc.js";
+import { onShareFile, onShareFolder } from "$lib/telefunc/sharing.telefunc.js";
+import {
+  onTrashItem,
   onRestoreFile,
   onRestoreFolder,
-  onShareFile,
-  onShareFolder,
-  onTrashItem,
-} from "./fileAPI.telefunc.js";
+  onPermanentDeleteFile,
+  onPermanentDeleteFolder,
+  onEmptyTrash,
+} from "$lib/telefunc/trash.telefunc.js";
 
 export {
   selectedItems,

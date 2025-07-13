@@ -1,6 +1,6 @@
 import type { FileItem } from "$lib/types/file.js";
 import { browser } from "$app/environment";
-import { onGetFolderChildren } from "./fileAPI.telefunc";
+import { onGetFolderChildren } from "$lib/telefunc/folders.telefunc.js";
 import { toast } from "svelte-sonner";
 
 export interface FileTreeNode {

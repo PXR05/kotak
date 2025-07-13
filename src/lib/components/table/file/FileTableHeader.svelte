@@ -3,7 +3,7 @@
   import * as Table from "$lib/components/ui/table/index.js";
   import type { FileItem } from "$lib/types/file.js";
   import type { Table as TanStackTable } from "@tanstack/table-core";
-  import TableContextMenu from "./TableContextMenu.svelte";
+  import TableContextMenu from "../TableContextMenu.svelte";
 
   let {
     table,

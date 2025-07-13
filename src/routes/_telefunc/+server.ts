@@ -1,5 +1,7 @@
-import { telefunc } from "telefunc";
+import { config, telefunc } from "telefunc";
 import type { RequestHandler } from "./$types";
+
+config.disableNamingConvention = true;
 
 const GET: RequestHandler = async (event) => {
   const response = await telefunc({

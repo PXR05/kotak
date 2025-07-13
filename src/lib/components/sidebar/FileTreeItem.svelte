@@ -9,7 +9,7 @@
   import FileTreeItem from "./FileTreeItem.svelte";
   import { page } from "$app/state";
   import { preloadData } from "$app/navigation";
-  import FileContextMenu from "../table/FileContextMenu.svelte";
+  import FileContextMenu from "../table/file/FileContextMenu.svelte";
 
   let { node }: { node: FileTreeNode } = $props();
 

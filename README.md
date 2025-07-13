@@ -53,7 +53,7 @@ The codebase follows SvelteKit conventions with a clear separation of concerns:
 
 **Frontend Components**: Located in `src/lib/components/`, organized by feature areas including dialogs, file tables, sidebar navigation, and reusable UI components.
 
-**Telefunc API**: The main application logic uses [Telefunc](https://telefunc.com) for type-safe server functions. Core functionality like file operations, folder management, search, and sharing is handled through telefunc functions in `src/lib/stores/*/` directories.
+**Telefunc API**: The main application logic uses [Telefunc](https://telefunc.com) for type-safe server functions. Core functionality like file operations, folder management, search, and sharing is handled through telefunc functions in `src/lib/telefunc/`.
 
 **API Routes**: Traditional REST endpoints in `src/routes/api/` are used specifically for file streaming, downloads, and XHR file uploads. These handle the binary file operations that require traditional HTTP endpoints.
 

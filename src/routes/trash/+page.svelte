@@ -4,7 +4,7 @@
   import { openConfirmationDialog } from "$lib/stores/dialogs/confirmationDialog.svelte.js";
   import { Trash2Icon } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
-  import TrashTable from "$lib/components/table/TrashTable.svelte";
+  import TrashTable from "$lib/components/table/trash/TrashTable.svelte";
   import {
     initPreviewFromUrl,
     handleUrlChange,

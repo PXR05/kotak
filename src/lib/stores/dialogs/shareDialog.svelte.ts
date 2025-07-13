@@ -1,8 +1,8 @@
 import { page } from "$app/state";
 import type { FileItem } from "$lib/types/file.js";
 import { toast } from "svelte-sonner";
-import { onGetFileShare, onGetFolderShare } from "../file/fileAPI.telefunc.js";
 import { createUrlStateManager } from "./urlStateHelper.js";
+import { onGetFileShare, onGetFolderShare } from "$lib/telefunc/sharing.telefunc.js";
 
 export interface ShareDialogState {
   open: boolean;

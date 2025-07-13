@@ -2,7 +2,7 @@ import type { FileItem } from "$lib/types/file.js";
 import { isDownloading } from "./fileState.svelte.js";
 import { toast } from "svelte-sonner";
 import JSZip from "jszip";
-import { onGetFolderChildren } from "./fileAPI.telefunc.js";
+import { onGetFolderChildren } from "$lib/telefunc/folders.telefunc.js";
 
 /**
  * Download and ZIP utilities

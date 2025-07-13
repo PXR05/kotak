@@ -32,7 +32,7 @@
   import {
     onDeleteFileShare,
     onDeleteFolderShare,
-  } from "$lib/stores/file/fileAPI.telefunc";
+  } from "$lib/telefunc/sharing.telefunc.js";
 
   const open = $derived(shareDialogData.open);
   const item = $derived(shareDialogData.item);

@@ -76,7 +76,10 @@
         </Sidebar.MenuButton>
       {/snippet}
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="center" class="w-52">
+    <DropdownMenuContent
+      align="center"
+      class="w-(--bits-dropdown-menu-anchor-width) min-w-52"
+    >
       <DropdownMenuItem
         onclick={() => {
           sidebar.setOpenMobile(false);
