@@ -164,9 +164,12 @@
     dropLeave(dragState, row.original.id, e);
   }
 
+  let loading = $state(false);
   async function handleDropZoneDrop(e: DragEvent) {
     if (row.original.type !== "folder") return;
+    loading = true;
     await dropHandler(dragState, row.original.id, e);
+    loading = false;
   }
 </script>
 
@@ -181,6 +184,7 @@
       {...props}
       data-state={row.getIsSelected() && "selected"}
       class="hover:bg-muted/50 transition-none cursor-pointer
+        {loading ? 'pointer-events-none animate-pulse' : ''}
         {dragState.isDragging ? 'opacity-50' : ''} 
         {dragState.isDropTarget && row.original.type === 'folder'
         ? 'bg-sidebar-primary/10 -outline-offset-1 outline outline-sidebar-primary pointer-events-none'

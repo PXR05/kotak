@@ -10,7 +10,7 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
-  import { FolderPlusIcon } from "@lucide/svelte";
+  import { FolderPlusIcon, LoaderIcon } from "@lucide/svelte";
   import { closeCreateFolderDialog, createFolderDialogData } from "$lib/stores";
 
   const open = $derived(createFolderDialogData.open);
@@ -146,8 +146,10 @@
         <Button
           type="submit"
           disabled={isSubmitting || !!error || !folderName.trim()}
+          class="flex items-center gap-2"
         >
           {#if isSubmitting}
+            <LoaderIcon class="size-4 animate-spin" />
             Creating...
           {:else}
             Create Folder

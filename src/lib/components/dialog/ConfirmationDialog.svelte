@@ -1,12 +1,12 @@
 <script lang="ts">
   import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-  } from "$lib/components/ui/dialog/index.js";
+    AlertDialog,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+  } from "$lib/components/ui/alert-dialog/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import { AlertTriangleIcon, LoaderIcon } from "@lucide/svelte";
   import { closeConfirmationDialog, confirmationDialogData } from "$lib/stores";
@@ -36,9 +36,9 @@
 </script>
 
 {#if config}
-  <Dialog {open} onOpenChange={handleOpenChange}>
-    <DialogContent class="sm:max-w-md">
-      <DialogHeader>
+  <AlertDialog {open} onOpenChange={handleOpenChange}>
+    <AlertDialogContent class="sm:max-w-md">
+      <AlertDialogHeader>
         <div class="flex items-center gap-3">
           {#if config.icon}
             <AlertTriangleIcon
@@ -47,13 +47,13 @@
                 : 'text-warning'}"
             />
           {/if}
-          <DialogTitle>{config.title}</DialogTitle>
+          <AlertDialogTitle>{config.title}</AlertDialogTitle>
         </div>
-        <DialogDescription class="text-left">
+        <AlertDialogDescription class="text-left">
           {config.description}
-        </DialogDescription>
-      </DialogHeader>
-      <DialogFooter class="gap-2 sm:gap-2">
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter class="gap-2 sm:gap-2">
         <Button variant="outline" onclick={handleCancel} disabled={loading}>
           {config.cancelText || "Cancel"}
         </Button>
@@ -68,7 +68,7 @@
           {/if}
           {config.confirmText || "Confirm"}
         </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 {/if}

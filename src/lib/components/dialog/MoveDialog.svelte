@@ -230,8 +230,18 @@
         >
           Cancel
         </Button>
-        <Button type="button" onclick={handleSubmit} disabled={!canMove}>
-          {isSubmitting ? "Moving..." : "Move Here"}
+        <Button
+          type="button"
+          onclick={handleSubmit}
+          disabled={!canMove}
+          class="flex items-center gap-2"
+        >
+          {#if isSubmitting}
+            <LoaderIcon class="size-4 animate-spin" />
+            Moving...
+          {:else}
+            Move Here
+          {/if}
         </Button>
       </DialogFooter>
     </DialogContent>

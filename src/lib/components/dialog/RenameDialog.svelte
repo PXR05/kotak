@@ -10,7 +10,7 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
-  import { EditIcon } from "@lucide/svelte";
+  import { EditIcon, LoaderIcon } from "@lucide/svelte";
   import { closeRenameDialog, renameDialogData } from "$lib/stores";
 
   const item = $derived(renameDialogData.item);
@@ -145,8 +145,10 @@
           <Button
             type="submit"
             disabled={isSubmitting || !!error || !newName.trim()}
+            class="flex items-center gap-2"
           >
             {#if isSubmitting}
+              <LoaderIcon class="size-4 animate-spin" />
               Renaming...
             {:else}
               Rename
