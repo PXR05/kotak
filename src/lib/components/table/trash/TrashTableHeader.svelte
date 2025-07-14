@@ -27,7 +27,7 @@
               class="
             {header.column.id === 'actions' ? 'w-12' : ''} 
             {i === 0 ? 'pl-5' : ''} 
-            py-4"
+            md:py-4 py-2"
             >
               {#if !header.isPlaceholder}
                 <FlexRender

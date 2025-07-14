@@ -11,6 +11,16 @@
   import { preloadData } from "$app/navigation";
   import FileContextMenu from "./FileContextMenu.svelte";
   import { IsMobile } from "$lib/hooks/is-mobile.svelte";
+  import {
+    createDragState,
+    handleDragStart as dragUtilStart,
+    handleDragEnd as dragUtilEnd,
+    handleDropZoneDragEnter as dropEnter,
+    handleDropZoneDragOver as dropOver,
+    handleDropZoneDragLeave as dropLeave,
+    handleDropZoneDrop as dropHandler,
+    createGlobalDragHandlers,
+  } from "$lib/stores/ui/drag-drop.svelte.js";
 
   let {
     row,
@@ -120,14 +130,68 @@
       }, 100);
     }
   }
+
+  const dragState = createDragState();
+  const { handleGlobalDragEnd, handleGlobalDragLeave } =
+    createGlobalDragHandlers(dragState);
+
+  function handleDragStart(e: DragEvent) {
+    if (!row.getIsSelected()) {
+      table.toggleAllPageRowsSelected(false);
+      selectedItems.length = 0;
+      selectedItems.push(row.original);
+      row.toggleSelected(true);
+    }
+    dragUtilStart(dragState, row.original, e);
+  }
+
+  function handleDragEnd() {
+    dragUtilEnd(dragState);
+  }
+
+  function handleDropZoneDragEnter(e: DragEvent) {
+    if (row.original.type !== "folder") return;
+    dropEnter(dragState, row.original.id, e);
+  }
+
+  function handleDropZoneDragOver(e: DragEvent) {
+    if (row.original.type !== "folder") return;
+    dropOver(row.original.id, e);
+  }
+
+  function handleDropZoneDragLeave(e: DragEvent) {
+    if (row.original.type !== "folder") return;
+    dropLeave(dragState, row.original.id, e);
+  }
+
+  async function handleDropZoneDrop(e: DragEvent) {
+    if (row.original.type !== "folder") return;
+    await dropHandler(dragState, row.original.id, e);
+  }
 </script>
+
+<svelte:window
+  ondragend={handleGlobalDragEnd}
+  ondragleave={handleGlobalDragLeave}
+/>
 
 <FileContextMenu item={row.original} rowItem={row}>
   {#snippet children({ props })}
     <Table.Row
       {...props}
       data-state={row.getIsSelected() && "selected"}
-      class="hover:bg-muted/50 transition-none cursor-pointer"
+      class="hover:bg-muted/50 transition-none cursor-pointer
+        {dragState.isDragging ? 'opacity-50' : ''} 
+        {dragState.isDropTarget && row.original.type === 'folder'
+        ? 'bg-sidebar-primary/10 -outline-offset-1 outline outline-sidebar-primary pointer-events-none'
+        : ''}"
+      draggable="true"
+      ondragstart={handleDragStart}
+      ondragend={handleDragEnd}
+      ondragenter={handleDropZoneDragEnter}
+      ondragover={handleDropZoneDragOver}
+      ondragleave={handleDropZoneDragLeave}
+      ondrop={handleDropZoneDrop}
       onclick={handleRowClick}
       ondblclick={(e) => {
         if (isMobile) {

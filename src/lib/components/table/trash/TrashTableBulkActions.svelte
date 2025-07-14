@@ -48,7 +48,7 @@
 
 <div
   transition:fly={{ duration: 150, y: -10, easing: quintOut }}
-  class="flex items-center justify-between p-4 rounded-md z-10 absolute top-0 left-0 right-0 bg-sidebar"
+  class="flex items-center justify-between md:p-4 p-2 rounded-md z-10 absolute top-0 left-0 right-0 bg-sidebar"
 >
   <div class="flex items-center gap-2">
     <Button

@@ -53,6 +53,7 @@ export function createTrashTableColumns(
         const item = row.original;
         return item.type === "folder" ? "Folder" : "File";
       },
+      enableHiding: true,
       enableSorting: true,
     },
     {
@@ -67,6 +68,7 @@ export function createTrashTableColumns(
         const item = row.original;
         return item.originalFolderId || item.originalParentId;
       },
+      enableHiding: true,
       enableSorting: true,
     },
     {
@@ -81,6 +83,7 @@ export function createTrashTableColumns(
         const item = row.original;
         return new Date(item.trashedAt).toLocaleDateString();
       },
+      enableHiding: true,
       enableSorting: true,
     },
     {

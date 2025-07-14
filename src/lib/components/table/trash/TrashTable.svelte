@@ -5,6 +5,7 @@
   import {
     type RowSelectionState,
     type SortingState,
+    type VisibilityState,
     getCoreRowModel,
     getSortedRowModel,
   } from "@tanstack/table-core";
@@ -19,6 +20,7 @@
   import { TrashIcon } from "@lucide/svelte";
   import TrashTableContextMenu from "./TrashTableContextMenu.svelte";
   import { invalidateAll } from "$app/navigation";
+  import { IsMobile } from "$lib/hooks/is-mobile.svelte";
 
   let {
     items,
@@ -28,8 +30,27 @@
     onEmptyTrash?: () => void;
   } = $props();
 
+  const isMobile = new IsMobile();
+
   let sorting = $state<SortingState>([]);
   let rowSelection = $state<RowSelectionState>({});
+  let columnVisibility = $state<VisibilityState>({});
+
+  $effect(() => {
+    if (isMobile.current) {
+      columnVisibility = {
+        itemType: false,
+        originalLocation: false,
+        trashedAt: false,
+      };
+    } else {
+      columnVisibility = {
+        itemType: true,
+        originalLocation: true,
+        trashedAt: true,
+      };
+    }
+  });
 
   const handleRestore = async (item: TrashedItem) => {
     try {
@@ -132,6 +153,9 @@
       get rowSelection() {
         return rowSelection;
       },
+      get columnVisibility() {
+        return columnVisibility;
+      },
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -149,7 +173,15 @@
         rowSelection = updater;
       }
     },
+    onColumnVisibilityChange: (updater) => {
+      if (typeof updater === "function") {
+        columnVisibility = updater(columnVisibility);
+      } else {
+        columnVisibility = updater;
+      }
+    },
     enableRowSelection: true,
+    enableHiding: true,
   });
 
   function handleKeyDown(event: KeyboardEvent) {
@@ -243,7 +275,7 @@
       <div {...props} class="flex-1">
         {#if !table.getRowModel().rows?.length}
           <div class="m-auto size-full grid place-items-center">
-            <div class="flex flex-col items-center gap-2 text-muted-foreground">
+            <div class="text-center flex flex-col items-center gap-2 text-muted-foreground">
               <TrashIcon class="size-8" />
               <p class="text-lg font-medium">Trash is empty</p>
               <p class="text-sm">

@@ -2,18 +2,74 @@
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import FileTreeItem from "./FileTreeItem.svelte";
   import DragDropZone from "$lib/components/shared/DragDropZone.svelte";
-  import { fileTree } from "$lib/stores";
+  import { fileTree, fileOperations, selectedItems } from "$lib/stores";
   import type { FileItem } from "$lib/types/file.js";
   import { page } from "$app/state";
   import TableContextMenu from "../table/TableContextMenu.svelte";
   import AppIcon from "../shared/AppIcon.svelte";
+  import {
+    createDragState,
+    handleDropZoneDragEnter as dropEnter,
+    handleDropZoneDragOver as dropOver,
+    handleDropZoneDragLeave as dropLeave,
+    handleDropZoneDrop as dropHandler,
+    createGlobalDragHandlers,
+  } from "$lib/stores/ui/drag-drop.svelte.js";
 
   let { rootItems }: { rootItems: FileItem[] } = $props();
 
   $effect(() => {
     fileTree.setRootItems(rootItems);
   });
+
+  const dragState = createDragState();
+  const { handleGlobalDragEnd, handleGlobalDragLeave } =
+    createGlobalDragHandlers(dragState);
+
+  function handleDropZoneDragEnter(e: DragEvent) {
+    dropEnter(dragState, "ROOT", e);
+  }
+
+  function handleDropZoneDragOver(e: DragEvent) {
+    dropOver("ROOT", e);
+  }
+
+  function handleDropZoneDragLeave(e: DragEvent) {
+    dropLeave(dragState, "ROOT", e);
+  }
+
+  async function handleDropZoneDrop(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragState.reset();
+
+    try {
+      const dragData = e.dataTransfer?.getData("text/plain");
+      if (!dragData) return;
+
+      const parsedData = JSON.parse(dragData);
+      if (parsedData.type !== "file-move") return;
+
+      const draggedItems = parsedData.items;
+
+      const itemsToMove = selectedItems.filter((item) =>
+        draggedItems.some((draggedItem: any) => draggedItem.id === item.id)
+      );
+
+      if (itemsToMove.length > 0) {
+        await fileOperations.moveItems(itemsToMove, null);
+        selectedItems.length = 0;
+      }
+    } catch (error) {
+      console.error("Error handling drop:", error);
+    }
+  }
 </script>
+
+<svelte:window
+  ondragend={handleGlobalDragEnd}
+  ondragleave={handleGlobalDragLeave}
+/>
 
 <DragDropZone class="flex flex-col flex-1 h-full relative">
   {#snippet children()}
@@ -26,7 +82,13 @@
                 <Sidebar.MenuButton
                   {...props}
                   data-active={page.url.pathname === "/"}
-                  class="font-medium"
+                  class="font-medium border border-transparent {dragState.isDropTarget
+                    ? 'transition-none !bg-sidebar-primary/10 border-sidebar-primary'
+                    : ''}"
+                  ondragenter={handleDropZoneDragEnter}
+                  ondragover={handleDropZoneDragOver}
+                  ondragleave={handleDropZoneDragLeave}
+                  ondrop={handleDropZoneDrop}
                 >
                   {#snippet child({ props })}
                     <a href="/" {...props}>

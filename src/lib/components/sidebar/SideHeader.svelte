@@ -6,5 +6,7 @@
 
 <Sidebar.Menu class="flex flex-col gap-4">
   <User />
-  <UploadButton />
+  <Sidebar.MenuItem class="px-2 max-md:hidden">
+    <UploadButton />
+  </Sidebar.MenuItem>
 </Sidebar.Menu>

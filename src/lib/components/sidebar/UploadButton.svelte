@@ -7,6 +7,7 @@
     DropdownMenuSeparator,
   } from "$lib/components/ui/dropdown-menu/index.js";
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+  import { IsMobile } from "$lib/hooks/is-mobile.svelte";
   import { fileOperations } from "$lib/stores";
   import type { UploadableFile } from "$lib/types/file";
   import {
@@ -16,7 +17,7 @@
     UploadIcon,
   } from "@lucide/svelte";
 
-  const sidebar = Sidebar.useSidebar();
+  const isMobile = $derived(new IsMobile().current);
 
   let fileInputRef: HTMLInputElement;
   let folderInputRef: HTMLInputElement;
@@ -62,52 +63,47 @@
   onchange={handleFileInputChange}
 />
 
-<Sidebar.MenuItem class="px-2">
-  <DropdownMenu>
-    <DropdownMenuTrigger>
-      {#snippet child({ props })}
-        <Sidebar.MenuButton
-          {...props}
-          size="lg"
-          class="bg-sidebar-primary hover:bg-sidebar-primary/90 active:bg-sidebar-primary/80 text-sidebar-primary-foreground hover:text-sidebar-primary-foreground active:text-sidebar-primary-foreground transition-colors flex items-center px-4"
-        >
-          <PlusIcon strokeWidth={2} class="size-6" absoluteStrokeWidth />
-          <span class="text-base"> New </span>
-        </Sidebar.MenuButton>
-      {/snippet}
-    </DropdownMenuTrigger>
-    <DropdownMenuContent
-      align="center"
-      class="w-(--bits-dropdown-menu-anchor-width) min-w-52"
+<DropdownMenu>
+  <DropdownMenuTrigger>
+    {#snippet child({ props })}
+      <Sidebar.MenuButton
+        {...props}
+        size="lg"
+        class="bg-sidebar-primary hover:bg-sidebar-primary/90 active:bg-sidebar-primary/80 text-sidebar-primary-foreground hover:text-sidebar-primary-foreground active:text-sidebar-primary-foreground transition-colors flex items-center max-md:justify-center px-4 max-md:size-12"
+      >
+        <PlusIcon strokeWidth={1.5} class="!size-6" absoluteStrokeWidth />
+        <span class="text-base max-md:hidden"> New </span>
+      </Sidebar.MenuButton>
+    {/snippet}
+  </DropdownMenuTrigger>
+  <DropdownMenuContent
+    align={isMobile ? "end" : "center"}
+    class="md:w-(--bits-dropdown-menu-anchor-width) md:min-w-52"
+  >
+    <DropdownMenuItem
+      onclick={() => {
+        fileInputRef.click();
+      }}
     >
-      <DropdownMenuItem
-        onclick={() => {
-          sidebar.setOpenMobile(false);
-          fileInputRef.click();
-        }}
-      >
-        <UploadIcon class="mr-2 size-4" />
-        Upload Files
-      </DropdownMenuItem>
-      <DropdownMenuItem
-        onclick={() => {
-          sidebar.setOpenMobile(false);
-          folderInputRef.click();
-        }}
-      >
-        <FolderPlusIcon class="mr-2 size-4" />
-        Upload Folder
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem
-        onclick={() => {
-          sidebar.setOpenMobile(false);
-          fileOperations.handleContextMenuAction("create-folder");
-        }}
-      >
-        <FolderEditIcon class="mr-2 size-4" />
-        Create Folder
-      </DropdownMenuItem>
-    </DropdownMenuContent>
-  </DropdownMenu>
-</Sidebar.MenuItem>
+      <UploadIcon class="mr-2 size-4" />
+      Upload Files
+    </DropdownMenuItem>
+    <DropdownMenuItem
+      onclick={() => {
+        folderInputRef.click();
+      }}
+    >
+      <FolderPlusIcon class="mr-2 size-4" />
+      Upload Folder
+    </DropdownMenuItem>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem
+      onclick={() => {
+        fileOperations.handleContextMenuAction("create-folder");
+      }}
+    >
+      <FolderEditIcon class="mr-2 size-4" />
+      Create Folder
+    </DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>

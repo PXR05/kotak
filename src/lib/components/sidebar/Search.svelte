@@ -18,6 +18,8 @@
   import { onSearch } from "$lib/telefunc/search.telefunc";
   import { toast } from "svelte-sonner";
 
+  const { alwaysOpen = false }: { alwaysOpen?: boolean } = $props();
+
   type SearchResult = {
     id: string;
     name: string;
@@ -32,7 +34,7 @@
     updatedAt: Date;
   };
 
-  let searchOpen = $state(false);
+  let searchOpen = $state(alwaysOpen);
   let searchInput: HTMLInputElement | null = $state(null);
   let searchValue = $state("");
   let searchResults = $state<SearchResult[]>([]);
@@ -116,7 +118,7 @@
         }, 0);
       }
     }
-    if (event.key === "Escape" && searchOpen) {
+    if (event.key === "Escape" && searchOpen && !alwaysOpen) {
       searchOpen = false;
       if (searchInput) {
         clearInput();
@@ -150,10 +152,12 @@
       case "Escape":
         event.preventDefault();
         selectedIndex = -1;
-        searchOpen = false;
-        if (searchInput) {
-          clearInput();
-          searchInput.blur();
+        if (!alwaysOpen) {
+          searchOpen = false;
+          if (searchInput) {
+            clearInput();
+            searchInput.blur();
+          }
         }
         break;
     }
@@ -176,6 +180,7 @@
   }
 
   function handleSearchToggle() {
+    if (alwaysOpen && searchOpen) return;
     searchOpen = !searchOpen;
     setTimeout(() => {
       if (searchOpen) {
@@ -230,7 +235,9 @@
   function handleResultClick(result: SearchResult) {
     fileOperations.handleItemClick(result);
     setTimeout(() => {
-      searchOpen = false;
+      if (!alwaysOpen) {
+        searchOpen = false;
+      }
       if (searchInput) {
         clearInput(false);
         searchInput.blur();
@@ -256,7 +263,8 @@
           type="search"
           placeholder="Search files and folders..."
           aria-label="Search files and folders"
-          class="w-full border-r-0 rounded-r-none focus-visible:border-border focus-visible:ring-0
+          class="w-full max-md:h-12 focus-visible:border-border focus-visible:dark:border-input focus-visible:ring-0
+          {searchValue.trim() === '' ? '' : 'border-r-0 rounded-r-none'}
           {searchResults.length > 0 ||
           isSearching ||
           (hasSearched && searchValue.trim())
@@ -268,7 +276,8 @@
     <Button
       variant="outline"
       size="icon"
-      class="grid place-items-center
+      class="grid place-items-center max-md:size-12 
+      {searchValue.trim() === '' ? 'max-md:hidden' : ''}
       {searchOpen ? 'rounded-l-none !border-l-transparent' : ''}
       {searchResults.length > 0 ||
       isSearching ||
@@ -308,7 +317,7 @@
   {#if searchOpen && (searchResults.length > 0 || isSearching || (hasSearched && searchValue.trim()))}
     <div
       bind:this={searchResultsContainer}
-      class="absolute top-9 left-0 right-0 bg-sidebar shadow-md rounded-b-lg border border-input max-h-80 overflow-y-auto z-40"
+      class="absolute top-9 left-0 right-0 bg-sidebar shadow-md rounded-b-lg border border-input max-h-80 overflow-y-auto z-40 max-md:top-12"
       transition:slide={{ axis: "y", duration: 150, easing: quintOut }}
     >
       {#if isSearching}

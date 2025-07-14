@@ -64,6 +64,7 @@ export function createFileTableColumns(
         const item = row.original;
         return getDisplayType(item);
       },
+      enableHiding: true,
       enableSorting: true,
       sortingFn: (rowA, rowB) => {
         const a = getDisplayType(rowA.original);
@@ -83,6 +84,7 @@ export function createFileTableColumns(
         const item = row.original;
         return item.type === "folder" ? "-" : formatFileSize(item.size || 0);
       },
+      enableHiding: true,
       enableSorting: true,
       sortingFn: (rowA, rowB) => {
         const a = rowA.original;
@@ -105,6 +107,7 @@ export function createFileTableColumns(
         const item = row.original;
         return new Date(item.updatedAt).toLocaleDateString();
       },
+      enableHiding: true,
       enableSorting: true,
     },
     {

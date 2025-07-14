@@ -1,0 +1,35 @@
+<script lang="ts" module>
+  import { Separator } from "$lib/components/ui/separator/index.js";
+  import Breadcrumb from "$lib/components/sidebar/Breadcrumb.svelte";
+  import Search from "$lib/components/sidebar/Search.svelte";
+  import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+  import { IsMobile } from "$lib/hooks/is-mobile.svelte";
+
+  const isMobile = $derived(new IsMobile().current);
+
+  const backgroundClass =
+    "bg-sidebar rounded-lg border border-sidebar-border shadow-sm";
+</script>
+
+{#if isMobile}
+  <header class="flex shrink-0 items-center justify-between gap-2">
+    <div class="flex items-center gap-2">
+      <Sidebar.Trigger class="size-12 {backgroundClass}" />
+    </div>
+    <Search alwaysOpen />
+  </header>
+{:else}
+  <header class="flex h-16 shrink-0 items-center gap-2 {backgroundClass}">
+    <div class="flex items-center justify-between w-full gap-4 px-4">
+      <div class="flex items-center gap-2">
+        <Sidebar.Trigger />
+        <Separator
+          orientation="vertical"
+          class="mr-2 data-[orientation=vertical]:h-4"
+        />
+        <Breadcrumb />
+      </div>
+      <Search />
+    </div>
+  </header>
+{/if}

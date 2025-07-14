@@ -16,7 +16,6 @@
         updateAvailable = true;
       }
 
-      // Also listen for new service workers becoming available
       registration.addEventListener("updatefound", () => {
         const newWorker = registration.installing;
         if (newWorker) {
@@ -52,7 +51,6 @@
     if (swRegistration?.waiting) {
       loadingUpdate = true;
 
-      // Set up one-time event listener for controller change
       const handleControllerChange = () => {
         navigator.serviceWorker?.removeEventListener(
           "controllerchange",
@@ -61,7 +59,6 @@
         window.location.reload();
       };
 
-      // Fallback timeout in case the update process gets stuck
       const timeoutId = setTimeout(() => {
         navigator.serviceWorker?.removeEventListener(
           "controllerchange",
@@ -78,7 +75,6 @@
         handleControllerChange();
       });
 
-      // Tell the service worker to skip waiting
       swRegistration.waiting.postMessage({ type: "skip-waiting" });
     }
   }

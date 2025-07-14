@@ -15,6 +15,7 @@
   } from "$lib/stores/dialogs/urlStateManager.js";
   import { afterNavigate } from "$app/navigation";
   import type { FileItem } from "$lib/types/file.js";
+  import UploadButton from "$lib/components/sidebar/UploadButton.svelte";
 
   let { data } = $props();
   let currentItems: FileItem[] = $state([]);
@@ -89,5 +90,8 @@
     </Card>
   {:else}
     <FileTable items={currentItems} currentFolderId={data.currentFolderId} />
+    <div class="fixed bottom-4 right-4 md:hidden">
+      <UploadButton />
+    </div>
   {/if}
 {/if}

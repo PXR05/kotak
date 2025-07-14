@@ -2,6 +2,7 @@
   import { fileOperations } from "$lib/stores";
   import type { UploadableFile } from "$lib/types/file.js";
   import { UploadIcon } from "@lucide/svelte";
+  import { isInternalMove } from "$lib/stores/ui/drag-drop.svelte.js";
 
   let {
     class: className = "",
@@ -24,6 +25,8 @@
     e.preventDefault();
     e.stopPropagation();
 
+    if (isInternalMove(e.dataTransfer)) return;
+
     dragCounter++;
     if (dragCounter === 1) {
       isDragOver = true;
@@ -34,14 +37,19 @@
     e.preventDefault();
     e.stopPropagation();
 
-    if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = "copy";
+    if (isInternalMove(e.dataTransfer)) {
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "none";
+      return;
     }
+
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
   }
 
   function handleDragLeave(e: DragEvent) {
     e.preventDefault();
     e.stopPropagation();
+
+    if (isInternalMove(e.dataTransfer)) return;
 
     dragCounter--;
     if (dragCounter === 0) {
@@ -55,6 +63,14 @@
 
     isDragOver = false;
     dragCounter = 0;
+
+    const dragData = e.dataTransfer?.getData("text/plain");
+    if (dragData) {
+      try {
+        const parsedData = JSON.parse(dragData);
+        if (parsedData.type === "file-move") return;
+      } catch {}
+    }
 
     const items = e.dataTransfer?.items;
     if (items && items.length > 0) {

@@ -27,12 +27,14 @@ export async function createFile(file: File) {
   const filePath = path.join(STORAGE_PATH, storageKey);
   await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
 
-  const placeholder = await lqipModern(filePath, {
-    outputFormat: "webp",
-    resize: 32,
-  });
-  const placeholderFilePath = path.join(STORAGE_PATH, `${storageKey}.webp`);
-  await writeFile(placeholderFilePath, placeholder.content);
+  if (file.type.startsWith("image/")) {
+    const placeholder = await lqipModern(filePath, {
+      outputFormat: "webp",
+      resize: 32,
+    });
+    const placeholderFilePath = path.join(STORAGE_PATH, `${storageKey}.webp`);
+    await writeFile(placeholderFilePath, placeholder.content);
+  }
 
   return {
     storageKey,
