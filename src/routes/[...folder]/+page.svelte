@@ -90,8 +90,10 @@
     </Card>
   {:else}
     <FileTable items={currentItems} currentFolderId={data.currentFolderId} />
-    <div class="fixed bottom-4 right-4 md:hidden">
-      <UploadButton />
-    </div>
+    <div
+      class="fixed bottom-4 right-4 md:hidden"
+    >
+    <UploadButton />
+  </div>
   {/if}
 {/if}

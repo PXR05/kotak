@@ -18,6 +18,8 @@
 
   let { rootItems }: { rootItems: FileItem[] } = $props();
 
+  const sidebar = Sidebar.useSidebar();
+
   $effect(() => {
     fileTree.setRootItems(rootItems);
   });
@@ -89,6 +91,9 @@
                   ondragover={handleDropZoneDragOver}
                   ondragleave={handleDropZoneDragLeave}
                   ondrop={handleDropZoneDrop}
+                  onclick={() => {
+                    sidebar.setOpenMobile(false);
+                  }}
                 >
                   {#snippet child({ props })}
                     <a href="/" {...props}>

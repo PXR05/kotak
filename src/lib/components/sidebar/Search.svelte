@@ -118,11 +118,13 @@
         }, 0);
       }
     }
-    if (event.key === "Escape" && searchOpen && !alwaysOpen) {
-      searchOpen = false;
+    if (event.key === "Escape" && searchOpen) {
       if (searchInput) {
         clearInput();
         searchInput.blur();
+      }
+      if (!alwaysOpen) {
+        searchOpen = false;
       }
     }
   }
@@ -152,12 +154,12 @@
       case "Escape":
         event.preventDefault();
         selectedIndex = -1;
+        if (searchInput) {
+          clearInput();
+          searchInput.blur();
+        }
         if (!alwaysOpen) {
           searchOpen = false;
-          if (searchInput) {
-            clearInput();
-            searchInput.blur();
-          }
         }
         break;
     }
@@ -180,10 +182,11 @@
   }
 
   function handleSearchToggle() {
-    if (alwaysOpen && searchOpen) return;
-    searchOpen = !searchOpen;
+    if (!alwaysOpen) {
+      searchOpen = !searchOpen;
+    }
     setTimeout(() => {
-      if (searchOpen) {
+      if (searchOpen && !alwaysOpen) {
         searchInput?.focus();
       } else if (searchInput) {
         clearInput();
@@ -263,12 +266,14 @@
           type="search"
           placeholder="Search files and folders..."
           aria-label="Search files and folders"
-          class="w-full max-md:h-12 focus-visible:border-border focus-visible:dark:border-input focus-visible:ring-0
-          {searchValue.trim() === '' ? '' : 'border-r-0 rounded-r-none'}
+          class="w-full max-md:h-12 max-md:shadow-sm max-md:rounded-lg focus-visible:border-border focus-visible:dark:border-input focus-visible:ring-0
+          {searchValue.trim() === '' && alwaysOpen
+            ? ''
+            : '!border-r-0 !rounded-r-none'}
           {searchResults.length > 0 ||
           isSearching ||
           (hasSearched && searchValue.trim())
-            ? 'rounded-b-none !border-b-transparent'
+            ? '!rounded-b-none'
             : ''}"
         />
       </div>
@@ -276,14 +281,14 @@
     <Button
       variant="outline"
       size="icon"
-      class="grid place-items-center max-md:size-12 
-      {searchValue.trim() === '' ? 'max-md:hidden' : ''}
-      {searchOpen ? 'rounded-l-none !border-l-transparent' : ''}
+      class="grid place-items-center max-md:size-12 max-md:rounded-lg
+      {searchValue.trim() === '' && alwaysOpen ? 'max-md:hidden' : ''}
+      {searchOpen ? '!rounded-l-none !border-l-transparent' : ''}
       {searchResults.length > 0 ||
       isSearching ||
       (hasSearched && searchValue.trim())
-        ? 'rounded-b-none !border-b-transparent'
-        : ''}"
+        ? '!rounded-b-none'
+        : 'max-md:shadow-sm'}"
       onclick={handleSearchToggle}
     >
       {#if searchOpen}
@@ -317,7 +322,7 @@
   {#if searchOpen && (searchResults.length > 0 || isSearching || (hasSearched && searchValue.trim()))}
     <div
       bind:this={searchResultsContainer}
-      class="absolute top-9 left-0 right-0 bg-sidebar shadow-md rounded-b-lg border border-input max-h-80 overflow-y-auto z-40 max-md:top-12"
+      class="absolute top-9 left-0 right-0 bg-background shadow-md rounded-b-lg border border-input border-t-0 max-h-80 overflow-y-auto z-60 max-md:top-12"
       transition:slide={{ axis: "y", duration: 150, easing: quintOut }}
     >
       {#if isSearching}

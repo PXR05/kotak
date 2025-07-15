@@ -30,15 +30,16 @@
     fileOperations.handleItemClick(node.item);
     sidebar.setOpenMobile(false);
   };
-
+  
   const handleFolderToggle = (e: MouseEvent) => {
     e.stopPropagation();
     fileTree.toggleFolder(node.item.id);
   };
-
+  
   const handleFolderNameClick = (e: MouseEvent) => {
     e.stopPropagation();
     fileOperations.handleItemClick(node.item);
+    sidebar.setOpenMobile(false);
   };
 
   let preloadTimeout: ReturnType<typeof setTimeout> | null = $state(null);

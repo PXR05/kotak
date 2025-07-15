@@ -69,9 +69,14 @@
       <Sidebar.MenuButton
         {...props}
         size="lg"
-        class="bg-sidebar-primary hover:bg-sidebar-primary/90 active:bg-sidebar-primary/80 text-sidebar-primary-foreground hover:text-sidebar-primary-foreground active:text-sidebar-primary-foreground transition-colors flex items-center max-md:justify-center px-4 max-md:size-12"
+        class="bg-sidebar-primary hover:bg-
+        sidebar-primary/90 active:bg-sidebar-primary/80 text-sidebar-primary-foreground hover:text-sidebar-primary-foreground active:text-sidebar-primary-foreground transition-colors flex items-center max-md:justify-center px-4 max-md:size-14 max-md:rounded-lg max-md:shadow-lg"
       >
-        <PlusIcon strokeWidth={1.5} class="!size-6" absoluteStrokeWidth />
+        <PlusIcon
+          strokeWidth={1.5}
+          class="md:!size-6 !size-7"
+          absoluteStrokeWidth
+        />
         <span class="text-base max-md:hidden"> New </span>
       </Sidebar.MenuButton>
     {/snippet}
