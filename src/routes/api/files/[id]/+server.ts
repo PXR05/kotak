@@ -2,10 +2,9 @@ import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
-import type { RequestHandler } from "./$types";
 import { getFileStream } from "$lib/server/storage";
 
-export const GET: RequestHandler = async ({ params, url, locals }) => {
+export const GET = async ({ params, url, locals }) => {
   if (!locals.user) {
     throw error(401, "Unauthorized");
   }

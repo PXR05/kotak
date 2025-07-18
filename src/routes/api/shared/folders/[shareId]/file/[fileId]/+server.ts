@@ -1,5 +1,4 @@
 import { json, error } from "@sveltejs/kit";
-import type { RequestHandler } from "./$types";
 import { getFileStream } from "$lib/server/storage";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
@@ -99,7 +98,7 @@ async function isFileInFolder(
   return false;
 }
 
-export const GET: RequestHandler = async ({ params, url, locals }) => {
+export const GET = async ({ params, url, locals }) => {
   const shareId = params.shareId;
   const fileId = params.fileId;
   const download = url.searchParams.get("download");

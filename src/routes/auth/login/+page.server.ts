@@ -5,7 +5,6 @@ import * as auth from "$lib/server/auth";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { loginSchema } from "$lib/validation";
-import type { Actions, PageServerLoad } from "./$types";
 import { RateLimiter } from "sveltekit-rate-limiter/server";
 
 const limiter = new RateLimiter({
@@ -19,7 +18,7 @@ const limiter = new RateLimiter({
   },
 });
 
-export const load: PageServerLoad = async (event) => {
+export const load = async (event) => {
   if (event.locals.user) {
     return redirect(302, "/");
   }
@@ -29,7 +28,7 @@ export const load: PageServerLoad = async (event) => {
   return {};
 };
 
-export const actions: Actions = {
+export const actions = {
   default: async (event) => {
     if (event.url.protocol === "https:") {
       const status = await limiter.check(event);

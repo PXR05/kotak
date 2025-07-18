@@ -10,6 +10,7 @@ const sw = /** @type {ServiceWorkerGlobalScope} */ (
 import { build, files, prerendered, version } from "$service-worker";
 
 const CACHE = `cache-${version}`;
+const RUNTIME_CACHE = `runtime-${version}`;
 const ASSETS = [...build, ...files, ...prerendered];
 
 sw.addEventListener("install", (event) => {
@@ -37,7 +38,7 @@ sw.addEventListener("install", (event) => {
 
 sw.addEventListener("activate", (event) => {
   async function deleteOldCaches() {
-    const cacheKeepList = [CACHE];
+    const cacheKeepList = [CACHE, RUNTIME_CACHE];
     const keyList = await caches.keys();
     const cachesToDelete = keyList.filter(
       (key) => !cacheKeepList.includes(key)
@@ -71,4 +72,57 @@ sw.addEventListener("statechange", () => {
       });
     });
   }
+});
+
+sw.addEventListener("fetch", (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+
+  if (request.method !== "GET") return;
+
+  if (url.origin !== location.origin) return;
+
+  if (ASSETS.includes(url.pathname)) {
+    event.respondWith(
+      caches.match(request).then((response) => {
+        return response || fetch(request);
+      })
+    );
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/")) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(request);
+        })
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(request).then((cachedResponse) => {
+      const fetchPromise = fetch(request).then((networkResponse) => {
+        if (networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(RUNTIME_CACHE).then((cache) => {
+            cache.put(request, responseClone);
+          });
+        }
+        return networkResponse;
+      });
+
+      return cachedResponse || fetchPromise;
+    })
+  );
 });

@@ -1,5 +1,4 @@
 import { error } from "@sveltejs/kit";
-import type { RequestHandler } from "./$types";
 import { getFileStream } from "$lib/server/storage";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
@@ -40,7 +39,7 @@ async function validateFileShare(shareId: string, userEmail?: string) {
   return recipient ? fileShare : null;
 }
 
-export const GET: RequestHandler = async ({ params, url, locals }) => {
+export const GET = async ({ params, url, locals }) => {
   const shareId = params.shareId;
   const download = url.searchParams.get("download");
 

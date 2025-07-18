@@ -1,5 +1,4 @@
 import { json, error } from "@sveltejs/kit";
-import type { RequestHandler } from "./$types";
 import { createFile } from "$lib/server/storage";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
@@ -42,7 +41,7 @@ async function generateUniqueFileName(
   }
 }
 
-export const POST: RequestHandler = async ({ request, locals }) => {
+export const POST = async ({ request, locals }) => {
   if (!locals.user) throw error(401, "Unauthorized");
 
   const contentType = request.headers.get("content-type");

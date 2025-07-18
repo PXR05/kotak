@@ -32,7 +32,7 @@
       try {
         isLoading = true;
         error = null;
-        const items = await (data.currentFolderId
+        const items = await (data.currentFolderId && data.currentFolderId !== ""
           ? data.items
           : data.rootItems);
         currentItems = items;
@@ -90,10 +90,8 @@
     </Card>
   {:else}
     <FileTable items={currentItems} currentFolderId={data.currentFolderId} />
-    <div
-      class="fixed bottom-4 right-4 md:hidden"
-    >
-    <UploadButton />
-  </div>
+    <div class="fixed bottom-4 right-4 md:hidden">
+      <UploadButton />
+    </div>
   {/if}
 {/if}

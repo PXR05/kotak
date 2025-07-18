@@ -2,12 +2,11 @@ import { redirect } from "@sveltejs/kit";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { eq, and } from "drizzle-orm";
-import type { PageServerLoad } from "./$types";
 import * as auth from "$lib/server/auth.js";
 
-export const load: PageServerLoad = async ({
+export const load = async ({
   locals: { user },
-  params: { folder }
+  params: { folder },
 }) => {
   if (!user) {
     redirect(302, "/auth/login");
@@ -22,13 +21,19 @@ export const load: PageServerLoad = async ({
     }
   }
 
-  const currentFolderPromise = currentFolderId
-    ? getCurrentFolder(currentFolderId, user.id)
-    : Promise.resolve(null);
+  if (!currentFolderId) {
+    return {
+      user,
+      currentFolderId,
+      currentFolder: Promise.resolve(null),
+      breadcrumbs: Promise.resolve([]),
+      items: Promise.resolve([]),
+    };
+  }
 
-  const breadcrumbsPromise = currentFolderId
-    ? getBreadcrumbs(currentFolderId, user.id)
-    : Promise.resolve([]);
+  const currentFolderPromise = getCurrentFolder(currentFolderId, user.id);
+
+  const breadcrumbsPromise = getBreadcrumbs(currentFolderId, user.id);
 
   const currentFolderItemsPromise = currentFolderId
     ? db
@@ -166,17 +171,3 @@ async function getCurrentFolder(
 
   return { ...folder, type: "folder" as const };
 }
-
-export const actions = {
-  logout: async (event) => {
-    const sessionToken = event.cookies.get(auth.sessionCookieName);
-    if (sessionToken) {
-      const { session } = await auth.validateSessionToken(sessionToken);
-      if (session) {
-        await auth.invalidateSession(session.id);
-      }
-    }
-    auth.deleteSessionTokenCookie(event);
-    return redirect(303, "/auth/login");
-  },
-};

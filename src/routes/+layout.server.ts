@@ -1,10 +1,9 @@
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { eq, and } from "drizzle-orm";
-import type { LayoutServerLoad } from "./$types";
 import { getStorageStatus } from "$lib/server/storage";
 
-export const load: LayoutServerLoad = async ({ locals }) => {
+export const load = async ({ locals }) => {
   const { user } = locals;
 
   if (!user) {
