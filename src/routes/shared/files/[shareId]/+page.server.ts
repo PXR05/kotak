@@ -1,7 +1,7 @@
 import { error, redirect } from "@sveltejs/kit";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
-import { and, eq, or, gte } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export const load = async ({ params, locals }) => {
   const shareId = params.shareId;

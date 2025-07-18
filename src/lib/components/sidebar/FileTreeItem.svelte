@@ -21,21 +21,26 @@
     createGlobalDragHandlers,
   } from "$lib/stores/ui/drag-drop.svelte.js";
 
-  let { node }: { node: FileTreeNode } = $props();
+  const { i, nodeList }: { i: number; nodeList: FileTreeNode[] } = $props();
+
+  const node = $derived(nodeList[i]);
 
   const sidebar = Sidebar.useSidebar();
 
   const handleFileClick = () => {
-    // TODO: file list
-    fileOperations.handleItemClick(node.item);
+    fileOperations.handleItemClick(
+      node.item,
+      nodeList.map((n) => n.item),
+      i
+    );
     sidebar.setOpenMobile(false);
   };
-  
+
   const handleFolderToggle = (e: MouseEvent) => {
     e.stopPropagation();
     fileTree.toggleFolder(node.item.id);
   };
-  
+
   const handleFolderNameClick = (e: MouseEvent) => {
     e.stopPropagation();
     fileOperations.handleItemClick(node.item);
@@ -150,7 +155,7 @@
                     class="flex items-center gap-2 flex-1 min-w-0 hover:bg-accent rounded-md px-2 h-8 duration-150 group/name border border-transparent
                     {dragState.isDragging ? 'opacity-50' : ''} 
                       {dragState.isDropTarget
-                      ? 'transition-none bg-sidebar-primary/10 border-sidebar-primary'
+                      ? 'transition-none bg-sidebar-primary/10 !border-sidebar-primary'
                       : ''}"
                     type="button"
                     draggable="true"
@@ -171,8 +176,8 @@
             </Collapsible.Trigger>
             <Collapsible.Content>
               <Sidebar.MenuSub>
-                {#each node.children || [] as childNode (childNode.item.id)}
-                  <FileTreeItem node={childNode} />
+                {#each node.children || [] as childNode, j (childNode.item.id)}
+                  <FileTreeItem i={j} nodeList={node.children ?? []} />
                 {/each}
               </Sidebar.MenuSub>
             </Collapsible.Content>

@@ -12,7 +12,6 @@
     handleDropZoneDragEnter as dropEnter,
     handleDropZoneDragOver as dropOver,
     handleDropZoneDragLeave as dropLeave,
-    handleDropZoneDrop as dropHandler,
     createGlobalDragHandlers,
   } from "$lib/stores/ui/drag-drop.svelte.js";
 
@@ -112,8 +111,8 @@
         <Sidebar.Menu class="h-full">
           <div class="h-full overflow-y-auto">
             <Sidebar.MenuSub>
-              {#each fileTree.nodes as node (node.item.id)}
-                <FileTreeItem {node} />
+              {#each fileTree.nodes as node, i (node.item.id)}
+                <FileTreeItem {i} nodeList={fileTree.nodes} />
               {/each}
             </Sidebar.MenuSub>
           </div>

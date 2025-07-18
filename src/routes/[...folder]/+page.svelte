@@ -16,15 +16,19 @@
   import { afterNavigate } from "$app/navigation";
   import type { FileItem } from "$lib/types/file.js";
   import UploadButton from "$lib/components/sidebar/UploadButton.svelte";
+  import { onGetCurrentFolderItems } from "$lib/telefunc/load.telefunc";
+  import { toast } from "svelte-sonner";
+  import { page } from "$app/state";
 
-  let { data } = $props();
+  const { data } = $props();
+  const { user, currentFolderId } = $derived(data);
   let currentItems: FileItem[] = $state([]);
   let isLoading = $state(true);
   let error = $state<string | null>(null);
 
   $effect(() => {
-    fileOperations.setCurrentFolder(data.currentFolderId);
-    fileOperations.setCurrentUser(data.user?.id || null);
+    fileOperations.setCurrentFolder(currentFolderId);
+    fileOperations.setCurrentUser(user?.id || null);
   });
 
   $effect(() => {
@@ -32,10 +36,17 @@
       try {
         isLoading = true;
         error = null;
-        const items = await (data.currentFolderId && data.currentFolderId !== ""
-          ? data.items
-          : data.rootItems);
-        currentItems = items;
+        if (currentFolderId) {
+          const { data, error } =
+            await onGetCurrentFolderItems(currentFolderId);
+          if (error) {
+            toast.error(error);
+          } else {
+            currentItems = data ?? [];
+          }
+        } else {
+          currentItems = await page.data.rootItems;
+        }
       } catch (err) {
         console.error("Failed to load items:", err);
         error = err instanceof Error ? err.message : "Failed to load items";

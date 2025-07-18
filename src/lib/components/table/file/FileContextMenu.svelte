@@ -23,7 +23,7 @@
 </script>
 
 <ContextMenu.Root>
-  <ContextMenu.Trigger>
+  <ContextMenu.Trigger style="content-visibility: auto; contain-intrinsic-size: 48px;">
     {#snippet child({ props })}
       {@render children?.({ props })}
     {/snippet}

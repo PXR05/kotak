@@ -4,14 +4,25 @@
   import { fileOperations } from "$lib/stores";
   import { tableActions } from "$lib/utils/table-actions.svelte";
   import type { Snippet } from "svelte";
-  import type { PageData } from "../../../routes/[...folder]/$types";
   import { LoaderIcon } from "@lucide/svelte";
+  import type { FileItem } from "$lib/types/file";
+  import { onGetCurrentFolder } from "$lib/telefunc/load.telefunc";
+  import { toast } from "svelte-sonner";
 
   const {
     children,
   }: {
     children: Snippet<[{ props: Record<string, any> }]>;
   } = $props();
+
+  const currentFolderPromise = $derived(
+    onGetCurrentFolder(page.data.currentFolderId).then(({ data, error }) => {
+      if (error) {
+        toast.error(error);
+      }
+      return data ?? ({} as FileItem);
+    })
+  );
 </script>
 
 <ContextMenu.Root>
@@ -21,7 +32,7 @@
     {/snippet}
   </ContextMenu.Trigger>
   <ContextMenu.Content class="w-52">
-    {#await (page.data as PageData).currentFolder}
+    {#await currentFolderPromise}
       <ContextMenu.Item>
         <LoaderIcon class="size-4 animate-spin m-auto" />
       </ContextMenu.Item>

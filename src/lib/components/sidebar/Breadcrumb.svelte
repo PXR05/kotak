@@ -6,11 +6,9 @@
   import { page } from "$app/state";
   import { HomeIcon } from "@lucide/svelte";
   import { IsMobile } from "$lib/hooks/is-mobile.svelte.js";
-  import type { PageData } from "../../../routes/[...folder]/$types";
+  import { onGetBreadcrumbs } from "$lib/telefunc/load.telefunc";
+  import { toast } from "svelte-sonner";
 
-  const breadcrumbsPromise = $derived(
-    (page.data as PageData)?.breadcrumbs ?? Promise.resolve([])
-  );
   const isMobile = new IsMobile();
   const isTrashPage = $derived(page.route?.id === "/trash");
 
@@ -20,8 +18,12 @@
   }[] = $state([]);
 
   $effect(() => {
-    breadcrumbsPromise.then((data) => {
-      breadcrumbs = data;
+    onGetBreadcrumbs(page.data.currentFolderId).then(({ data, error }) => {
+      if (error) {
+        toast.error(error);
+      } else {
+        breadcrumbs = data ?? [];
+      }
     });
   });
 

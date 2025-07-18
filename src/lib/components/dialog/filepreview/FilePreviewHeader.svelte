@@ -81,9 +81,11 @@
 
       <DropdownMenu.Root>
         <DropdownMenu.Trigger>
-          <Button variant="ghost" size="sm" class="h-9 sm:hidden">
-            <MoreHorizontalIcon class="size-4" />
-          </Button>
+          {#snippet child({ props })}
+            <Button {...props} variant="ghost" size="sm" class="h-9 sm:hidden">
+              <MoreHorizontalIcon class="size-4" />
+            </Button>
+          {/snippet}
         </DropdownMenu.Trigger>
         <DropdownMenu.Content align="end" class="w-48">
           <DropdownMenu.Item onclick={onDownload}>

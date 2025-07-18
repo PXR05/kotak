@@ -231,16 +231,13 @@
   ondragleave={handleGlobalMainDragLeave}
 />
 
-<DragDropZone
-  class="flex flex-col relative transition-all duration-100 w-full h-[calc(100dvh-5.5rem-2px)]"
->
+<DragDropZone class="flex flex-col relative transition-all duration-100 w-full">
   {#snippet children()}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
-      class="flex flex-col relative w-full h-full {isMainDropTarget
-        ? 'bg-primary/5'
-        : ''}"
+      class="flex flex-col relative w-full h-[calc(100dvh-5.5rem-2px)]
+      {isMainDropTarget ? 'bg-primary/5' : ''}"
       onclick={handleOutsideClick}
       ondragenter={handleMainAreaDragEnter}
       ondragover={handleMainAreaDragOver}

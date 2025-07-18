@@ -240,7 +240,7 @@ function getQueueStatus(): {
  */
 export const uploadUtils = {
   /**
-   * Upload multiple files one by one 
+   * Upload multiple files one by one
    * If upload is in progress, files are added to queue
    */
   async uploadFiles(
