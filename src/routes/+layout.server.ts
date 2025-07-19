@@ -86,7 +86,6 @@ export const load = async ({ locals }) => {
   });
 
   return {
-    timestamp: Date.now(),
     user: locals.user,
     session: locals.session,
     storageStatus: getStorageStatus(locals.user?.id ),

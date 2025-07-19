@@ -21,7 +21,7 @@
   import { page } from "$app/state";
 
   const { data } = $props();
-  const { timestamp, user, currentFolderId } = $derived(data);
+  const { user, currentFolderId } = $derived(data);
   let currentItems: FileItem[] = $state([]);
   let isLoading = $state(true);
   let error = $state<string | null>(null);
@@ -32,9 +32,7 @@
   });
 
   $effect(() => {
-    async function loadItems(timestamp?: number) {
-      if (!timestamp) return;
-
+    async function loadItems() {
       isLoading = true;
       error = null;
       if (currentFolderId && currentFolderId.length > 0) {
@@ -50,7 +48,7 @@
       isLoading = false;
     }
 
-    loadItems(timestamp);
+    loadItems();
   });
 
   $effect(() => {
@@ -76,7 +74,7 @@
 {#if data.user}
   {#if isLoading}
     <div class="text-center m-auto">
-      <LoaderIcon class="animate-spin size-8 text-primary mx-auto mb-4" />
+      <LoaderIcon class="animate-spin size-6 text-primary mx-auto mb-4" />
       <p class="text-muted-foreground">Loading files and folders...</p>
     </div>
   {:else if error}
