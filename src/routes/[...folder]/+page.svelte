@@ -21,7 +21,7 @@
   import { page } from "$app/state";
 
   const { data } = $props();
-  const { user, currentFolderId } = $derived(data);
+  const { timestamp, user, currentFolderId } = $derived(data);
   let currentItems: FileItem[] = $state([]);
   let isLoading = $state(true);
   let error = $state<string | null>(null);
@@ -32,31 +32,25 @@
   });
 
   $effect(() => {
-    const loadItems = async () => {
-      try {
-        isLoading = true;
-        error = null;
-        if (currentFolderId) {
-          const { data, error } =
-            await onGetCurrentFolderItems(currentFolderId);
-          if (error) {
-            toast.error(error);
-          } else {
-            currentItems = data ?? [];
-          }
-        } else {
-          currentItems = await page.data.rootItems;
-        }
-      } catch (err) {
-        console.error("Failed to load items:", err);
-        error = err instanceof Error ? err.message : "Failed to load items";
-        currentItems = [];
-      } finally {
-        isLoading = false;
-      }
-    };
+    async function loadItems(timestamp?: number) {
+      if (!timestamp) return;
 
-    loadItems();
+      isLoading = true;
+      error = null;
+      if (currentFolderId && currentFolderId.length > 0) {
+        const { data, error } = await onGetCurrentFolderItems(currentFolderId);
+        if (error) {
+          toast.error(error);
+        } else {
+          currentItems = data ?? [];
+        }
+      } else {
+        currentItems = await page.data.rootItems;
+      }
+      isLoading = false;
+    }
+
+    loadItems(timestamp);
   });
 
   $effect(() => {

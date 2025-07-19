@@ -73,7 +73,7 @@ export async function onGetCurrentFolder(folderId: string) {
 
   if (!folder) {
     return {
-      error: "Folder not found",
+      error: null,
     };
   }
 
@@ -110,39 +110,38 @@ export async function onGetCurrentFolderItems(folderId: string) {
     )
     .orderBy(table.file.name);
 
-  const items = Promise.all([
-    currentFolderItems,
-    currentFolderFiles,
-  ]).then(([currentFolderItems, currentFolderFiles]) => {
-    const transformedCurrentFiles = currentFolderFiles.map((file) => ({
-      ...file,
-      type: "file" as const,
-    }));
-
-    return [
-      ...currentFolderItems.map((folder) => ({
-        id: folder.id,
-        name: folder.name,
-        type: "folder" as const,
-        ownerId: folder.ownerId,
-        parentId: folder.parentId,
-        createdAt: folder.createdAt,
-        updatedAt: folder.updatedAt,
-      })),
-      ...transformedCurrentFiles.map((file) => ({
-        id: file.id,
-        name: file.name,
+  const items = Promise.all([currentFolderItems, currentFolderFiles]).then(
+    ([currentFolderItems, currentFolderFiles]) => {
+      const transformedCurrentFiles = currentFolderFiles.map((file) => ({
+        ...file,
         type: "file" as const,
-        storageKey: file.storageKey,
-        ownerId: file.ownerId,
-        folderId: file.folderId,
-        size: file.size,
-        mimeType: file.mimeType,
-        createdAt: file.createdAt,
-        updatedAt: file.updatedAt,
-      })),
-    ];
-  });
+      }));
+
+      return [
+        ...currentFolderItems.map((folder) => ({
+          id: folder.id,
+          name: folder.name,
+          type: "folder" as const,
+          ownerId: folder.ownerId,
+          parentId: folder.parentId,
+          createdAt: folder.createdAt,
+          updatedAt: folder.updatedAt,
+        })),
+        ...transformedCurrentFiles.map((file) => ({
+          id: file.id,
+          name: file.name,
+          type: "file" as const,
+          storageKey: file.storageKey,
+          ownerId: file.ownerId,
+          folderId: file.folderId,
+          size: file.size,
+          mimeType: file.mimeType,
+          createdAt: file.createdAt,
+          updatedAt: file.updatedAt,
+        })),
+      ];
+    }
+  );
 
   return {
     data: await items,

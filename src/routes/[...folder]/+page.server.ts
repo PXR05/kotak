@@ -14,16 +14,7 @@ export const load = async ({ locals: { user }, params: { folder } }) => {
     }
   }
 
-  if (!currentFolderId) {
-    return {
-      user,
-      currentFolderId,
-      items: Promise.resolve([]),
-    };
-  }
-
   return {
-    user,
     currentFolderId,
   };
 };
