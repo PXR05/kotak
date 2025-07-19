@@ -74,7 +74,7 @@
 
 <DragDropZone class="flex flex-col flex-1 h-full relative">
   {#snippet children()}
-    <Sidebar.Group class="flex flex-col h-full pb-0">
+    <Sidebar.Group class="flex flex-col pb-0">
       <div class="flex-shrink-0">
         <Sidebar.Menu>
           <Sidebar.MenuItem>
@@ -119,5 +119,11 @@
         </Sidebar.Menu>
       </div>
     </Sidebar.Group>
+
+    <TableContextMenu>
+      {#snippet children({ props })}
+        <div {...props} class="flex-1"></div>
+      {/snippet}
+    </TableContextMenu>
   {/snippet}
 </DragDropZone>

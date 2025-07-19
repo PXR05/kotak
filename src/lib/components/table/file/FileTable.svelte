@@ -179,60 +179,11 @@
     }
   }
 
-  let isMainDropTarget = $state(false);
-
-  function handleMainAreaDragEnter(e: DragEvent) {
-    const target = e.target as HTMLElement;
-    if (target.closest("tr")) return;
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  function handleMainAreaDragOver(e: DragEvent) {
-    const target = e.target as HTMLElement;
-    if (target.closest("tr")) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer) e.dataTransfer.dropEffect = "none";
-  }
-
-  function handleMainAreaDragLeave(e: DragEvent) {
-    const target = e.target as HTMLElement;
-    if (target.closest("tr")) return;
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  function handleGlobalMainDragEnd() {
-    isMainDropTarget = false;
-  }
-
-  function handleGlobalMainDragLeave(e: DragEvent) {
-    if (
-      e.clientX < 0 ||
-      e.clientY < 0 ||
-      e.clientX > window.innerWidth ||
-      e.clientY > window.innerHeight
-    ) {
-      isMainDropTarget = false;
-    }
-  }
-
-  async function handleMainAreaDrop(e: DragEvent) {
-    const target = e.target as HTMLElement;
-    if (target.closest("tr")) return;
-    e.preventDefault();
-    e.stopPropagation();
-    isMainDropTarget = false;
-  }
-
   let activeRow: Row<FileItem> | undefined = $state();
 </script>
 
 <svelte:window
   onkeydown={handleKeyDown}
-  ondragend={handleGlobalMainDragEnd}
-  ondragleave={handleGlobalMainDragLeave}
 />
 
 <DragDropZone class="flex flex-col relative transition-all duration-100 w-full">
@@ -240,25 +191,9 @@
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
-      class="flex flex-col relative w-full h-[calc(100dvh-5.5rem-2px)]
-      {isMainDropTarget ? 'bg-primary/5' : ''}"
+      class="flex flex-col relative w-full h-[calc(100dvh-5.5rem-2px)]"
       onclick={handleOutsideClick}
-      ondragenter={handleMainAreaDragEnter}
-      ondragover={handleMainAreaDragOver}
-      ondragleave={handleMainAreaDragLeave}
-      ondrop={handleMainAreaDrop}
     >
-      {#if isMainDropTarget}
-        <div
-          class="absolute inset-0 z-10 pointer-events-none border-2 border-dashed border-primary/50 rounded-lg"
-        >
-          <div
-            class="absolute top-4 left-4 bg-primary/10 text-primary px-3 py-1 rounded-md text-sm font-medium"
-          >
-            Drop here to move to this folder
-          </div>
-        </div>
-      {/if}
       <input
         type="file"
         multiple

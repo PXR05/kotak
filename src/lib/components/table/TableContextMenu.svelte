@@ -15,14 +15,19 @@
     children: Snippet<[{ props: Record<string, any> }]>;
   } = $props();
 
-  const currentFolderPromise = $derived(
+  let currentFolder = $state<FileItem>();
+  let loading = $state(true);
+
+  $effect(() => {
+    loading = true;
     onGetCurrentFolder(page.data.currentFolderId).then(({ data, error }) => {
       if (error) {
         toast.error(error);
       }
-      return data ?? ({} as FileItem);
-    })
-  );
+      currentFolder = data ?? ({} as FileItem);
+      loading = false;
+    });
+  });
 </script>
 
 <ContextMenu.Root>
@@ -32,11 +37,11 @@
     {/snippet}
   </ContextMenu.Trigger>
   <ContextMenu.Content class="w-52">
-    {#await currentFolderPromise}
+    {#if loading}
       <ContextMenu.Item>
         <LoaderIcon class="size-4 animate-spin m-auto" />
       </ContextMenu.Item>
-    {:then currentFolder}
+    {:else if currentFolder}
       {#each tableActions() as action, index}
         {#if action.separator && index > 0}
           <ContextMenu.Separator />
@@ -51,6 +56,6 @@
           {action.label}
         </ContextMenu.Item>
       {/each}
-    {/await}
+    {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>

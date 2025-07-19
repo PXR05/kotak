@@ -4,7 +4,7 @@
   import * as Drawer from "$lib/components/ui/drawer/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import { page } from "$app/state";
-  import { HomeIcon } from "@lucide/svelte";
+  import { HomeIcon, LoaderIcon } from "@lucide/svelte";
   import { IsMobile } from "$lib/hooks/is-mobile.svelte.js";
   import { onGetBreadcrumbs } from "$lib/telefunc/load.telefunc";
   import { toast } from "svelte-sonner";
@@ -16,19 +16,20 @@
     id: string;
     name: string;
   }[] = $state([]);
+  let loading = $state(true);
 
   $effect(() => {
+    loading = true;
     onGetBreadcrumbs(page.data.currentFolderId).then(({ data, error }) => {
       if (error) {
         toast.error(error);
-      } else {
-        breadcrumbs = data ?? [];
       }
+      breadcrumbs = data ?? [];
+      loading = false;
     });
   });
 
   const ITEMS_TO_DISPLAY = 3;
-  let open = $state(false);
 </script>
 
 <Breadcrumb.Root>
@@ -44,6 +45,11 @@
       <Breadcrumb.Item>
         <Breadcrumb.Page class="flex items-center gap-2">Trash</Breadcrumb.Page>
       </Breadcrumb.Item>
+    {:else if loading}
+      <Breadcrumb.Separator />
+      <Breadcrumb.Item>
+        <LoaderIcon class="size-4 animate-spin" />
+      </Breadcrumb.Item>
     {:else if breadcrumbs.length > 0}
       <Breadcrumb.Separator />
 
@@ -51,7 +57,7 @@
         <Breadcrumb.Item>
           {#if !isMobile.current}
             <!-- Desktop: Dropdown Menu -->
-            <DropdownMenu.Root bind:open>
+            <DropdownMenu.Root>
               <DropdownMenu.Trigger
                 class="flex items-center gap-1"
                 aria-label="Toggle menu"
@@ -70,7 +76,7 @@
             </DropdownMenu.Root>
           {:else}
             <!-- Mobile: Drawer -->
-            <Drawer.Root bind:open>
+            <Drawer.Root>
               <Drawer.Trigger aria-label="Toggle Menu">
                 <Breadcrumb.Ellipsis class="h-4 w-4" />
               </Drawer.Trigger>

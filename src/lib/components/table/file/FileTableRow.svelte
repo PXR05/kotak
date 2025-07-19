@@ -1,5 +1,6 @@
 <script lang="ts">
   import * as Table from "$lib/components/ui/table/index.js";
+  import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
   import { FlexRender } from "$lib/components/ui/data-table/index.js";
   import type { Row, Table as TanStackTable } from "@tanstack/table-core";
   import type { FileItem } from "$lib/types/file.js";
@@ -182,10 +183,10 @@
 <Table.Row
   data-state={row.getIsSelected() && "selected"}
   class="hover:bg-muted/50 transition-none cursor-pointer
-        {loading ? 'pointer-events-none animate-pulse' : ''}
-        {dragState.isDragging ? 'opacity-50' : ''} 
-        {dragState.isDropTarget && row.original.type === 'folder'
-    ? 'bg-sidebar-primary/10 -outline-offset-1 outline outline-sidebar-primary pointer-events-none'
+    {loading ? 'pointer-events-none animate-pulse' : ''}
+    {dragState.isDragging ? 'opacity-50' : ''} 
+    {dragState.isDropTarget
+    ? 'bg-sidebar-primary/10 -outline-offset-1 outline outline-sidebar-primary'
     : ''}"
   draggable="true"
   ondragstart={handleDragStart}
@@ -216,7 +217,7 @@
   {#each row.getVisibleCells() as cell, i}
     <Table.Cell
       class="{cell.column.id !== 'name' ? 'text-muted-foreground' : ''} 
-          {i === 0 ? 'pl-5' : ''}"
+    {i === 0 ? 'pl-5' : ''}"
     >
       <FlexRender
         content={cell.column.columnDef.cell}
