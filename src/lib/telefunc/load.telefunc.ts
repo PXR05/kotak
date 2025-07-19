@@ -1,5 +1,6 @@
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
+import type { FileItem } from "$lib/types/file";
 import { and, eq } from "drizzle-orm";
 import { getContext } from "telefunc";
 
@@ -56,9 +57,11 @@ export async function onGetBreadcrumbs(folderId: string) {
 }
 
 export async function onGetCurrentFolder(folderId: string) {
+  console.log("Fetching current folder with ID:", folderId);
   const context = getContext();
   const { user } = context;
   if (!user) {
+    console.error("User not authenticated");
     return {
       error: "User not authenticated",
     };
@@ -72,8 +75,9 @@ export async function onGetCurrentFolder(folderId: string) {
     );
 
   if (!folder) {
+    console.error(`Folder with ID ${folderId} not found for user ${user.id}`);
     return {
-      error: null,
+      data: {} as FileItem,
     };
   }
 

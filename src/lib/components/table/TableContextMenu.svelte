@@ -23,8 +23,9 @@
     onGetCurrentFolder(page.data.currentFolderId).then(({ data, error }) => {
       if (error) {
         toast.error(error);
+      } else {
+        currentFolder = data;
       }
-      currentFolder = data ?? ({} as FileItem);
       loading = false;
     });
   });
