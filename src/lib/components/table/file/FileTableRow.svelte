@@ -9,7 +9,6 @@
     selectedItems,
   } from "$lib/stores";
   import { preloadData } from "$app/navigation";
-  import FileContextMenu from "./FileContextMenu.svelte";
   import { IsMobile } from "$lib/hooks/is-mobile.svelte";
   import {
     createDragState,
@@ -25,9 +24,11 @@
   let {
     row,
     table,
+    onHover,
   }: {
     row: Row<FileItem>;
     table: TanStackTable<FileItem>;
+    onHover: (row: Row<FileItem>) => void;
   } = $props();
 
   const isMobile = $derived(new IsMobile().current);
@@ -178,50 +179,49 @@
   ondragleave={handleGlobalDragLeave}
 />
 
-<FileContextMenu item={row.original} rowItem={row}>
-  {#snippet children({ props })}
-    <Table.Row
-      {...props}
-      data-state={row.getIsSelected() && "selected"}
-      class="hover:bg-muted/50 transition-none cursor-pointer
+<Table.Row
+  data-state={row.getIsSelected() && "selected"}
+  class="hover:bg-muted/50 transition-none cursor-pointer
         {loading ? 'pointer-events-none animate-pulse' : ''}
         {dragState.isDragging ? 'opacity-50' : ''} 
         {dragState.isDropTarget && row.original.type === 'folder'
-        ? 'bg-sidebar-primary/10 -outline-offset-1 outline outline-sidebar-primary pointer-events-none'
-        : ''}"
-      draggable="true"
-      ondragstart={handleDragStart}
-      ondragend={handleDragEnd}
-      ondragenter={handleDropZoneDragEnter}
-      ondragover={handleDropZoneDragOver}
-      ondragleave={handleDropZoneDragLeave}
-      ondrop={handleDropZoneDrop}
-      onclick={handleRowClick}
-      ondblclick={(e) => {
-        if (isMobile) {
-          return;
-        }
-        handleRowDoubleClick(e);
-      }}
-      onmouseenter={handleRowPreload}
-      onmouseleave={() => {
-        if (preloadTimeout) {
-          clearTimeout(preloadTimeout);
-          preloadTimeout = null;
-        }
-      }}
-    >
-      {#each row.getVisibleCells() as cell, i}
-        <Table.Cell
-          class="{cell.column.id !== 'name' ? 'text-muted-foreground' : ''} 
+    ? 'bg-sidebar-primary/10 -outline-offset-1 outline outline-sidebar-primary pointer-events-none'
+    : ''}"
+  draggable="true"
+  ondragstart={handleDragStart}
+  ondragend={handleDragEnd}
+  ondragenter={handleDropZoneDragEnter}
+  ondragover={handleDropZoneDragOver}
+  ondragleave={handleDropZoneDragLeave}
+  ondrop={handleDropZoneDrop}
+  onclick={handleRowClick}
+  ondblclick={(e) => {
+    if (isMobile) {
+      return;
+    }
+    handleRowDoubleClick(e);
+  }}
+  onmouseenter={() => {
+    onHover(row);
+    handleRowPreload();
+  }}
+  onmouseleave={() => {
+    if (preloadTimeout) {
+      clearTimeout(preloadTimeout);
+      preloadTimeout = null;
+    }
+  }}
+  ontouchstart={() => onHover(row)}
+>
+  {#each row.getVisibleCells() as cell, i}
+    <Table.Cell
+      class="{cell.column.id !== 'name' ? 'text-muted-foreground' : ''} 
           {i === 0 ? 'pl-5' : ''}"
-        >
-          <FlexRender
-            content={cell.column.columnDef.cell}
-            context={cell.getContext()}
-          />
-        </Table.Cell>
-      {/each}
-    </Table.Row>
-  {/snippet}
-</FileContextMenu>
+    >
+      <FlexRender
+        content={cell.column.columnDef.cell}
+        context={cell.getContext()}
+      />
+    </Table.Cell>
+  {/each}
+</Table.Row>

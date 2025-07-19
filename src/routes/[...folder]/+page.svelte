@@ -21,7 +21,7 @@
   import { page } from "$app/state";
 
   const { data } = $props();
-  const { user, currentFolderId } = $derived(data);
+  const { timestamp, user, currentFolderId } = $derived(data);
   let currentItems: FileItem[] = $state([]);
   let isLoading = $state(true);
   let error = $state<string | null>(null);
@@ -33,6 +33,7 @@
 
   $effect(() => {
     async function loadItems() {
+      if (!timestamp) return;
       isLoading = true;
       error = null;
       if (currentFolderId && currentFolderId.length > 0) {
@@ -41,9 +42,12 @@
           toast.error(error);
         } else {
           currentItems = data ?? [];
+          initAllDialogsFromUrl(data ?? []);
         }
       } else {
-        currentItems = await page.data.rootItems;
+        const rootItems = await page.data.rootItems;
+        currentItems = rootItems;
+        initAllDialogsFromUrl(rootItems);
       }
       isLoading = false;
     }
@@ -51,25 +55,12 @@
     loadItems();
   });
 
-  $effect(() => {
-    initAllDialogsFromUrl(currentItems);
-  });
-
   afterNavigate(() => {
     handleAllUrlChanges(currentItems);
   });
-
-  $effect(() => {
-    const handlePopState = () => {
-      handleAllUrlChanges(currentItems);
-    };
-
-    if (typeof window !== "undefined") {
-      window.addEventListener("popstate", handlePopState);
-      return () => window.removeEventListener("popstate", handlePopState);
-    }
-  });
 </script>
+
+<svelte:window onpopstate={() => handleAllUrlChanges(currentItems)} />
 
 {#if data.user}
   {#if isLoading}

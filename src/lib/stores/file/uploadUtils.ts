@@ -198,6 +198,8 @@ async function uploadFilesInternal(
         progressAfter,
         i + 1 < files.length ? files[i + 1].name : undefined
       );
+
+      invalidateAll();
     }
 
     updateProgress(100);

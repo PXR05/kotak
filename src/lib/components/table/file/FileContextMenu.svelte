@@ -16,20 +16,22 @@
     rowItem,
     children,
   }: {
-    item: FileItem;
+    item?: FileItem;
     rowItem?: Row<FileItem>;
-    children: Snippet<[{ props: Record<string, any> }]>;
+    children: Snippet<[{ props: Record<string, any>; open: boolean }]>;
   } = $props();
+
+  let open = $state(false);
 </script>
 
-<ContextMenu.Root>
-  <ContextMenu.Trigger style="content-visibility: auto; contain-intrinsic-size: 48px;">
+<ContextMenu.Root bind:open>
+  <ContextMenu.Trigger>
     {#snippet child({ props })}
-      {@render children?.({ props })}
+      {@render children?.({ props, open })}
     {/snippet}
   </ContextMenu.Trigger>
   <ContextMenu.Content class="w-52">
-    {#if rowItem}
+    {#if item && rowItem}
       <ContextMenu.Item
         onclick={() => {
           const currentIndex = rowItem.index;

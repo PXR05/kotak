@@ -3,6 +3,7 @@
   import * as Table from "$lib/components/ui/table/index.js";
   import type { FileItem, UploadableFile } from "$lib/types/file.js";
   import {
+    type Row,
     type RowSelectionState,
     type SortingState,
     type VisibilityState,
@@ -27,6 +28,7 @@
   } from "$lib/stores";
 
   import { lastSelectedIndex } from "$lib/stores";
+  import FileContextMenu from "./FileContextMenu.svelte";
 
   let {
     items,
@@ -223,6 +225,8 @@
     e.stopPropagation();
     isMainDropTarget = false;
   }
+
+  let activeRow: Row<FileItem> | undefined = $state();
 </script>
 
 <svelte:window
@@ -275,11 +279,24 @@
 
       <Table.Root>
         <FileTableHeader {table} />
-        <Table.Body>
-          {#each table.getRowModel().rows as row}
-            <FileTableRow {row} {table} />
-          {/each}
-        </Table.Body>
+        <FileContextMenu item={activeRow?.original} rowItem={activeRow}>
+          {#snippet children({ props, open })}
+            <Table.Body {...props}>
+              {#each table.getRowModel().rows as row}
+                {@const lockRow = open}
+                <FileTableRow
+                  {row}
+                  {table}
+                  onHover={(r) => {
+                    if (!lockRow) {
+                      activeRow = r;
+                    }
+                  }}
+                />
+              {/each}
+            </Table.Body>
+          {/snippet}
+        </FileContextMenu>
       </Table.Root>
 
       <FileTableEmptyState isEmpty={!table.getRowModel().rows?.length} />
