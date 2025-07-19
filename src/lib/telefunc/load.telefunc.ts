@@ -4,7 +4,13 @@ import type { FileItem } from "$lib/types/file";
 import { and, eq } from "drizzle-orm";
 import { getContext } from "telefunc";
 
-export async function onGetBreadcrumbs(folderId: string) {
+export async function onGetBreadcrumbs(folderId?: string | null) {
+  if (!folderId) {
+    return {
+      data: [],
+    };
+  }
+
   const context = getContext();
   const { user } = context;
   if (!user) {
@@ -23,7 +29,6 @@ export async function onGetBreadcrumbs(folderId: string) {
   if (!folder) {
     return {
       data: [],
-      error: null,
     };
   }
 
@@ -56,12 +61,16 @@ export async function onGetBreadcrumbs(folderId: string) {
   };
 }
 
-export async function onGetCurrentFolder(folderId: string) {
-  console.log("Fetching current folder with ID:", folderId);
+export async function onGetCurrentFolder(folderId?: string | null) {
+  if (!folderId) {
+    return {
+      data: {} as FileItem,
+    };
+  }
+
   const context = getContext();
   const { user } = context;
   if (!user) {
-    console.error("User not authenticated");
     return {
       error: "User not authenticated",
     };
@@ -75,7 +84,6 @@ export async function onGetCurrentFolder(folderId: string) {
     );
 
   if (!folder) {
-    console.error(`Folder with ID ${folderId} not found for user ${user.id}`);
     return {
       data: {} as FileItem,
     };

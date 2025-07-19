@@ -20,14 +20,20 @@
 
   $effect(() => {
     loading = true;
-    onGetCurrentFolder(page.data.currentFolderId).then(({ data, error }) => {
-      if (error) {
-        toast.error(error);
-      } else {
-        currentFolder = data;
-      }
+    try {
+      onGetCurrentFolder(page.data.currentFolderId).then(({ data, error }) => {
+        if (error) {
+          toast.error(error);
+        } else {
+          currentFolder = data;
+        }
+        loading = false;
+      });
+    } catch (error) {
+      console.error("Error fetching current folder:", error);
+      toast.error("Failed to load current folder");
       loading = false;
-    });
+    }
   });
 </script>
 

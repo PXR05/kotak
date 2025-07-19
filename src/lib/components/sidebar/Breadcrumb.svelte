@@ -20,13 +20,19 @@
 
   $effect(() => {
     loading = true;
-    onGetBreadcrumbs(page.data.currentFolderId).then(({ data, error }) => {
-      if (error) {
-        toast.error(error);
-      }
-      breadcrumbs = data ?? [];
+    try {
+      onGetBreadcrumbs(page.data.currentFolderId).then(({ data, error }) => {
+        if (error) {
+          toast.error(error);
+        }
+        breadcrumbs = data ?? [];
+        loading = false;
+      });
+    } catch (error) {
+      console.error("Error fetching breadcrumbs:", error);
+      toast.error("Failed to load breadcrumbs");
       loading = false;
-    });
+    }
   });
 
   const ITEMS_TO_DISPLAY = 3;
