@@ -20,6 +20,8 @@ function isFormContentType(request: Request) {
 const csrf: Handle = async ({ event, resolve }) => {
   const { request } = event;
 
+  console.log(`[csrf] Handling request: ${request.method} ${request.url}`);
+
   const allowedOrigins: string[] = [];
   const originPatterns = (process.env.ALLOWED_ORIGINS || "")
     .split(/,(?![^\[]*\])/)
@@ -39,6 +41,7 @@ const csrf: Handle = async ({ event, resolve }) => {
       allowedOrigins.push(trimmed);
     }
   }
+  console.log(`[csrf] Allowed origins: ${allowedOrigins.join(", ")}`);
 
   const blockedMethods = ["POST", "PUT", "PATCH", "DELETE"];
 
@@ -49,11 +52,10 @@ const csrf: Handle = async ({ event, resolve }) => {
 
   if (forbidden) {
     console.log(
-      `CSRF check failed for ${
+      `[csrf] CSRF check failed for ${
         request.method
       } request from origin: ${request.headers.get("origin")}`
     );
-    console.log(`Allowed origins: ${allowedOrigins.join(", ")}`);
     error(403, `Cross-site ${request.method} form submissions are forbidden`);
   }
 

@@ -83,6 +83,7 @@ export function setSessionTokenCookie(
   token: string,
   expiresAt: Date
 ) {
+  console.log(`[auth] Setting session cookie for ${event.url.protocol}`);
   event.cookies.set(sessionCookieName, token, {
     expires: expiresAt,
     path: "/",
@@ -93,6 +94,7 @@ export function setSessionTokenCookie(
 }
 
 export function deleteSessionTokenCookie(event: RequestEvent) {
+  console.log(`[auth] Deleting session cookie for ${event.url.protocol}`);
   event.cookies.delete(sessionCookieName, {
     path: "/",
     httpOnly: true,

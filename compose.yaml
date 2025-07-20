@@ -28,6 +28,7 @@ services:
     command: ["bun", "--bun", "run", "."]
     restart: always
     environment:
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
       BODY_SIZE_LIMIT: Infinity
       DATABASE_URL: ${DATABASE_URL}
       LIMITER_SECRET: ${LIMITER_SECRET}
