@@ -48,6 +48,12 @@ const csrf: Handle = async ({ event, resolve }) => {
     !allowedOrigins.includes(request.headers.get("origin") || "");
 
   if (forbidden) {
+    console.log(
+      `CSRF check failed for ${
+        request.method
+      } request from origin: ${request.headers.get("origin")}`
+    );
+    console.log(`Allowed origins: ${allowedOrigins.join(", ")}`);
     error(403, `Cross-site ${request.method} form submissions are forbidden`);
   }
 
