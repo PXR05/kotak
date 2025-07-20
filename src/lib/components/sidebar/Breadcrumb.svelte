@@ -19,6 +19,11 @@
   let loading = $state(true);
 
   $effect(() => {
+    if (!page.data.currentFolderId) {
+      breadcrumbs = [];
+      loading = false;
+      return;
+    }
     loading = true;
     try {
       onGetBreadcrumbs(page.data.currentFolderId).then(({ data, error }) => {
