@@ -16,7 +16,6 @@
   import { goto } from "$app/navigation";
 
   const user = $derived(page.data?.user);
-  const sidebar = useSidebar();
 
   const currentSidebarSide = $derived(settings.getSetting("sidebarSide"));
 

@@ -1,4 +1,5 @@
 import { redirect } from "@sveltejs/kit";
+import * as auth from "$lib/server/auth";
 
 export const load = async ({ locals: { user }, params: { folder } }) => {
   if (!user) {
@@ -17,4 +18,18 @@ export const load = async ({ locals: { user }, params: { folder } }) => {
   return {
     currentFolderId,
   };
+};
+
+export const actions = {
+  logout: async (event) => {
+    const sessionToken = event.cookies.get(auth.sessionCookieName);
+    if (sessionToken) {
+      const { session } = await auth.validateSessionToken(sessionToken);
+      if (session) {
+        await auth.invalidateSession(session.id);
+      }
+    }
+    auth.deleteSessionTokenCookie(event);
+    redirect(303, "/auth/signin");
+  },
 };
