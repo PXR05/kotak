@@ -18,6 +18,8 @@ function isFormContentType(request: Request) {
 }
 
 const csrf: Handle = async ({ event, resolve }) => {
+  if (import.meta.env.DEV) return resolve(event);
+
   const { request } = event;
 
   const origin = process.env.ORIGIN || "";

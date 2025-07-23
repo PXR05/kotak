@@ -104,13 +104,14 @@
       {#if node.item.type === "file"}
         <Sidebar.MenuButton
           onclick={handleFileClick}
-          class="w-full justify-start {dragState.isDragging
+          class="relative overflow-visible w-full justify-start {dragState.isDragging
             ? 'opacity-50'
             : ''}"
           draggable="true"
           ondragstart={handleDragStart}
           ondragend={handleDragEnd}
         >
+          <span class="h-4 w-2 absolute -left-[10px] top-0 border-b"></span>
           <FileIcon class="size-4" />
           <span class="truncate">
             {node.item.name}
@@ -127,6 +128,9 @@
                   class="w-full items-center justify-center p-0 gap-0.5 data-[active=false]:!bg-transparent"
                   onclick={() => {}}
                 >
+                  <span class="h-4 w-2 absolute -left-[10px] top-0 border-b"
+                  ></span>
+
                   <button
                     onclick={handleFolderToggle}
                     class="flex items-center justify-center h-8 w-4 ml-1.25 hover:bg-accent rounded-md duration-150 group/arrow"
