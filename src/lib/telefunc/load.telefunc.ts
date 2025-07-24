@@ -1,6 +1,6 @@
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
-import type { FileItem } from "$lib/types/file";
+import type { FileItem, TrashedItem } from "$lib/types/file";
 import { and, eq } from "drizzle-orm";
 import { getContext } from "telefunc";
 
@@ -158,4 +158,44 @@ export async function onGetCurrentFolderItems(folderId: string) {
   return {
     data: await items,
   };
+}
+
+export async function onGetTrashedItems() {
+  const context = getContext();
+  const { user } = context;
+  if (!user) {
+    return {
+      error: "User not authenticated",
+    };
+  }
+
+  try {
+    const trashedItems: (TrashedItem & FileItem)[] = (
+      await db
+        .select()
+        .from(table.trashedItem)
+        .where(eq(table.trashedItem.ownerId, user.id))
+        .orderBy(table.trashedItem.trashedAt)
+    ).map((item) => ({
+      id: item.id,
+      name: item.name,
+      itemId: item.itemId,
+      type: item.itemType as "file" | "folder",
+      ownerId: item.ownerId,
+      originalFolderId: item.originalFolderId,
+      originalParentId: item.originalParentId,
+      trashedAt: item.trashedAt,
+      updatedAt: item.trashedAt,
+      createdAt: item.trashedAt,
+    }));
+
+    return {
+      data: trashedItems,
+    };
+  } catch (error) {
+    console.error("Error loading trashed items:", error);
+    return {
+      error: "Failed to load trashed items",
+    };
+  }
 }

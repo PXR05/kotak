@@ -37,9 +37,10 @@
       isLoading = true;
       error = null;
       if (currentFolderId && currentFolderId.length > 0) {
-        const { data, error } = await onGetCurrentFolderItems(currentFolderId);
-        if (error) {
-          toast.error(error);
+        const { data, error: err } = await onGetCurrentFolderItems(currentFolderId);
+        if (err) {
+          error = err;
+          toast.error(err);
         } else {
           currentItems = data ?? [];
           initAllDialogsFromUrl(data ?? []);

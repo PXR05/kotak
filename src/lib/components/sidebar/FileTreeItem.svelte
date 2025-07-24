@@ -128,7 +128,7 @@
                   class="w-full items-center justify-center p-0 gap-0.5 data-[active=false]:!bg-transparent"
                   onclick={() => {}}
                 >
-                  <span class="h-4 w-2 absolute -left-[10px] top-0 border-b"
+                  <span class="h-4 w-3.5 absolute -left-[10px] top-0 border-b"
                   ></span>
 
                   <button

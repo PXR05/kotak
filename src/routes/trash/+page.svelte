@@ -2,22 +2,47 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { fileOperations } from "$lib/stores";
   import { openConfirmationDialog } from "$lib/stores/dialogs/confirmationDialog.svelte.js";
-  import { Trash2Icon } from "@lucide/svelte";
+  import { LoaderIcon, Trash2Icon } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
   import TrashTable from "$lib/components/table/trash/TrashTable.svelte";
   import {
     initPreviewFromUrl,
     handleUrlChange,
   } from "$lib/stores/dialogs/filePreviewDialog.svelte.js";
+  import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+  } from "$lib/components/ui/card/index.js";
   import { afterNavigate, invalidateAll } from "$app/navigation";
+  import { onGetTrashedItems } from "$lib/telefunc/load.telefunc.js";
+  import type { FileItem, TrashedItem } from "$lib/types/file.js";
 
-  const { data } = $props();
-  const { trashedItems } = $derived(data);
+  let isLoading = $state(false);
+  let error = $state<string | null>(null);
+  let trashedItems: (FileItem & TrashedItem)[] = $state([]);
 
   $effect(() => {
-    if (trashedItems.length > 0) {
-      initPreviewFromUrl(trashedItems);
+    async function loadItems() {
+      isLoading = true;
+      error = null;
+      const { data, error: err } = await onGetTrashedItems();
+      if (err) {
+        error = err;
+        toast.error(err);
+      } else {
+        trashedItems = (data ?? []).map((item) => ({
+          ...item,
+          createdAt: new Date(item.trashedAt),
+          updatedAt: new Date(item.trashedAt),
+        }));
+        initPreviewFromUrl(trashedItems);
+      }
+      isLoading = false;
     }
+
+    loadItems();
   });
 
   afterNavigate(() => {
@@ -83,7 +108,28 @@
     </div>
   </div>
 
-  <div class="flex-1 overflow-hidden">
-    <TrashTable items={trashedItems} onEmptyTrash={handleEmptyTrash} />
-  </div>
+  {#if isLoading}
+    <div class="text-center m-auto">
+      <LoaderIcon class="animate-spin size-6 text-primary mx-auto mb-4" />
+      <p class="text-muted-foreground">Loading files and folders...</p>
+    </div>
+  {:else if error}
+    <Card class="w-full max-w-md m-auto">
+      <CardHeader>
+        <CardTitle class="font-serif text-xl">Error Loading Files</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p class="text-muted-foreground mb-8">
+          {error}
+        </p>
+        <Button onclick={() => window.location.reload()} class="w-full">
+          Refresh Page
+        </Button>
+      </CardContent>
+    </Card>
+  {:else}
+    <div class="flex-1 overflow-hidden">
+      <TrashTable items={trashedItems} onEmptyTrash={handleEmptyTrash} />
+    </div>
+  {/if}
 </div>
