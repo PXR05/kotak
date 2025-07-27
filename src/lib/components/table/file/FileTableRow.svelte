@@ -1,6 +1,5 @@
 <script lang="ts">
   import * as Table from "$lib/components/ui/table/index.js";
-  import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
   import { FlexRender } from "$lib/components/ui/data-table/index.js";
   import type { Row, Table as TanStackTable } from "@tanstack/table-core";
   import type { FileItem } from "$lib/types/file.js";
@@ -214,10 +213,10 @@
   }}
   ontouchstart={() => onHover(row)}
 >
-  {#each row.getVisibleCells() as cell, i}
+  {#each row.getVisibleCells() as cell, i (cell.id)}
     <Table.Cell
       class="{cell.column.id !== 'name' ? 'text-muted-foreground' : ''} 
-    {i === 0 ? 'pl-5' : ''}"
+      {i === 0 ? 'pl-5' : ''}"
     >
       <FlexRender
         content={cell.column.columnDef.cell}

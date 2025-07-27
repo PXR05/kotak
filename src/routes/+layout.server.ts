@@ -2,6 +2,7 @@ import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getStorageStatus } from "$lib/server/storage";
+import type { FileItem } from "$lib/types/file.js";
 
 export const load = async ({ locals }) => {
   const { user } = locals;
@@ -51,7 +52,7 @@ export const load = async ({ locals }) => {
     )
     .orderBy(table.file.name);
 
-  const rootItemsPromise = Promise.all([
+  const rootItemsPromise: Promise<FileItem[]> = Promise.all([
     rootFoldersPromise,
     rootFilesPromise,
   ]).then(([rootFolders, rootFiles]) => {

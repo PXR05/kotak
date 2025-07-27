@@ -42,16 +42,6 @@ import {
   onEmptyTrash,
 } from "$lib/telefunc/trash.telefunc.js";
 
-export {
-  selectedItems,
-  currentFolderId,
-  isUploading,
-  isDownloading,
-  uploadProgress,
-  lastSelectedIndex,
-  currentUserId,
-} from "./fileState.svelte.js";
-
 export type { UploadOptions } from "./uploadUtils.js";
 
 export const fileOperations = {

@@ -6,11 +6,14 @@
 		ref = $bindable(null),
 		class: className,
 		children,
+		containerRef = $bindable(null),
 		...restProps
-	}: WithElementRef<HTMLTableAttributes> = $props();
+	}: WithElementRef<HTMLTableAttributes> & {
+		containerRef?: HTMLDivElement | null;	
+	} = $props();
 </script>
 
-<div data-slot="table-container" class="relative w-full overflow-x-auto">
+<div data-slot="table-container" bind:this={containerRef} class="relative w-full overflow-x-auto">
 	<table
 		bind:this={ref}
 		data-slot="table"

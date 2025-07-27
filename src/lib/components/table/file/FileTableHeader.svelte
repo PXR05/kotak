@@ -22,10 +22,10 @@
           {#each headerGroup.headers as header, i}
             <Table.Head
               colspan={header.colSpan}
-              class="
-            {header.column.id === 'actions' ? 'w-12' : ''} 
-            {i === 0 ? 'pl-5' : ''} 
-            md:py-4 py-2"
+              style="width: {header.id !== 'name'
+                ? header.getSize() + 'px'
+                : 'full'};"
+              class="{i === 0 ? 'pl-5' : ''} md:py-4 py-2"
             >
               {#if !header.isPlaceholder}
                 <FlexRender

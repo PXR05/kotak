@@ -66,6 +66,7 @@ export function createFileTableColumns(
       },
       enableHiding: true,
       enableSorting: true,
+      size: 150,
       sortingFn: (rowA, rowB) => {
         const a = getDisplayType(rowA.original);
         const b = getDisplayType(rowB.original);
@@ -86,6 +87,7 @@ export function createFileTableColumns(
       },
       enableHiding: true,
       enableSorting: true,
+      size: 100,
       sortingFn: (rowA, rowB) => {
         const a = rowA.original;
         const b = rowB.original;
@@ -109,14 +111,13 @@ export function createFileTableColumns(
       },
       enableHiding: true,
       enableSorting: true,
+      size: 140,
     },
     {
       id: "actions",
-      header: "",
       enableHiding: false,
       enableSorting: false,
-      size: 60,
-      maxSize: 60,
+      size: 52,
       cell: ({ row }) => {
         const item = row.original;
         return renderComponent(FileTableActions, {

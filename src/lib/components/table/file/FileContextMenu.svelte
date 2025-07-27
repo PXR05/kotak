@@ -45,7 +45,7 @@
       </ContextMenu.Item>
       <ContextMenu.Separator />
     {/if}
-    {#each fileActions() as action, index}
+    {#each fileActions as action, index}
       {#if action.separator && index > 0}
         <ContextMenu.Separator />
       {/if}

@@ -40,7 +40,7 @@
     }
   });
 
-  const ITEMS_TO_DISPLAY = 3;
+  const ITEMS_TO_DISPLAY = $derived(isMobile.current ? 2 : 4);
 </script>
 
 <Breadcrumb.Root>

@@ -18,10 +18,9 @@
   import UploadButton from "$lib/components/sidebar/UploadButton.svelte";
   import { onGetCurrentFolderItems } from "$lib/telefunc/load.telefunc";
   import { toast } from "svelte-sonner";
-  import { page } from "$app/state";
 
   const { data } = $props();
-  const { timestamp, user, currentFolderId } = $derived(data);
+  const { user, currentFolderId, rootItems } = $derived(data);
   let currentItems: FileItem[] = $state([]);
   let isLoading = $state(true);
   let error = $state<string | null>(null);
@@ -32,28 +31,40 @@
   });
 
   $effect(() => {
-    async function loadItems() {
-      if (!timestamp) return;
-      isLoading = true;
-      error = null;
-      if (currentFolderId && currentFolderId.length > 0) {
-        const { data, error: err } = await onGetCurrentFolderItems(currentFolderId);
-        if (err) {
-          error = err;
-          toast.error(err);
-        } else {
-          currentItems = data ?? [];
-          initAllDialogsFromUrl(data ?? []);
-        }
-      } else {
-        const rootItems = await page.data.rootItems;
-        currentItems = rootItems;
-        initAllDialogsFromUrl(rootItems);
-      }
-      isLoading = false;
+    isLoading = true;
+    error = null;
+    if (currentFolderId && currentFolderId.length > 0) {
+      onGetCurrentFolderItems(currentFolderId)
+        .then(({ data, error: err }) => {
+          if (err) {
+            error = err;
+            toast.error(err);
+          } else {
+            currentItems = data ?? [];
+            initAllDialogsFromUrl(data ?? []);
+          }
+        })
+        .catch((err) => {
+          error = err.message;
+          toast.error(err.message);
+        })
+        .finally(() => {
+          isLoading = false;
+        });
+    } else {
+      rootItems
+        .then((items) => {
+          currentItems = items;
+          initAllDialogsFromUrl(items);
+        })
+        .catch((err) => {
+          error = err.message;
+          toast.error(err.message);
+        })
+        .finally(() => {
+          isLoading = false;
+        });
     }
-
-    loadItems();
   });
 
   afterNavigate(() => {

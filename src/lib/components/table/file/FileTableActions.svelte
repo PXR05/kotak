@@ -26,12 +26,14 @@
 
 <DropdownMenu>
   <DropdownMenuTrigger>
-    <Button variant="ghost" size="sm" onclick={(e) => e.stopPropagation()}>
-      <MoreHorizontalIcon class="size-4" />
-    </Button>
+    {#snippet child({ props })}
+      <Button {...props} variant="ghost" size="sm">
+        <MoreHorizontalIcon class="size-4" />
+      </Button>
+    {/snippet}
   </DropdownMenuTrigger>
   <DropdownMenuContent align="end">
-    {#each fileActions() as action, index}
+    {#each fileActions as action, index}
       {#if action.separator && index > 0}
         <DropdownMenuSeparator />
       {/if}

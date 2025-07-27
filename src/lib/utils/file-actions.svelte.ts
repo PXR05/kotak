@@ -19,7 +19,7 @@ interface FileActionConfig {
   separator?: boolean;
 }
 
-const actions: FileActionConfig[] = $derived([
+export const fileActions: FileActionConfig[] = [
   {
     id: "open",
     label: "Open",
@@ -59,6 +59,4 @@ const actions: FileActionConfig[] = $derived([
     variant: "destructive",
     separator: true,
   },
-]);
-
-export const fileActions = () => actions;
+];

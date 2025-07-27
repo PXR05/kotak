@@ -29,6 +29,7 @@
 
   import { lastSelectedIndex } from "$lib/stores";
   import FileContextMenu from "./FileContextMenu.svelte";
+  import { onMount } from "svelte";
 
   let {
     items,
@@ -67,6 +68,52 @@
     if (lastSelectedIndex) {
       lastSelectedIndex.value = null;
     }
+  });
+
+  const ROW_HEIGHT = 48;
+  const OVERSCAN = 20;
+  let pagination = $state({
+    offset: 0,
+    pageSize: 20,
+  });
+  const range = $derived({
+    start: Math.max(0, pagination.offset - OVERSCAN),
+    end: Math.min(
+      items.length,
+      pagination.offset + pagination.pageSize + OVERSCAN
+    ),
+  });
+
+  let containerRef = $state<HTMLDivElement | null>(null);
+
+  function handleResize({ ref }: { ref: HTMLDivElement }) {
+    const clientHeight = ref.clientHeight;
+    const visibleRows = Math.ceil(clientHeight / ROW_HEIGHT);
+    pagination.pageSize = visibleRows;
+  }
+
+  function handleScroll(e: Event) {
+    const ref = e.target as HTMLDivElement;
+    const scrollTop = ref.scrollTop;
+    pagination.offset = Math.floor(scrollTop / ROW_HEIGHT);
+  }
+
+  onMount(() => {
+    if (containerRef) {
+      handleResize({ ref: containerRef });
+      window.addEventListener("resize", () =>
+        handleResize({ ref: containerRef! })
+      );
+      containerRef.addEventListener("scroll", handleScroll);
+    }
+    return () => {
+      if (containerRef) {
+        window.removeEventListener("resize", () =>
+          handleResize({ ref: containerRef! })
+        );
+        containerRef.removeEventListener("scroll", handleScroll);
+      }
+    };
   });
 
   const table = createSvelteTable({
@@ -182,9 +229,7 @@
   let activeRow: Row<FileItem> | undefined = $state();
 </script>
 
-<svelte:window
-  onkeydown={handleKeyDown}
-/>
+<svelte:window onkeydown={handleKeyDown} />
 
 <DragDropZone class="flex flex-col relative transition-all duration-100 w-full">
   {#snippet children()}
@@ -212,22 +257,27 @@
         <FileTableBulkActions {table} />
       {/if}
 
-      <Table.Root>
+      <Table.Root bind:containerRef>
         <FileTableHeader {table} />
         <FileContextMenu item={activeRow?.original} rowItem={activeRow}>
           {#snippet children({ props, open })}
             <Table.Body {...props}>
-              {#each table.getRowModel().rows as row}
+              {#each table.getRowModel().rows as row, i}
+                {@const inView = i >= range.start && i < range.end}
                 {@const lockRow = open}
-                <FileTableRow
-                  {row}
-                  {table}
-                  onHover={(r) => {
-                    if (!lockRow) {
-                      activeRow = r;
-                    }
-                  }}
-                />
+                {#if inView}
+                  <FileTableRow
+                    {row}
+                    {table}
+                    onHover={(r) => {
+                      if (!lockRow) {
+                        activeRow = r;
+                      }
+                    }}
+                  />
+                {:else}
+                  <Table.Row style="height: {ROW_HEIGHT}px;"></Table.Row>
+                {/if}
               {/each}
             </Table.Body>
           {/snippet}
