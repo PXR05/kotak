@@ -71,8 +71,14 @@ async function uploadSingleFile(
 
     xhr.addEventListener("load", () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        options.onFileComplete?.(true);
-        resolve(true);
+        try {
+          options.onFileComplete?.(true);
+          resolve(true);
+        } catch (error) {
+          console.error("Failed to parse upload response:", error);
+          options.onFileComplete?.(false);
+          resolve(false);
+        }
       } else {
         const error = `Failed to upload ${uploadFile.name}: ${xhr.responseText}`;
         options.onError?.(error);
@@ -94,6 +100,8 @@ async function uploadSingleFile(
       options.onFileComplete?.(false);
       resolve(false);
     });
+
+    xhr.timeout = 300000; // 5 minutes
 
     xhr.open("POST", "/api/files");
     xhr.send(formData);
@@ -166,7 +174,7 @@ async function uploadFilesInternal(
       fileProgress.status = "uploading";
       updateProgress((i / totalFiles) * 100, uploadFile.name);
 
-      const success = await uploadSingleFile(uploadFile, {
+      await uploadSingleFile(uploadFile, {
         folderId: options.folderId,
         onFileProgress: (progress, fileName) => {
           const fileProgress = fileProgresses.get(fileName)!;

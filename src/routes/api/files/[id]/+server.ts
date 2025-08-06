@@ -6,7 +6,7 @@ import { getFileStream } from "$lib/server/storage";
 
 export const GET = async ({ params, url, locals }) => {
   if (!locals.user) {
-    throw error(401, "Unauthorized");
+    error(401, "Unauthorized");
   }
 
   const fileId = params.id;
@@ -14,7 +14,7 @@ export const GET = async ({ params, url, locals }) => {
   const placeholder = url.searchParams.get("placeholder");
 
   if (!fileId) {
-    throw error(400, "Missing file ID");
+    error(400, "Missing file ID");
   }
 
   const [file] = await db
@@ -34,7 +34,7 @@ export const GET = async ({ params, url, locals }) => {
     );
 
   if (!file) {
-    throw error(404, "File not found");
+    error(404, "File not found");
   }
 
   try {
@@ -65,6 +65,6 @@ export const GET = async ({ params, url, locals }) => {
     return new Response(fileStream, { headers });
   } catch (err) {
     console.error(err);
-    throw error(404, "File not found");
+    error(404, "File not found");
   }
 };

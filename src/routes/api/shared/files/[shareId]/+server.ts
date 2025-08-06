@@ -44,14 +44,14 @@ export const GET = async ({ params, url, locals }) => {
   const download = url.searchParams.get("download");
 
   if (!shareId) {
-    throw error(400, "Missing share ID");
+    error(400, "Missing share ID");
   }
 
   const userEmail = locals.user?.email;
   const shareData = await validateFileShare(shareId, userEmail);
 
   if (!shareData) {
-    throw error(404, "Shared file not found or access denied");
+    error(404, "Shared file not found or access denied");
   }
 
   const { file } = shareData;
@@ -79,6 +79,6 @@ export const GET = async ({ params, url, locals }) => {
     return new Response(fileStream, { headers });
   } catch (err) {
     console.error("Error serving shared file:", err);
-    throw error(404, "File not found");
+    error(404, "File not found");
   }
 };

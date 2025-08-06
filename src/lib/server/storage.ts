@@ -45,6 +45,39 @@ export async function createFile(file: File) {
 }
 
 /**
+ * Creates a file from a stream that's already been written to storage.
+ * This is used when files are processed via streaming multipart parsing.
+ */
+export async function createFileFromStream(
+  storageKey: string,
+  filename: string,
+  mimeType: string,
+  size: number
+) {
+  const filePath = path.join(STORAGE_PATH, storageKey);
+
+  if (mimeType.startsWith("image/")) {
+    try {
+      const placeholder = await lqipModern(filePath, {
+        outputFormat: "webp",
+        resize: 32,
+      });
+      const placeholderFilePath = path.join(STORAGE_PATH, `${storageKey}.webp`);
+      await writeFile(placeholderFilePath, placeholder.content);
+    } catch (error) {
+      console.warn("Failed to generate image placeholder:", error);
+    }
+  }
+
+  return {
+    storageKey,
+    size,
+    mimeType: mimeType || "application/octet-stream",
+    name: filename,
+  };
+}
+
+/**
  * Gets a readable stream for a file from storage.
  * This is for streaming file contents in a response.
  */

@@ -125,11 +125,11 @@
                 <Sidebar.MenuButton
                   {...props}
                   data-active={page.url.pathname === `/${node.item.id}`}
-                  class="w-full items-center justify-center p-0 gap-0.5 data-[active=false]:!bg-transparent"
+                  class="group w-full items-center justify-center p-0 gap-0 data-[active=false]:!bg-transparent"
                   onclick={() => {}}
                 >
                   <span
-                    class="h-4 w-2.5 data-[active=false]:w-3.5 absolute -left-[10px] top-0 border-b"
+                    class="h-4 w-2 group-data-[active=false]:w-3 absolute -left-[10px] top-0 border-b"
                   ></span>
 
                   <button

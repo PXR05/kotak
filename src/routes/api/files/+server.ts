@@ -1,9 +1,10 @@
 import { json, error } from "@sveltejs/kit";
-import { createFile } from "$lib/server/storage";
+import { createFileFromStream } from "$lib/server/storage";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { ensureFolderPath, ensureRootFolder } from "$lib/server/folderUtils";
+import { parseMultipartStream } from "$lib/server/multipart.js";
 
 async function generateUniqueFileName(
   name: string,
@@ -42,50 +43,50 @@ async function generateUniqueFileName(
 }
 
 export const POST = async ({ request, locals }) => {
-  if (!locals.user) throw error(401, "Unauthorized");
+  if (!locals.user) error(401, "Unauthorized");
 
   const contentType = request.headers.get("content-type");
 
   if (!contentType?.includes("multipart/form-data"))
     return error(400, "Invalid content type");
 
-  const formData = await request.formData();
-  let folderId = formData.get("folderId") as string;
-
-  if (!folderId) {
-    const rootFolder = await ensureRootFolder(locals.user.id);
-    folderId = rootFolder.id;
-  }
-
-  const [folder] = await db
-    .select()
-    .from(table.folder)
-    .where(
-      and(
-        eq(table.folder.id, folderId),
-        eq(table.folder.ownerId, locals.user.id)
-      )
-    );
-
-  if (!folder)
-    throw error(403, "Forbidden: You don't have access to this folder.");
-
-  const files = formData.getAll("files") as File[];
-  const relativePaths = formData.getAll("relativePaths") as string[];
-
-  if (!files || files.length === 0)
-    throw error(400, "No files found in form data.");
-
+  let folderId: string | undefined;
   const uploadedFiles = [];
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const relativePath = relativePaths[i] || file.name;
+  try {
+    const { files, fields } = await parseMultipartStream(request);
 
-    if (file instanceof File && file.size > 0) {
+    const folderIds = fields.get("folderId");
+    if (folderIds && folderIds.length > 0) {
+      folderId = folderIds[0];
+    }
+
+    if (!folderId) {
+      const rootFolder = await ensureRootFolder(locals.user.id);
+      folderId = rootFolder.id;
+    }
+
+    const [folder] = await db
+      .select()
+      .from(table.folder)
+      .where(
+        and(
+          eq(table.folder.id, folderId),
+          eq(table.folder.ownerId, locals.user.id)
+        )
+      );
+
+    if (!folder) error(403, "Forbidden: You don't have access to this folder.");
+
+    const relativePaths = fields.get("relativePaths") || [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const relativePath = relativePaths[i] || file.filename;
+
       try {
         let targetFolderId = folderId;
-        let actualFileName = file.name;
+        let actualFileName = file.filename;
 
         if (relativePath && relativePath.includes("/")) {
           const pathWithoutFilename = relativePath.substring(
@@ -108,15 +109,21 @@ export const POST = async ({ request, locals }) => {
           targetFolderId,
           locals.user.id
         );
-        const fileMetadata = await createFile(file);
+
+        const fileMetadata = await createFileFromStream(
+          file.storageKey,
+          file.filename,
+          file.mimeType,
+          file.size
+        );
 
         const [dbFile] = await db
           .insert(table.file)
           .values({
             ...fileMetadata,
             name: uniqueName,
-            updatedAt: new Date(file.lastModified),
-            createdAt: new Date(file.lastModified),
+            updatedAt: new Date(),
+            createdAt: new Date(),
             id: fileMetadata.storageKey,
             ownerId: locals.user.id,
             folderId: targetFolderId,
@@ -125,14 +132,17 @@ export const POST = async ({ request, locals }) => {
 
         uploadedFiles.push(dbFile);
       } catch (err) {
-        console.error(`Failed to upload file ${file.name}:`, err);
+        console.error(`Failed to process file ${file.filename}:`, err);
       }
     }
-  }
 
-  return json({
-    success: true,
-    message: `Successfully uploaded ${uploadedFiles.length} files`,
-    files: uploadedFiles,
-  });
+    return json({
+      success: true,
+      message: `Successfully uploaded ${uploadedFiles.length} files`,
+      files: uploadedFiles,
+    });
+  } catch (err) {
+    console.error("Upload error:", err);
+    error(500, "Failed to process upload");
+  }
 };

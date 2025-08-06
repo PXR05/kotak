@@ -25,7 +25,7 @@
 </script>
 
 <ContextMenu.Root bind:open>
-  <ContextMenu.Trigger>
+  <ContextMenu.Trigger class="group/ctx-trigger">
     {#snippet child({ props })}
       {@render children?.({ props, open })}
     {/snippet}
