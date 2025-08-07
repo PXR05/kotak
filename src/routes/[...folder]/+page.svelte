@@ -1,12 +1,5 @@
 <script lang="ts">
   import FileTable from "$lib/components/table/file/FileTable.svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-  } from "$lib/components/ui/card/index.js";
   import { fileOperations } from "$lib/stores";
   import { LoaderIcon } from "@lucide/svelte";
   import {
@@ -16,11 +9,13 @@
   import { afterNavigate } from "$app/navigation";
   import type { FileItem } from "$lib/types/file.js";
   import UploadButton from "$lib/components/sidebar/UploadButton.svelte";
-  import { onGetCurrentFolderItems } from "$lib/telefunc/load.telefunc";
+  import { getRootItems } from "$lib/remote/load.remote";
+  import { getFolderChildren } from "$lib/remote/folders.remote";
+  import Error from "$lib/components/shared/Error.svelte";
   import { toast } from "svelte-sonner";
 
   const { data } = $props();
-  const { user, currentFolderId, rootItems } = $derived(data);
+  const { user, currentFolderId } = $derived(data);
   let currentItems: FileItem[] = $state([]);
   let isLoading = $state(true);
   let error = $state<string | null>(null);
@@ -32,39 +27,20 @@
 
   $effect(() => {
     isLoading = true;
-    error = null;
-    if (currentFolderId && currentFolderId.length > 0) {
-      onGetCurrentFolderItems(currentFolderId)
-        .then(({ data, error: err }) => {
-          if (err) {
-            error = err;
-            toast.error(err);
-          } else {
-            currentItems = data ?? [];
-            initAllDialogsFromUrl(data ?? []);
-          }
-        })
-        .catch((err) => {
-          error = err.message;
-          toast.error(err.message);
-        })
-        .finally(() => {
-          isLoading = false;
-        });
-    } else {
-      rootItems
-        .then((items) => {
-          currentItems = items;
-          initAllDialogsFromUrl(items);
-        })
-        .catch((err) => {
-          error = err.message;
-          toast.error(err.message);
-        })
-        .finally(() => {
-          isLoading = false;
-        });
+    async function load() {
+      error = null;
+      const hasCurrentFolder = currentFolderId && currentFolderId.length > 0;
+      const { data, error: err } = await (hasCurrentFolder ? getFolderChildren(currentFolderId) : getRootItems());
+      if (err) {
+        error = err;
+        toast.error(err);
+      } else {
+        currentItems = data ?? [];
+        initAllDialogsFromUrl(data ?? []);
+      }
+      isLoading = false; 
     }
+    load();
   });
 
   afterNavigate(() => {
@@ -81,19 +57,7 @@
       <p class="text-muted-foreground">Loading files and folders...</p>
     </div>
   {:else if error}
-    <Card class="w-full max-w-md m-auto">
-      <CardHeader>
-        <CardTitle class="font-serif text-xl">Error Loading Files</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p class="text-muted-foreground mb-8">
-          {error}
-        </p>
-        <Button onclick={() => window.location.reload()} class="w-full">
-          Refresh Page
-        </Button>
-      </CardContent>
-    </Card>
+    <Error messages={[error]} status={500} statusMessage={error} />
   {:else}
     <FileTable items={currentItems} currentFolderId={data.currentFolderId} />
     <div class="fixed bottom-4 right-4 md:hidden">

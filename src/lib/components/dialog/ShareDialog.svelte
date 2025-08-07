@@ -30,9 +30,9 @@
   import { slide } from "svelte/transition";
   import { page } from "$app/state";
   import {
-    onDeleteFileShare,
-    onDeleteFolderShare,
-  } from "$lib/telefunc/sharing.telefunc.js";
+    deleteFileShare,
+    deleteFolderShare,
+  } from "$lib/remote/sharing.remote.js";
 
   const open = $derived(shareDialogData.open);
   const item = $derived(shareDialogData.item);
@@ -166,12 +166,13 @@
     isSubmitting = true;
     try {
       const { error: err } = await (item.type === "file"
-        ? onDeleteFileShare({
+        ? deleteFileShare({
             itemId: item.id,
           })
-        : onDeleteFolderShare({
+        : deleteFolderShare({
             itemId: item.id,
-          }));
+          })
+        );
       if (err) {
         throw new Error(err);
       }

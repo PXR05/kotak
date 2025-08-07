@@ -1,4 +1,4 @@
-import { error, type Handle } from "@sveltejs/kit";
+import { error, type Handle, type HandleValidationError } from "@sveltejs/kit";
 import * as auth from "$lib/server/auth";
 import { sequence } from "@sveltejs/kit/hooks";
 
@@ -65,3 +65,24 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 };
 
 export const handle: Handle = sequence(csrf, handleAuth);
+
+export const handleValidationError: HandleValidationError = ({
+  event,
+  issues,
+}) => {
+  console.error(Date.now());
+  console.error("Validation error:", event);
+  console.error("Validation error:", issues);
+  return {
+    message: "Invalid request data",
+  };
+};
+
+export const handleError = ({ event, error }) => {
+  console.error(Date.now());
+  console.error("Error:", event);
+  console.error("Error:", error);
+  return {
+    message: "Internal server error",
+  };
+};

@@ -114,7 +114,7 @@
   }
 </script>
 
-<div class="min-h-screen flex items-center justify-center bg-background px-4">
+<div class="min-h-dvh flex items-center justify-center bg-background px-4">
   <Card.Root class="w-full max-w-md">
     <Card.Header class="text-center">
       <Card.Title class="text-2xl font-serif font-normal"

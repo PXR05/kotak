@@ -1,6 +1,6 @@
 import type { FileItem } from "$lib/types/file.js";
 import { browser } from "$app/environment";
-import { onGetFolderChildren } from "$lib/telefunc/folders.telefunc.js";
+import { getFolderChildren } from "$lib/remote/folders.remote.js";
 import { toast } from "svelte-sonner";
 
 export interface FileTreeNode {
@@ -78,18 +78,6 @@ export const fileTree = {
       childrenLoaded: item.type === "file",
       children: item.type === "file" ? undefined : [],
     }));
-
-    items.forEach((item) => {
-      if (
-        item.type === "folder" &&
-        fileTreeState.expandedFolders.has(item.id)
-      ) {
-        const node = this.findNode(item.id);
-        if (node && !node.childrenLoaded && !node.loading) {
-          this.loadFolderChildren(item.id);
-        }
-      }
-    });
   },
 
   toggleFolder(folderId: string) {
@@ -99,11 +87,6 @@ export const fileTree = {
     } else {
       fileTreeState.expandedFolders.add(folderId);
       this.setFolderExpanded(folderId, true);
-
-      const node = this.findNode(folderId);
-      if (node && !node.childrenLoaded && !node.loading) {
-        this.loadFolderChildren(folderId);
-      }
     }
     saveExpandedFolders(fileTreeState.expandedFolders);
   },
@@ -121,16 +104,11 @@ export const fileTree = {
     }
   },
 
-  async loadFolderChildren(folderId: string) {
-    const node = this.findNode(folderId);
-    if (!node || node.loading || node.childrenLoaded) return;
-
+  async loadFolderChildren(node: FileTreeNode) {
     node.loading = true;
 
     try {
-      const { data, error } = await onGetFolderChildren({
-        folderId,
-      });
+      const { data, error } = await getFolderChildren(node.item.id);
       if (error || !data) {
         toast.error(
           `Failed to load folder children: ${error || "Unknown error"}`
@@ -145,17 +123,6 @@ export const fileTree = {
         children: child.type === "file" ? undefined : [],
       }));
       node.childrenLoaded = true;
-
-      data.forEach((child) => {
-        if (
-          child.type === "folder" &&
-          fileTreeState.expandedFolders.has(child.id)
-        ) {
-          setTimeout(() => {
-            this.loadFolderChildren(child.id);
-          }, 0);
-        }
-      });
     } catch (error) {
       console.error("Failed to load folder children:", error);
     } finally {
@@ -238,9 +205,6 @@ export const fileTree = {
         if (node.item.type === "folder") {
           node.childrenLoaded = false;
           node.children = [];
-          if (node.expanded) {
-            this.loadFolderChildren(node.item.id);
-          }
         }
         if (node.children) {
           resetNodes(node.children);
@@ -256,9 +220,6 @@ export const fileTree = {
     if (node && node.item.type === "folder") {
       node.childrenLoaded = false;
       node.children = [];
-      if (node.expanded) {
-        this.loadFolderChildren(node.item.id);
-      }
     }
   },
 

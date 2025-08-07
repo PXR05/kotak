@@ -49,9 +49,9 @@ export const actions = {
     });
 
     if (!validation.success) {
-      const errors = validation.error.flatten().fieldErrors;
+      const errors = validation.error;
       return fail(400, {
-        message: errors.email?.[0] || errors.password?.[0] || "Invalid input",
+        message: errors.message || "Invalid input",
         errors: errors,
       });
     }

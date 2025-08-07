@@ -26,21 +26,21 @@ import {
 import { uploadUtils } from "./uploadUtils.js";
 import { downloadUtils } from "./downloadUtils.js";
 import { capitalize } from "$lib/utils/format.js";
-import { onRenameFile, onMoveFile } from "$lib/telefunc/files.telefunc.js";
 import {
-  onRenameFolder,
-  onCreateFolder,
-  onMoveFolder,
-} from "$lib/telefunc/folders.telefunc.js";
-import { onShareFile, onShareFolder } from "$lib/telefunc/sharing.telefunc.js";
+  renameFolder,
+  createFolder,
+  moveFolder,
+} from "$lib/remote/folders.remote.js";
+import { shareFile, shareFolder } from "$lib/remote/sharing.remote.js";
 import {
-  onTrashItem,
-  onRestoreFile,
-  onRestoreFolder,
-  onPermanentDeleteFile,
-  onPermanentDeleteFolder,
-  onEmptyTrash,
-} from "$lib/telefunc/trash.telefunc.js";
+  trashItem,
+  restoreFile,
+  restoreFolder,
+  permanentDeleteFile,
+  permanentDeleteFolder,
+  emptyTrash,
+} from "$lib/remote/trash.remote.js";
+import { moveFile, renameFile } from "$lib/remote/files.remote.js";
 
 export type { UploadOptions } from "./uploadUtils.js";
 
@@ -59,7 +59,7 @@ export const fileOperations = {
 
   async handleRename(item: FileItem, newName: string) {
     if (item.type === "file") {
-      const { data, error } = await onRenameFile({
+      const { data, error } = await renameFile({
         fileId: item.id,
         newName,
       });
@@ -69,7 +69,7 @@ export const fileOperations = {
       }
       toast.success(`File renamed to "${data.name}" successfully`);
     } else {
-      const { data, error } = await onRenameFolder({
+      const { data, error } = await renameFolder({
         folderId: item.id,
         newName,
       });
@@ -79,7 +79,6 @@ export const fileOperations = {
       }
       toast.success(`Folder renamed to "${data.name}" successfully`);
     }
-    invalidateAll();
   },
 
   async handleTrash(item: FileItem) {
@@ -91,7 +90,7 @@ export const fileOperations = {
       name: item.name,
     };
 
-    const { data, error } = await onTrashItem(trashRecord);
+    const { data, error } = await trashItem(trashRecord);
     if (error || !data) {
       toast.error(`Failed to move item to trash: ${error || "Unknown error"}`);
       return;
@@ -102,7 +101,7 @@ export const fileOperations = {
   },
 
   async handleCreateFolder(name: string) {
-    const { data, error } = await onCreateFolder({
+    const { data, error } = await createFolder({
       name,
       parentId: currentFolderId.value || undefined,
     });
@@ -111,7 +110,6 @@ export const fileOperations = {
       return;
     }
     toast.success(`Folder "${data.name}" created successfully`);
-    invalidateAll();
   },
 
   async handleFilesUpload(uploadableFiles: UploadableFile[]) {
@@ -184,15 +182,13 @@ export const fileOperations = {
     try {
       const movePromises = items.map((item) =>
         item.type === "file"
-          ? onMoveFile({
+          ? moveFile({
               fileId: item.id,
               targetFolderId,
-              skipConflicts: true,
             })
-          : onMoveFolder({
+          : moveFolder({
               folderId: item.id,
               targetParentId: targetFolderId,
-              skipConflicts: true,
             })
       );
       const results = await Promise.all(movePromises);
@@ -212,7 +208,6 @@ export const fileOperations = {
         );
       }
 
-      invalidateAll();
       this.clearSelection();
     } catch (error) {
       console.error("Failed to move items:", error);
@@ -296,11 +291,11 @@ export const fileOperations = {
   async handleShare(item: FileItem, shareData: ShareData) {
     const { data: result, error } =
       item.type === "file"
-        ? await onShareFile({
+        ? await shareFile({
             ...shareData,
             itemId: item.id,
           })
-        : await onShareFolder({
+        : await shareFolder({
             ...shareData,
             itemId: item.id,
           });
@@ -325,7 +320,7 @@ export const fileOperations = {
 
   async restoreItem(item: TrashedItem) {
     if (item.type === "file") {
-      const { data, error } = await onRestoreFile({
+      const { data, error } = await restoreFile({
         itemId: item.itemId,
       });
       if (error || !data) {
@@ -334,7 +329,7 @@ export const fileOperations = {
       }
       toast.success(`File "${item.name}" restored successfully`);
     } else {
-      const { data, error } = await onRestoreFolder({
+      const { data, error } = await restoreFolder({
         itemId: item.itemId,
       });
       if (error || !data) {
@@ -347,7 +342,7 @@ export const fileOperations = {
 
   async permanentlyDeleteItem(item: TrashedItem) {
     if (item.type === "file") {
-      const { data, error } = await onPermanentDeleteFile({
+      const { data, error } = await permanentDeleteFile({
         itemId: item.itemId,
       });
       if (error || !data) {
@@ -358,7 +353,7 @@ export const fileOperations = {
       }
       toast.success(`File "${item.name}" permanently deleted`);
     } else {
-      const { data, error } = await onPermanentDeleteFolder({
+      const { data, error } = await permanentDeleteFolder({
         itemId: item.itemId,
       });
       if (error || !data) {
@@ -372,7 +367,7 @@ export const fileOperations = {
   },
 
   async emptyTrash() {
-    const { data, error } = await onEmptyTrash();
+    const { data, error } = await emptyTrash();
     if (error || !data) {
       toast.error(`Failed to empty trash: ${error || "Unknown error"}`);
       return;

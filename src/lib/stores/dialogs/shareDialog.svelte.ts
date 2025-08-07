@@ -2,7 +2,7 @@ import { page } from "$app/state";
 import type { FileItem } from "$lib/types/file.js";
 import { toast } from "svelte-sonner";
 import { createUrlStateManager } from "./urlStateHelper.js";
-import { onGetFileShare, onGetFolderShare } from "$lib/telefunc/sharing.telefunc.js";
+import { getFileShare, getFolderShare } from "$lib/remote/sharing.remote.js";
 
 export interface ShareDialogState {
   open: boolean;
@@ -64,10 +64,10 @@ export async function openShareDialog(
   urlStateManager.pushUrlState(item.id);
 
   const { data: existingShare, error } = await (item.type === "file"
-    ? onGetFileShare({
+    ? getFileShare({
         itemId: item.id,
       })
-    : onGetFolderShare({
+    : getFolderShare({
         itemId: item.id,
       }));
   if (error) {

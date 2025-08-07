@@ -6,7 +6,7 @@
   import type { Snippet } from "svelte";
   import { LoaderIcon } from "@lucide/svelte";
   import type { FileItem } from "$lib/types/file";
-  import { onGetCurrentFolder } from "$lib/telefunc/load.telefunc";
+  import { getCurrentFolder } from "$lib/remote/load.remote";
   import { toast } from "svelte-sonner";
 
   const {
@@ -21,7 +21,7 @@
   $effect(() => {
     loading = true;
     try {
-      onGetCurrentFolder(page.data.currentFolderId).then(({ data, error }) => {
+      getCurrentFolder(page.data.currentFolderId).then(({ data, error }) => {
         if (error) {
           toast.error(error);
         } else {

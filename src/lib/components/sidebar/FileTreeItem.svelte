@@ -91,6 +91,15 @@
     if (node.item.type !== "folder") return;
     await dropHandler(dragState, node.item.id, e);
   }
+  
+  $effect(() => {
+    if (
+      node.item.type === "folder" &&
+      node.expanded 
+    ) {
+      fileTree.loadFolderChildren(node);
+    }
+  });
 </script>
 
 <svelte:window

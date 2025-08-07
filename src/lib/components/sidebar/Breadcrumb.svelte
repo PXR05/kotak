@@ -6,7 +6,7 @@
   import { page } from "$app/state";
   import { HomeIcon, LoaderIcon } from "@lucide/svelte";
   import { IsMobile } from "$lib/hooks/is-mobile.svelte.js";
-  import { onGetBreadcrumbs } from "$lib/telefunc/load.telefunc";
+  import { getBreadcrumbs } from "$lib/remote/load.remote";
   import { toast } from "svelte-sonner";
 
   const isMobile = new IsMobile();
@@ -26,7 +26,7 @@
     }
     loading = true;
     try {
-      onGetBreadcrumbs(page.data.currentFolderId).then(({ data, error }) => {
+      getBreadcrumbs(page.data.currentFolderId).then(({ data, error }) => {
         if (error) {
           toast.error(error);
         }

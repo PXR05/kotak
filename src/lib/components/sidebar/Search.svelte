@@ -15,7 +15,7 @@
   import { onDestroy, onMount } from "svelte";
   import { fileOperations } from "$lib/stores";
   import { formatFileSize } from "$lib/utils/format";
-  import { onSearch } from "$lib/telefunc/search.telefunc";
+  import { searchDrive } from "$lib/remote/search.remote";
   import { toast } from "svelte-sonner";
 
   const { alwaysOpen = false }: { alwaysOpen?: boolean } = $props();
@@ -66,7 +66,7 @@
     isSearching = true;
     hasSearched = true;
     selectedIndex = -1;
-    const { data, error } = await onSearch({ query, limit: 10 });
+    const { data, error } = await searchDrive({ query, limit: 10 });
     if (error || !data) {
       toast.error(`Search failed: ${error ?? "Unknown error"}`);
       searchResults = [];

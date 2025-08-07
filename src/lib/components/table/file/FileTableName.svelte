@@ -57,4 +57,5 @@
     class="max-w-[calc(100dvw-8.5rem)] md:max-w-[calc(100dvw-42rem)] truncate"
     >{item.name}</span
   >
+  
 </div>

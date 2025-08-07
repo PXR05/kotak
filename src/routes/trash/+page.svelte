@@ -16,7 +16,7 @@
     CardTitle,
   } from "$lib/components/ui/card/index.js";
   import { afterNavigate, invalidateAll } from "$app/navigation";
-  import { onGetTrashedItems } from "$lib/telefunc/load.telefunc.js";
+  import { getTrashedItems } from "$lib/remote/load.remote.js";
   import type { FileItem, TrashedItem } from "$lib/types/file.js";
 
   let isLoading = $state(false);
@@ -27,7 +27,7 @@
     async function loadItems() {
       isLoading = true;
       error = null;
-      const { data, error: err } = await onGetTrashedItems();
+      const { data, error: err } = await getTrashedItems();
       if (err) {
         error = err;
         toast.error(err);

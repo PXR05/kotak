@@ -14,11 +14,9 @@
 
 <TableContextMenu>
   {#snippet children({ props })}
-    <Table.Header {...props} class="sticky top-0 bg-sidebar">
+    <Table.Header {...props} class="bottom-border sticky top-0 bg-sidebar">
       {#each table.getHeaderGroups() as headerGroup}
-        <Table.Row
-          class={table.getRowModel().rows.length > 0 ? "thead-sep" : ""}
-        >
+        <Table.Row>
           {#each headerGroup.headers as header, i}
             <Table.Head
               colspan={header.colSpan}
@@ -42,10 +40,10 @@
 </TableContextMenu>
 
 <style>
-  :global(.thead-sep::after) {
+  :global(.bottom-border)::after {
     content: "";
     position: absolute;
-    bottom: -1px;
+    bottom: 0;
     left: 0;
     right: 0;
     height: 1px;

@@ -18,7 +18,7 @@
     LoaderIcon,
   } from "@lucide/svelte";
   import { closeMoveDialog, moveDialogData } from "$lib/stores";
-  import { onGetFolders } from "$lib/telefunc/folders.telefunc.js";
+  import { getFolders } from "$lib/remote/folders.remote.js";
   import { currentFolderId } from "$lib/stores";
   import type { FileItem } from "$lib/types/file.js";
 
@@ -50,7 +50,7 @@
     isLoading = true;
     error = null;
 
-    const { data, error: err } = await onGetFolders();
+    const { data, error: err } = await getFolders();
     if (err) {
       error = err || "Failed to load folders";
       isLoading = false;

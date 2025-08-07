@@ -1,68 +1,73 @@
-import { z } from "zod";
+import * as z from "zod/mini";
 
-export const emailSchema = z
-  .string()
-  .min(1, "Email is required")
-  .max(255, "Email must be less than 255 characters")
-  .email("Invalid email format")
-  .refine(
+export const emailSchema = z.email().check(
+  z.minLength(1, "Email is required"),
+  z.maxLength(255, "Email must be less than 255 characters"),
+  z.refine(
     (email) => !email.includes("<") && !email.includes(">"),
     "Email contains invalid characters"
-  );
+  )
+);
 
 export const passwordSchema = z
   .string()
-  .min(8, "Password must be at least 8 characters")
-  .max(255, "Password must be less than 255 characters")
-  .regex(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-    "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+  .check(
+    z.minLength(8, "Password must be at least 8 characters"),
+    z.maxLength(255, "Password must be less than 255 characters"),
+    z.regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+    )
   );
 
 export const loginSchema = z.object({
   email: emailSchema,
-  password: z.string().min(1, "Password is required"),
+  password: z.string().check(z.minLength(1, "Password is required")),
 });
 
 export const registerSchema = z
   .object({
     email: emailSchema,
     password: passwordSchema,
-    confirmPassword: z.string().min(1, "Please confirm your password"),
+    confirmPassword: z
+      .string()
+      .check(z.minLength(1, "Please confirm your password")),
   })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
+  .check(
+    z.refine((data) => data.password === data.confirmPassword, {
+      message: "Passwords do not match",
+      path: ["confirmPassword"],
+    })
+  );
 
 export const nameSchema = z
   .string()
-  .min(1, "Name is required")
-  .max(255, "Name must be less than 255 characters")
-  .regex(/^[^<>:"/\\|?*\x00-\x1f]+$/, "Name contains invalid characters");
+  .check(
+    z.minLength(1, "Name is required"),
+    z.maxLength(255, "Name must be less than 255 characters"),
+    z.regex(/^[^<>:"/\\|?*\x00-\x1f]+$/, "Name contains invalid characters")
+  );
 
 export function validateEmail(email: string): string {
-  try {
-    emailSchema.parse(email);
+  const { success, error } = emailSchema.safeParse(email);
+  if (success) {
     return "";
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return error.errors[0]?.message || "Invalid email";
-    }
-    return "Invalid email";
   }
+  if (error instanceof z.core.$ZodError) {
+    return z.prettifyError(error) || "Invalid email";
+  }
+  return "Invalid email";
 }
 
 export function validatePassword(password: string): string {
-  try {
-    passwordSchema.parse(password);
+  const { success, error } = passwordSchema.safeParse(password);
+  if (success) {
     return "";
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return error.errors[0]?.message || "Invalid password";
-    }
-    return "Invalid password";
   }
+  if (error instanceof z.core.$ZodError) {
+    return z.prettifyError(error) || "Invalid password";
+  }
+  return "Invalid password";
 }
 
 export function validateLoginPassword(password: string): string {
@@ -80,15 +85,14 @@ export function validateConfirmPassword(
 }
 
 export function validateName(name: string): string {
-  try {
-    nameSchema.parse(name);
+  const { success, error } = nameSchema.safeParse(name);
+  if (success) {
     return "";
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return error.errors[0]?.message || "Invalid name";
-    }
-    return "Invalid name";
   }
+  if (error instanceof z.core.$ZodError) {
+    return z.prettifyError(error) || "Invalid name";
+  }
+  return "Invalid name";
 }
 
 export type LoginFormData = z.infer<typeof loginSchema>;

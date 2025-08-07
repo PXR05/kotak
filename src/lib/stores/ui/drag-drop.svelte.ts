@@ -137,8 +137,45 @@ export function isInternalMove(dataTransfer: DataTransfer | null) {
   );
 }
 
-export function isCurrentFolder(folderId: string) {
-  return folderId === currentFolderId.value;
+export function isInvalidDropTarget(
+  targetFolderId: string,
+  draggedItems: FileItem[]
+) {
+  return draggedItems.some((item) => {
+    if (item.type === "file") {
+      return item.folderId === targetFolderId;
+    }
+    if (item.type === "folder") {
+      return item.parentId === targetFolderId;
+    }
+    return false;
+  });
+}
+
+export function shouldPreventDrop(
+  targetId: string,
+  dataTransfer: DataTransfer | null
+): boolean {
+  if (!isInternalMove(dataTransfer)) return true;
+
+  try {
+    const dragData = dataTransfer?.getData("text/plain");
+    if (!dragData) return true;
+
+    const parsedData = JSON.parse(dragData);
+    if (parsedData.type !== "file-move") return true;
+
+    const draggedItems = parsedData.items;
+
+    const actualDraggedItems = selectedItems.filter((item) =>
+      draggedItems.some((draggedItem: any) => draggedItem.id === item.id)
+    );
+
+    return isInvalidDropTarget(targetId, actualDraggedItems);
+  } catch (error) {
+    console.error("Error parsing drag data:", error);
+    return true;
+  }
 }
 
 export function handleDragStart(
@@ -178,7 +215,7 @@ export function handleDropZoneDragEnter(
   e.preventDefault();
   e.stopPropagation();
 
-  if (!isInternalMove(e.dataTransfer) || isCurrentFolder(targetId)) return;
+  if (shouldPreventDrop(targetId, e.dataTransfer)) return;
 
   dragState.dragCounter++;
   if (dragState.dragCounter === 1) {
@@ -190,7 +227,7 @@ export function handleDropZoneDragOver(targetId: string, e: DragEvent) {
   e.preventDefault();
   e.stopPropagation();
 
-  if (!isInternalMove(e.dataTransfer) || isCurrentFolder(targetId)) {
+  if (shouldPreventDrop(targetId, e.dataTransfer)) {
     if (e.dataTransfer) e.dataTransfer.dropEffect = "none";
     return;
   }
@@ -206,7 +243,7 @@ export function handleDropZoneDragLeave(
   e.preventDefault();
   e.stopPropagation();
 
-  if (!isInternalMove(e.dataTransfer) || isCurrentFolder(targetId)) return;
+  if (shouldPreventDrop(targetId, e.dataTransfer)) return;
 
   dragState.dragCounter--;
   if (dragState.dragCounter === 0) {
