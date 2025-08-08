@@ -54,8 +54,7 @@
     strokeWidth={1.5}
   />
   <span
-    class="max-w-[calc(100dvw-8.5rem)] md:max-w-[calc(100dvw-42rem)] truncate"
+    class="w-full max-w-[calc(100dvw-8.5rem)] md:max-w-[calc(100dvw-42rem)] truncate"
     >{item.name}</span
   >
-  
 </div>

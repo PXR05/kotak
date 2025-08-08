@@ -76,10 +76,11 @@
       },
       async () => {
         try {
-          await fileOperations.emptyTrash();
+          await fileOperations.bulkPermanentDelete(trashedItems);
           invalidateAll();
         } catch (error) {
           console.error("Failed to empty trash:", error);
+          toast.error("Failed to empty trash");
         }
       }
     );
@@ -129,7 +130,7 @@
     </Card>
   {:else}
     <div class="flex-1 overflow-hidden">
-      <TrashTable items={trashedItems} onEmptyTrash={handleEmptyTrash} />
+      <TrashTable items={trashedItems} />
     </div>
   {/if}
 </div>

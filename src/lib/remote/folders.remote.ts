@@ -3,7 +3,7 @@ import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { ensureRootFolder } from "$lib/server/folderUtils";
 import { nameSchema } from "$lib/validation";
-import { and, eq, isNull, ne } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import * as z from "zod/mini";
 import { getRootItems } from "./load.remote";
 
@@ -53,99 +53,93 @@ export const getFolders = query(async () => {
   }
 });
 
-export const getFolderChildren = query(
-  z.string(),
-  async (folderId) => {
-    const {
-      locals: { user },
-    } = getRequestEvent();
-    if (!user) {
-      return {
-        error: "User not authenticated",
-      };
-    }
-
-    if (!folderId) {
-      return {
-        error: "Missing folder ID",
-      };
-    }
-
-    try {
-      const [folder] = await db
-        .select()
-        .from(table.folder)
-        .where(
-          and(eq(table.folder.id, folderId), eq(table.folder.ownerId, user.id))
-        );
-
-      if (!folder) {
-        return {
-          error: "Folder not found or access denied",
-        };
-      }
-
-      const childFolders = await db
-        .select({
-          id: table.folder.id,
-          name: table.folder.name,
-          ownerId: table.folder.ownerId,
-          parentId: table.folder.parentId,
-          createdAt: table.folder.createdAt,
-          updatedAt: table.folder.updatedAt,
-        })
-        .from(table.folder)
-        .where(
-          and(
-            eq(table.folder.parentId, folderId),
-            eq(table.folder.ownerId, user.id)
-          )
-        )
-        .orderBy(table.folder.name);
-
-      const childFiles = await db
-        .select({
-          id: table.file.id,
-          name: table.file.name,
-          ownerId: table.file.ownerId,
-          storageKey: table.file.storageKey,
-          folderId: table.file.folderId,
-          size: table.file.size,
-          mimeType: table.file.mimeType,
-          createdAt: table.file.createdAt,
-          updatedAt: table.file.updatedAt,
-        })
-        .from(table.file)
-        .where(
-          and(
-            eq(table.file.folderId, folderId),
-            eq(table.file.ownerId, user.id)
-          )
-        )
-        .orderBy(table.file.name);
-
-      const children = [
-        ...childFolders.map((f) => ({
-          ...f,
-          type: "folder" as const,
-        })),
-        ...childFiles.map((f) => ({
-          ...f,
-          type: "file" as const,
-        })),
-      ];
-
-      return {
-        data: children,
-      };
-    } catch (err) {
-      console.error("Error fetching folder children:", err);
-      return {
-        error: "Failed to fetch folder children",
-      };
-    }
+export const getFolderChildren = query(z.string(), async (folderId) => {
+  const {
+    locals: { user },
+  } = getRequestEvent();
+  if (!user) {
+    return {
+      error: "User not authenticated",
+    };
   }
-);
+
+  if (!folderId) {
+    return {
+      error: "Missing folder ID",
+    };
+  }
+
+  try {
+    const [folder] = await db
+      .select()
+      .from(table.folder)
+      .where(
+        and(eq(table.folder.id, folderId), eq(table.folder.ownerId, user.id))
+      );
+
+    if (!folder) {
+      return {
+        error: "Folder not found or access denied",
+      };
+    }
+
+    const childFolders = await db
+      .select({
+        id: table.folder.id,
+        name: table.folder.name,
+        ownerId: table.folder.ownerId,
+        parentId: table.folder.parentId,
+        createdAt: table.folder.createdAt,
+        updatedAt: table.folder.updatedAt,
+      })
+      .from(table.folder)
+      .where(
+        and(
+          eq(table.folder.parentId, folderId),
+          eq(table.folder.ownerId, user.id)
+        )
+      )
+      .orderBy(table.folder.name);
+
+    const childFiles = await db
+      .select({
+        id: table.file.id,
+        name: table.file.name,
+        ownerId: table.file.ownerId,
+        storageKey: table.file.storageKey,
+        folderId: table.file.folderId,
+        size: table.file.size,
+        mimeType: table.file.mimeType,
+        createdAt: table.file.createdAt,
+        updatedAt: table.file.updatedAt,
+      })
+      .from(table.file)
+      .where(
+        and(eq(table.file.folderId, folderId), eq(table.file.ownerId, user.id))
+      )
+      .orderBy(table.file.name);
+
+    const children = [
+      ...childFolders.map((f) => ({
+        ...f,
+        type: "folder" as const,
+      })),
+      ...childFiles.map((f) => ({
+        ...f,
+        type: "file" as const,
+      })),
+    ];
+
+    return {
+      data: children,
+    };
+  } catch (err) {
+    console.error("Error fetching folder children:", err);
+    return {
+      error: "Failed to fetch folder children",
+    };
+  }
+});
 
 export const createFolder = command(
   z.object({
@@ -299,10 +293,10 @@ export const renameFolder = command(
 
 export const moveFolder = command(
   z.object({
-    folderId: z.string(),
+    folderIds: z.array(z.string()),
     targetParentId: z.nullable(z.string()),
   }),
-  async ({ folderId, targetParentId }) => {
+  async ({ folderIds, targetParentId }) => {
     const {
       locals: { user },
     } = getRequestEvent();
@@ -312,22 +306,9 @@ export const moveFolder = command(
       };
     }
 
-    const [folder] = await db
-      .select()
-      .from(table.folder)
-      .where(
-        and(eq(table.folder.id, folderId), eq(table.folder.ownerId, user.id))
-      );
-
-    if (!folder) {
+    if (!folderIds || folderIds.length === 0) {
       return {
-        error: "Folder not found or access denied",
-      };
-    }
-
-    if (folder.name === "__root__" || folder.name === "__trash__") {
-      return {
-        error: "Cannot modify system folders",
+        error: "No folders provided",
       };
     }
 
@@ -337,12 +318,6 @@ export const moveFolder = command(
       const rootFolder = await ensureRootFolder(user.id);
       resolvedTargetParentId = rootFolder.id;
     } else {
-      if (targetParentId === folderId) {
-        return {
-          error: "Cannot move folder into itself",
-        };
-      }
-
       const [targetFolder] = await db
         .select()
         .from(table.folder)
@@ -359,73 +334,109 @@ export const moveFolder = command(
         };
       }
 
-      if (targetFolder.parentId === folderId) {
-        return {
-          error: "Cannot move folder into its own child",
-        };
-      }
-
       resolvedTargetParentId = targetParentId;
     }
 
-    const [existingFolder] = await db
+    const foldersToMove = await db
       .select()
       .from(table.folder)
       .where(
         and(
-          resolvedTargetParentId === null
-            ? isNull(table.folder.parentId)
-            : eq(table.folder.parentId, resolvedTargetParentId),
-          eq(table.folder.name, folder.name),
-          eq(table.folder.ownerId, user.id)
+          eq(table.folder.ownerId, user.id),
+          inArray(table.folder.id, folderIds)
         )
       );
 
-    if (existingFolder && existingFolder.id !== folder.id) {
+    if (foldersToMove.length !== folderIds.length) {
       return {
-        data: {
-          skipped: true,
-          item: existingFolder,
-        },
+        error: "One or more folders not found or access denied",
       };
     }
 
-    const [updatedFolder] = await db
-      .update(table.folder)
-      .set({
-        parentId: resolvedTargetParentId,
-        updatedAt: new Date(),
-      })
-      .where(eq(table.folder.id, folderId))
-      .returning();
+    const results: Array<{ skipped: boolean; item: any }> = [];
+    const affectedSourceParentIds = new Set<string | null>();
 
-    if (
-      (!folder.parentId || folder.parentId.startsWith("root-")) &&
-      targetParentId
-    ) {
-      await Promise.all([
-        await getRootItems().refresh(),
-        await getFolderChildren(targetParentId).refresh(),
-      ]);
-    } else if (
-      folder.parentId &&
-      (!targetParentId || targetParentId.startsWith("root-"))
-    ) {
-      await Promise.all([
-        await getFolderChildren(folder.parentId).refresh(),
-        await getRootItems().refresh(),
-      ]);
-    } else if (folder.parentId && targetParentId) {
-      await Promise.all([
-        await getFolderChildren(folder.parentId).refresh(),
-        await getFolderChildren(targetParentId).refresh(),
-      ]);
+    for (const folder of foldersToMove) {
+      if (folder.name === "__root__" || folder.name === "__trash__") {
+        results.push({ skipped: true, item: folder });
+        continue;
+      }
+
+      if (resolvedTargetParentId === folder.id) {
+        results.push({ skipped: true, item: folder });
+        continue;
+      }
+
+      if (resolvedTargetParentId) {
+        const [targetFolder] = await db
+          .select()
+          .from(table.folder)
+          .where(
+            and(
+              eq(table.folder.id, resolvedTargetParentId),
+              eq(table.folder.ownerId, user.id)
+            )
+          );
+        if (targetFolder && targetFolder.parentId === folder.id) {
+          results.push({ skipped: true, item: folder });
+          continue;
+        }
+      }
+
+      const [conflict] = await db
+        .select()
+        .from(table.folder)
+        .where(
+          and(
+            resolvedTargetParentId === null
+              ? isNull(table.folder.parentId)
+              : eq(table.folder.parentId, resolvedTargetParentId),
+            eq(table.folder.name, folder.name),
+            eq(table.folder.ownerId, user.id)
+          )
+        );
+
+      if (conflict && conflict.id !== folder.id) {
+        results.push({ skipped: true, item: conflict });
+        continue;
+      }
+
+      const [updatedFolder] = await db
+        .update(table.folder)
+        .set({
+          parentId: resolvedTargetParentId,
+          updatedAt: new Date(),
+        })
+        .where(eq(table.folder.id, folder.id))
+        .returning();
+
+      results.push({ skipped: false, item: updatedFolder });
+      affectedSourceParentIds.add(folder.parentId);
     }
+
+    const refreshPromises: Array<Promise<unknown>> = [];
+
+    for (const sourceParentId of affectedSourceParentIds) {
+      if (!sourceParentId || String(sourceParentId).startsWith("root-")) {
+        refreshPromises.push(getRootItems().refresh());
+      } else {
+        refreshPromises.push(
+          getFolderChildren(String(sourceParentId)).refresh()
+        );
+      }
+    }
+
+    if (!resolvedTargetParentId || resolvedTargetParentId.startsWith("root-")) {
+      refreshPromises.push(getRootItems().refresh());
+    } else {
+      refreshPromises.push(getFolderChildren(resolvedTargetParentId).refresh());
+    }
+
+    await Promise.all(refreshPromises);
 
     return {
       data: {
-        skipped: false,
-        item: updatedFolder,
+        results,
       },
     };
   }

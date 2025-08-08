@@ -1,8 +1,9 @@
 <script lang="ts">
   import { createSvelteTable } from "$lib/components/ui/data-table/index.js";
   import * as Table from "$lib/components/ui/table/index.js";
-  import type { TrashedItem } from "$lib/types/file.js";
+  import type { FileItem, TrashedItem } from "$lib/types/file.js";
   import {
+    type Row,
     type RowSelectionState,
     type SortingState,
     type VisibilityState,
@@ -21,13 +22,13 @@
   import TrashTableContextMenu from "./TrashTableContextMenu.svelte";
   import { invalidateAll } from "$app/navigation";
   import { IsMobile } from "$lib/hooks/is-mobile.svelte";
+  import FileContextMenu from "../file/FileContextMenu.svelte";
+  import { onMount } from "svelte";
 
   let {
     items,
-    onEmptyTrash,
   }: {
     items: TrashedItem[];
-    onEmptyTrash?: () => void;
   } = $props();
 
   const isMobile = new IsMobile();
@@ -98,12 +99,9 @@
     }
   };
 
-  const handleBulkRestore = async (selectedItems: TrashedItem[]) => {
+  const handleBulkRestore = async (selected: TrashedItem[]) => {
     try {
-      const restorePromises = selectedItems.map((item) =>
-        fileOperations.restoreItem(item)
-      );
-      await Promise.all(restorePromises);
+      await fileOperations.bulkRestore(selected);
       invalidateAll();
     } catch (error) {
       console.error("Failed to bulk restore:", error);
@@ -111,21 +109,18 @@
     }
   };
 
-  const handleBulkDelete = (selectedItems: TrashedItem[]) => {
+  const handleBulkDelete = (selected: TrashedItem[]) => {
     openConfirmationDialog(
       {
-        title: `Permanently delete ${selectedItems.length} items`,
-        description: `Are you sure you want to permanently delete ${selectedItems.length} selected items? This action cannot be undone.`,
+        title: `Permanently delete ${selected.length} items`,
+        description: `Are you sure you want to permanently delete ${selected.length} selected items? This action cannot be undone.`,
         confirmText: "Permanently Delete",
         cancelText: "Cancel",
         variant: "destructive",
       },
       async () => {
         try {
-          const deletePromises = selectedItems.map((item) =>
-            fileOperations.permanentlyDeleteItem(item)
-          );
-          await Promise.all(deletePromises);
+          await fileOperations.bulkPermanentDelete(selected);
           invalidateAll();
         } catch (error) {
           console.error("Failed to bulk delete:", error);
@@ -184,6 +179,49 @@
     enableHiding: true,
   });
 
+  const ROW_HEIGHT = 48;
+  const OVERSCAN = 20;
+  let pagination = $state({
+    offset: 0,
+    pageSize: 20,
+  });
+  const range = $derived({
+    start: Math.max(0, pagination.offset - OVERSCAN),
+    end: Math.min(
+      items.length,
+      pagination.offset + pagination.pageSize + OVERSCAN
+    ),
+  });
+
+  let containerRef = $state<HTMLDivElement | null>(null);
+
+  function handleResize({ ref }: { ref: HTMLDivElement }) {
+    const clientHeight = ref.clientHeight;
+    const visibleRows = Math.ceil(clientHeight / ROW_HEIGHT);
+    pagination.pageSize = visibleRows;
+  }
+
+  function handleScroll(e: Event) {
+    const ref = e.target as HTMLDivElement;
+    const scrollTop = ref.scrollTop;
+    pagination.offset = Math.floor(scrollTop / ROW_HEIGHT);
+  }
+
+  onMount(() => {
+    if (containerRef) {
+      handleResize({ ref: containerRef });
+      const resizeHandler = () => handleResize({ ref: containerRef! });
+      window.addEventListener("resize", resizeHandler);
+      containerRef.addEventListener("scroll", handleScroll);
+      return () => {
+        window.removeEventListener("resize", resizeHandler);
+        containerRef?.removeEventListener("scroll", handleScroll);
+      };
+    }
+  });
+
+  let activeRow: Row<TrashedItem> | undefined = $state();
+
   function handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Escape") {
       table.resetRowSelection();
@@ -217,19 +255,7 @@
         invalidateAll();
         break;
       case "empty-trash":
-        if (onEmptyTrash) {
-          openConfirmationDialog(
-            {
-              title: "Empty trash",
-              description:
-                "Are you sure you want to permanently delete all items in trash? This action cannot be undone.",
-              confirmText: "Empty Trash",
-              cancelText: "Cancel",
-              variant: "destructive",
-            },
-            onEmptyTrash
-          );
-        }
+        handleBulkDelete(items);
         break;
       default:
         console.warn(`Unknown context action: ${actionId}`);
@@ -253,21 +279,48 @@
     />
   {/if}
 
-  <Table.Root>
-    <Table.Table>
-      <TrashTableHeader {table} onContextAction={handleContextAction} />
-      <Table.Body>
-        {#each table.getRowModel().rows as row}
-          <TrashTableRow
-            {row}
-            {table}
-            onRestore={handleRestore}
-            onPermanentDelete={handlePermanentDelete}
-            onPreview={handlePreview}
-          />
-        {/each}
-      </Table.Body>
-    </Table.Table>
+  <Table.Root bind:containerRef>
+    <TrashTableHeader {table} onContextAction={handleContextAction} />
+    <FileContextMenu
+      item={activeRow
+        ? {
+            id: activeRow.original.itemId,
+            name: activeRow.original.name,
+            type: activeRow.original.type,
+            ownerId: "",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            folderId: activeRow.original.originalFolderId || undefined,
+            parentId: activeRow.original.originalParentId || undefined,
+          }
+        : undefined}
+      rowItem={activeRow as unknown as Row<FileItem>}
+    >
+      {#snippet children({ props, open })}
+        <Table.Body {...props}>
+          {#each table.getRowModel().rows as row, i}
+            {@const inView = i >= range.start && i < range.end}
+            {@const lockRow = open}
+            {#if inView}
+              <TrashTableRow
+                {row}
+                {table}
+                onRestore={handleRestore}
+                onPermanentDelete={handlePermanentDelete}
+                onPreview={handlePreview}
+                onHover={(r) => {
+                  if (!lockRow) {
+                    activeRow = r;
+                  }
+                }}
+              />
+            {:else}
+              <Table.Row style="height: {ROW_HEIGHT}px;"></Table.Row>
+            {/if}
+          {/each}
+        </Table.Body>
+      {/snippet}
+    </FileContextMenu>
   </Table.Root>
 
   <TrashTableContextMenu onAction={handleContextAction}>
@@ -275,7 +328,9 @@
       <div {...props} class="flex-1">
         {#if !table.getRowModel().rows?.length}
           <div class="m-auto size-full grid place-items-center">
-            <div class="text-center flex flex-col items-center gap-2 text-muted-foreground">
+            <div
+              class="text-center flex flex-col items-center gap-2 text-muted-foreground"
+            >
               <TrashIcon class="size-8" />
               <p class="text-lg font-medium">Trash is empty</p>
               <p class="text-sm">

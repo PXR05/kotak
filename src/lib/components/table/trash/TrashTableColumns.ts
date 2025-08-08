@@ -55,6 +55,7 @@ export function createTrashTableColumns(
       },
       enableHiding: true,
       enableSorting: true,
+      size: 140,
     },
     {
       accessorKey: "originalLocation",
@@ -70,6 +71,7 @@ export function createTrashTableColumns(
       },
       enableHiding: true,
       enableSorting: true,
+      size: 140,
     },
     {
       accessorKey: "trashedAt",
@@ -85,14 +87,14 @@ export function createTrashTableColumns(
       },
       enableHiding: true,
       enableSorting: true,
+      size: 140,
     },
     {
       id: "actions",
       header: "",
       enableHiding: false,
       enableSorting: false,
-      size: 60,
-      maxSize: 60,
+      size: 52,
       cell: ({ row }) => {
         const item = row.original;
         return renderComponent(TrashTableActions, {

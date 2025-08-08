@@ -39,6 +39,9 @@ import {
   permanentDeleteFile,
   permanentDeleteFolder,
   emptyTrash,
+  trashItems,
+  restoreItems,
+  permanentDeleteItems,
 } from "$lib/remote/trash.remote.js";
 import { moveFile, renameFile } from "$lib/remote/files.remote.js";
 
@@ -180,29 +183,44 @@ export const fileOperations = {
 
   async moveItems(items: FileItem[], targetFolderId: string | null) {
     try {
-      const movePromises = items.map((item) =>
-        item.type === "file"
-          ? moveFile({
-              fileId: item.id,
-              targetFolderId,
-            })
-          : moveFolder({
-              folderId: item.id,
-              targetParentId: targetFolderId,
-            })
-      );
-      const results = await Promise.all(movePromises);
+      const fileIds = items.filter((i) => i.type === "file").map((i) => i.id);
+      const folderIds = items
+        .filter((i) => i.type === "folder")
+        .map((i) => i.id);
 
-      const skipped = results.filter((r) => r.data && r.data.skipped);
+      const aggregatedResults: Array<{ skipped: boolean; item: any }> = [];
 
-      if (items.length - skipped.length > 0) {
-        toast.success(
-          `Successfully moved ${items.length - skipped.length} item(s)`
-        );
+      if (fileIds.length > 0) {
+        const { data, error } = await moveFile({
+          fileIds,
+          targetFolderId,
+        });
+        if (error || !data) {
+          throw new Error(error || "Failed to move files");
+        }
+        aggregatedResults.push(...(data.results || []));
+      }
+
+      if (folderIds.length > 0) {
+        const { data, error } = await moveFolder({
+          folderIds,
+          targetParentId: targetFolderId,
+        });
+        if (error || !data) {
+          throw new Error(error || "Failed to move folders");
+        }
+        aggregatedResults.push(...(data.results || []));
+      }
+
+      const skipped = aggregatedResults.filter((r) => r.skipped);
+      const movedCount = aggregatedResults.length - skipped.length;
+
+      if (movedCount > 0) {
+        toast.success(`Successfully moved ${movedCount} item(s)`);
       }
 
       if (skipped.length > 0) {
-        const skippedNames = skipped.map((r) => r.data?.item.name).join(", ");
+        const skippedNames = skipped.map((r) => r.item?.name).join(", ");
         toast.warning(
           `Skipped ${skipped.length} item(s) due to name conflicts: ${skippedNames}`
         );
@@ -240,12 +258,25 @@ export const fileOperations = {
       },
       async () => {
         try {
-          const trashPromises = selectedItems.map((item) =>
-            this.handleTrash(item)
-          );
-          await Promise.all(trashPromises);
+          const payload = selectedItems.map((item) => ({
+            itemId: item.id,
+            itemType: item.type,
+            originalFolderId: item.type === "file" ? item.folderId : null,
+            originalParentId: item.type === "folder" ? item.parentId : null,
+            name: item.name,
+          }));
+
+          const { data, error } = await trashItems({ items: payload });
+          if (error || !data) {
+            throw new Error(error || "Failed to move items to trash");
+          }
+          toast.success(`Moved ${data.count} item(s) to trash`);
+          this.clearSelection();
         } catch (error) {
           console.error("Failed to trash items:", error);
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error occurred";
+          toast.error(`Failed to move items to trash: ${errorMessage}`);
         }
       }
     );
@@ -253,6 +284,30 @@ export const fileOperations = {
 
   async bulkDownload() {
     await downloadUtils.bulkDownload(selectedItems);
+  },
+
+  async bulkRestore(items: TrashedItem[]) {
+    if (!items.length) return;
+    const ids = items.map((i) => i.itemId);
+    const { data, error } = await restoreItems({ itemIds: ids });
+    if (error || !data) {
+      toast.error(`Failed to restore items: ${error || "Unknown error"}`);
+      return;
+    }
+    toast.success(`Restored ${data.count} item(s)`);
+  },
+
+  async bulkPermanentDelete(items: TrashedItem[]) {
+    if (!items.length) return;
+    const ids = items.map((i) => i.itemId);
+    const { data, error } = await permanentDeleteItems({ itemIds: ids });
+    if (error || !data) {
+      toast.error(
+        `Failed to permanently delete items: ${error || "Unknown error"}`
+      );
+      return;
+    }
+    toast.success(`Permanently deleted ${data.count} item(s)`);
   },
 
   handleContextMenuAction(action: string, item?: FileItem | null) {
@@ -364,14 +419,5 @@ export const fileOperations = {
       }
       toast.success(`Folder "${item.name}" permanently deleted`);
     }
-  },
-
-  async emptyTrash() {
-    const { data, error } = await emptyTrash();
-    if (error || !data) {
-      toast.error(`Failed to empty trash: ${error || "Unknown error"}`);
-      return;
-    }
-    toast.success("Trash emptied successfully");
   },
 };

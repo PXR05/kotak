@@ -1,10 +1,8 @@
 <script lang="ts">
-  import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
   import * as Table from "$lib/components/ui/table/index.js";
   import { FlexRender } from "$lib/components/ui/data-table/index.js";
   import type { Row, Table as TanStackTable } from "@tanstack/table-core";
   import type { TrashedItem } from "$lib/types/file.js";
-  import { UndoIcon, EyeIcon, Trash2Icon } from "@lucide/svelte";
   import { selectedItems } from "$lib/stores";
 
   let {
@@ -13,12 +11,14 @@
     onRestore,
     onPermanentDelete,
     onPreview,
+    onHover,
   }: {
     row: Row<TrashedItem>;
     table: TanStackTable<TrashedItem>;
     onRestore: (item: TrashedItem) => void;
     onPermanentDelete: (item: TrashedItem) => void;
     onPreview: (item: TrashedItem) => void;
+    onHover: (row: Row<TrashedItem>) => void;
   } = $props();
 
   function handleRowClick(e: MouseEvent) {
@@ -76,48 +76,22 @@
   }
 </script>
 
-<ContextMenu.Root>
-  <ContextMenu.Trigger>
-    {#snippet child({ props })}
-      <Table.Row
-        {...props}
-        data-state={row.getIsSelected() && "selected"}
-        class="hover:bg-muted/50 transition-none cursor-pointer"
-        onclick={handleRowClick}
-        ondblclick={handleRowDoubleClick}
-      >
-        {#each row.getVisibleCells() as cell, i}
-          <Table.Cell
-            class="{cell.column.id !== 'name' ? 'text-muted-foreground' : ''} 
-              {i === 0 ? 'pl-5' : ''}"
-          >
-            <FlexRender
-              content={cell.column.columnDef.cell}
-              context={cell.getContext()}
-            />
-          </Table.Cell>
-        {/each}
-      </Table.Row>
-    {/snippet}
-  </ContextMenu.Trigger>
-  <ContextMenu.Content class="w-52">
-    {#if row.original.type === "file"}
-      <ContextMenu.Item onclick={() => onPreview(row.original)}>
-        <EyeIcon class="mr-2 size-4" />
-        Preview
-      </ContextMenu.Item>
-      <ContextMenu.Separator />
-    {/if}
-    <ContextMenu.Item onclick={() => onRestore(row.original)}>
-      <UndoIcon class="mr-2 size-4" />
-      Restore
-    </ContextMenu.Item>
-    <ContextMenu.Item
-      onclick={() => onPermanentDelete(row.original)}
-      variant="destructive"
+<Table.Row
+  data-state={row.getIsSelected() && "selected"}
+  class="hover:bg-muted/50 transition-none cursor-pointer"
+  onclick={handleRowClick}
+  ondblclick={handleRowDoubleClick}
+  onmouseenter={() => onHover(row)}
+>
+  {#each row.getVisibleCells() as cell, i}
+    <Table.Cell
+      class="{cell.column.id !== 'name' ? 'text-muted-foreground' : ''} 
+        {i === 0 ? 'pl-5' : ''}"
     >
-      <Trash2Icon class="mr-2 size-4" />
-      Permanently Delete
-    </ContextMenu.Item>
-  </ContextMenu.Content>
-</ContextMenu.Root>
+      <FlexRender
+        content={cell.column.columnDef.cell}
+        context={cell.getContext()}
+      />
+    </Table.Cell>
+  {/each}
+</Table.Row>
