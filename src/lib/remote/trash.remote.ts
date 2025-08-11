@@ -6,6 +6,54 @@ import { and, eq, inArray } from "drizzle-orm";
 import * as z from "zod/mini";
 import { getFolderChildren } from "./folders.remote";
 import { getRootItems, getTrashedItems } from "./load.remote";
+import { deleteFile as deleteFromStorage } from "$lib/server/storage";
+
+async function collectDescendantFolderIds(
+  userId: string,
+  rootFolderIds: string[]
+): Promise<string[]> {
+  const visited = new Set<string>(rootFolderIds);
+  let frontier = [...rootFolderIds];
+
+  while (frontier.length > 0) {
+    const children = await db
+      .select({ id: table.folder.id })
+      .from(table.folder)
+      .where(
+        and(
+          eq(table.folder.ownerId, userId),
+          inArray(table.folder.parentId, frontier)
+        )
+      );
+
+    const next: string[] = [];
+    for (const child of children) {
+      if (!visited.has(child.id)) {
+        visited.add(child.id);
+        next.push(child.id);
+      }
+    }
+    frontier = next;
+  }
+
+  return Array.from(visited);
+}
+
+async function getFileRecordsForFolderIds(
+  userId: string,
+  folderIds: string[]
+): Promise<{ id: string; storageKey: string }[]> {
+  if (folderIds.length === 0) return [];
+  return db
+    .select({ id: table.file.id, storageKey: table.file.storageKey })
+    .from(table.file)
+    .where(
+      and(
+        eq(table.file.ownerId, userId),
+        inArray(table.file.folderId, folderIds)
+      )
+    );
+}
 
 export const restoreFile = command(
   z.object({
@@ -28,39 +76,38 @@ export const restoreFile = command(
     }
 
     try {
-      const [trashedItem] = await db
-        .select()
-        .from(table.trashedItem)
-        .where(
-          and(
-            eq(table.trashedItem.itemId, itemId),
-            eq(table.trashedItem.ownerId, user.id)
-          )
-        );
+      let trashedItem: any;
+      const txErr = await db.transaction(async (tx) => {
+        const [t] = await tx
+          .select()
+          .from(table.trashedItem)
+          .where(
+            and(
+              eq(table.trashedItem.itemId, itemId),
+              eq(table.trashedItem.ownerId, user.id)
+            )
+          );
+        if (!t) return "Trashed item not found" as const;
+        if (t.itemType !== "file") return "Item is not a file" as const;
 
-      if (!trashedItem) {
-        return {
-          error: "Trashed item not found",
-        };
-      }
+        trashedItem = t;
 
-      if (trashedItem.itemType !== "file") {
-        return {
-          error: "Item is not a file",
-        };
-      }
+        await tx
+          .update(table.file)
+          .set({
+            folderId: t.originalFolderId ?? undefined,
+            updatedAt: new Date(),
+          })
+          .where(eq(table.file.id, itemId));
 
-      await db
-        .update(table.file)
-        .set({
-          folderId: trashedItem.originalFolderId ?? undefined,
-          updatedAt: new Date(),
-        })
-        .where(eq(table.file.id, itemId));
+        await tx
+          .delete(table.trashedItem)
+          .where(eq(table.trashedItem.id, t.id));
 
-      await db
-        .delete(table.trashedItem)
-        .where(eq(table.trashedItem.id, trashedItem.id));
+        return;
+      });
+
+      if (txErr) return { error: txErr };
 
       const refreshPromises = [getTrashedItems().refresh()];
 
@@ -107,39 +154,38 @@ export const restoreFolder = command(
     }
 
     try {
-      const [trashedItem] = await db
-        .select()
-        .from(table.trashedItem)
-        .where(
-          and(
-            eq(table.trashedItem.itemId, itemId),
-            eq(table.trashedItem.ownerId, user.id)
-          )
-        );
+      let trashedItem: any;
+      const txErr = await db.transaction(async (tx) => {
+        const [t] = await tx
+          .select()
+          .from(table.trashedItem)
+          .where(
+            and(
+              eq(table.trashedItem.itemId, itemId),
+              eq(table.trashedItem.ownerId, user.id)
+            )
+          );
+        if (!t) return "Trashed item not found" as const;
+        if (t.itemType !== "folder") return "Item is not a folder" as const;
 
-      if (!trashedItem) {
-        return {
-          error: "Trashed item not found",
-        };
-      }
+        trashedItem = t;
 
-      if (trashedItem.itemType !== "folder") {
-        return {
-          error: "Item is not a folder",
-        };
-      }
+        await tx
+          .update(table.folder)
+          .set({
+            parentId: t.originalParentId,
+            updatedAt: new Date(),
+          })
+          .where(eq(table.folder.id, itemId));
 
-      await db
-        .update(table.folder)
-        .set({
-          parentId: trashedItem.originalParentId,
-          updatedAt: new Date(),
-        })
-        .where(eq(table.folder.id, itemId));
+        await tx
+          .delete(table.trashedItem)
+          .where(eq(table.trashedItem.id, t.id));
 
-      await db
-        .delete(table.trashedItem)
-        .where(eq(table.trashedItem.id, trashedItem.id));
+        return;
+      });
+
+      if (txErr) return { error: txErr };
 
       const refreshPromises = [getTrashedItems().refresh()];
 
@@ -196,41 +242,45 @@ export const trashItem = command(
     }
 
     try {
-      const [trashRecord] = await db
-        .insert(table.trashedItem)
-        .values({
-          id: `trash-${Date.now()}-${Math.random()
-            .toString(36)
-            .substring(2, 9)}`,
-          itemId,
-          itemType,
-          originalFolderId: originalFolderId || null,
-          originalParentId: originalParentId || null,
-          ownerId: user.id,
-          trashedAt: new Date(),
-          name,
-        })
-        .returning();
+      let trashRecord: any;
+      await db.transaction(async (tx) => {
+        [trashRecord] = await tx
+          .insert(table.trashedItem)
+          .values({
+            id: `trash-${Date.now()}-${Math.random()
+              .toString(36)
+              .substring(2, 9)}`,
+            itemId,
+            itemType,
+            originalFolderId: originalFolderId || null,
+            originalParentId: originalParentId || null,
+            ownerId: user.id,
+            trashedAt: new Date(),
+            name,
+          })
+          .returning();
 
-      if (trashRecord) {
-        if (itemType === "file") {
-          await db
-            .update(table.file)
-            .set({
-              folderId: (await ensureTrashFolder(user.id)).id,
-              updatedAt: new Date(),
-            })
-            .where(eq(table.file.id, itemId));
-        } else if (itemType === "folder") {
-          await db
-            .update(table.folder)
-            .set({
-              parentId: (await ensureTrashFolder(user.id)).id,
-              updatedAt: new Date(),
-            })
-            .where(eq(table.folder.id, itemId));
+        if (trashRecord) {
+          const trashFolder = await ensureTrashFolder(user.id);
+          if (itemType === "file") {
+            await tx
+              .update(table.file)
+              .set({
+                folderId: trashFolder.id,
+                updatedAt: new Date(),
+              })
+              .where(eq(table.file.id, itemId));
+          } else if (itemType === "folder") {
+            await tx
+              .update(table.folder)
+              .set({
+                parentId: trashFolder.id,
+                updatedAt: new Date(),
+              })
+              .where(eq(table.folder.id, itemId));
+          }
         }
-      }
+      });
 
       const refreshPromises = [getTrashedItems().refresh()];
 
@@ -282,33 +332,40 @@ export const permanentDeleteFile = command(
     }
 
     try {
-      const [trashedItem] = await db
-        .select()
-        .from(table.trashedItem)
-        .where(
-          and(
-            eq(table.trashedItem.itemId, itemId),
-            eq(table.trashedItem.ownerId, user.id)
-          )
-        );
+      const txErr = await db.transaction(async (tx) => {
+        const [trashedItem] = await tx
+          .select()
+          .from(table.trashedItem)
+          .where(
+            and(
+              eq(table.trashedItem.itemId, itemId),
+              eq(table.trashedItem.ownerId, user.id)
+            )
+          );
 
-      if (!trashedItem) {
-        return {
-          error: "Trashed item not found",
-        };
-      }
+        if (!trashedItem) return "Trashed item not found" as const;
+        if (trashedItem.itemType !== "file")
+          return "Item is not a file" as const;
 
-      if (trashedItem.itemType !== "file") {
-        return {
-          error: "Item is not a file",
-        };
-      }
+        try {
+          await deleteFromStorage(trashedItem.itemId);
+        } catch (error) {
+          console.error("Error deleting file blob from storage:", {
+            itemId,
+            storageKey: trashedItem.itemId,
+            error,
+          });
+        }
 
-      await db.delete(table.file).where(eq(table.file.id, itemId));
+        await tx.delete(table.file).where(eq(table.file.id, itemId));
+        await tx
+          .delete(table.trashedItem)
+          .where(eq(table.trashedItem.id, trashedItem.id));
 
-      await db
-        .delete(table.trashedItem)
-        .where(eq(table.trashedItem.id, trashedItem.id));
+        return;
+      });
+
+      if (txErr) return { error: txErr };
 
       await getTrashedItems().refresh();
 
@@ -345,33 +402,44 @@ export const permanentDeleteFolder = command(
     }
 
     try {
-      const [trashedItem] = await db
-        .select()
-        .from(table.trashedItem)
-        .where(
-          and(
-            eq(table.trashedItem.itemId, itemId),
-            eq(table.trashedItem.ownerId, user.id)
-          )
+      const txErr = await db.transaction(async (tx) => {
+        const [trashedItem] = await tx
+          .select()
+          .from(table.trashedItem)
+          .where(
+            and(
+              eq(table.trashedItem.itemId, itemId),
+              eq(table.trashedItem.ownerId, user.id)
+            )
+          );
+
+        if (!trashedItem) return "Trashed item not found" as const;
+        if (trashedItem.itemType !== "folder")
+          return "Item is not a folder" as const;
+
+        const allFolderIds = await collectDescendantFolderIds(user.id, [
+          itemId,
+        ]);
+        const fileRecords = await getFileRecordsForFolderIds(
+          user.id,
+          allFolderIds
         );
 
-      if (!trashedItem) {
-        return {
-          error: "Trashed item not found",
-        };
-      }
+        const storageKeys = Array.from(
+          new Set(fileRecords.map((r) => r.storageKey))
+        );
+        await Promise.allSettled(storageKeys.map((k) => deleteFromStorage(k)));
 
-      if (trashedItem.itemType !== "folder") {
-        return {
-          error: "Item is not a folder",
-        };
-      }
+        await tx.delete(table.folder).where(eq(table.folder.id, itemId));
 
-      await db.delete(table.folder).where(eq(table.folder.id, itemId));
+        await tx
+          .delete(table.trashedItem)
+          .where(eq(table.trashedItem.id, trashedItem.id));
 
-      await db
-        .delete(table.trashedItem)
-        .where(eq(table.trashedItem.id, trashedItem.id));
+        return;
+      });
+
+      if (txErr) return { error: txErr };
 
       await getTrashedItems().refresh();
 
@@ -416,43 +484,45 @@ export const trashItems = command(
     }
 
     try {
-      const trashFolder = await ensureTrashFolder(user.id);
+      await db.transaction(async (tx) => {
+        const trashFolder = await ensureTrashFolder(user.id);
 
-      await db.insert(table.trashedItem).values(
-        items.map((i) => ({
-          id: `trash-${Date.now()}-${Math.random()
-            .toString(36)
-            .substring(2, 9)}`,
-          itemId: i.itemId,
-          itemType: i.itemType,
-          originalFolderId: i.originalFolderId || null,
-          originalParentId: i.originalParentId || null,
-          ownerId: user.id,
-          trashedAt: new Date(),
-          name: i.name,
-        }))
-      );
+        await tx.insert(table.trashedItem).values(
+          items.map((i) => ({
+            id: `trash-${Date.now()}-${Math.random()
+              .toString(36)
+              .substring(2, 9)}`,
+            itemId: i.itemId,
+            itemType: i.itemType,
+            originalFolderId: i.originalFolderId || null,
+            originalParentId: i.originalParentId || null,
+            ownerId: user.id,
+            trashedAt: new Date(),
+            name: i.name,
+          }))
+        );
 
-      const fileIds = items
-        .filter((i) => i.itemType === "file")
-        .map((i) => i.itemId);
-      const folderIds = items
-        .filter((i) => i.itemType === "folder")
-        .map((i) => i.itemId);
+        const fileIds = items
+          .filter((i) => i.itemType === "file")
+          .map((i) => i.itemId);
+        const folderIds = items
+          .filter((i) => i.itemType === "folder")
+          .map((i) => i.itemId);
 
-      if (fileIds.length > 0) {
-        await db
-          .update(table.file)
-          .set({ folderId: trashFolder.id, updatedAt: new Date() })
-          .where(inArray(table.file.id, fileIds));
-      }
+        if (fileIds.length > 0) {
+          await tx
+            .update(table.file)
+            .set({ folderId: trashFolder.id, updatedAt: new Date() })
+            .where(inArray(table.file.id, fileIds));
+        }
 
-      if (folderIds.length > 0) {
-        await db
-          .update(table.folder)
-          .set({ parentId: trashFolder.id, updatedAt: new Date() })
-          .where(inArray(table.folder.id, folderIds));
-      }
+        if (folderIds.length > 0) {
+          await tx
+            .update(table.folder)
+            .set({ parentId: trashFolder.id, updatedAt: new Date() })
+            .where(inArray(table.folder.id, folderIds));
+        }
+      });
 
       const refreshPromises: Array<Promise<unknown>> = [
         getTrashedItems().refresh(),
@@ -511,49 +581,55 @@ export const restoreItems = command(
     }
 
     try {
-      const trashedItems = await db
-        .select()
-        .from(table.trashedItem)
-        .where(
-          and(
-            eq(table.trashedItem.ownerId, user.id),
-            inArray(table.trashedItem.itemId, itemIds)
-          )
-        );
+      let filesToRestore: any[] = [];
+      let foldersToRestore: any[] = [];
+      const txErr = await db.transaction(async (tx) => {
+        const trashedItems = await tx
+          .select()
+          .from(table.trashedItem)
+          .where(
+            and(
+              eq(table.trashedItem.ownerId, user.id),
+              inArray(table.trashedItem.itemId, itemIds)
+            )
+          );
 
-      if (trashedItems.length !== itemIds.length) {
-        return { error: "One or more items not found in trash" };
-      }
+        if (trashedItems.length !== itemIds.length) {
+          return "One or more items not found in trash" as const;
+        }
 
-      const filesToRestore = trashedItems.filter((t) => t.itemType === "file");
-      const foldersToRestore = trashedItems.filter(
-        (t) => t.itemType === "folder"
-      );
+        filesToRestore = trashedItems.filter((t) => t.itemType === "file");
+        foldersToRestore = trashedItems.filter((t) => t.itemType === "folder");
 
-      for (const t of filesToRestore) {
-        await db
-          .update(table.file)
-          .set({
-            folderId: t.originalFolderId ?? undefined,
-            updatedAt: new Date(),
-          })
-          .where(eq(table.file.id, t.itemId));
-      }
-      for (const t of foldersToRestore) {
-        await db
-          .update(table.folder)
-          .set({ parentId: t.originalParentId, updatedAt: new Date() })
-          .where(eq(table.folder.id, t.itemId));
-      }
+        for (const t of filesToRestore) {
+          await tx
+            .update(table.file)
+            .set({
+              folderId: t.originalFolderId ?? undefined,
+              updatedAt: new Date(),
+            })
+            .where(eq(table.file.id, t.itemId));
+        }
+        for (const t of foldersToRestore) {
+          await tx
+            .update(table.folder)
+            .set({ parentId: t.originalParentId, updatedAt: new Date() })
+            .where(eq(table.folder.id, t.itemId));
+        }
 
-      await db
-        .delete(table.trashedItem)
-        .where(
-          and(
-            eq(table.trashedItem.ownerId, user.id),
-            inArray(table.trashedItem.itemId, itemIds)
-          )
-        );
+        await tx
+          .delete(table.trashedItem)
+          .where(
+            and(
+              eq(table.trashedItem.ownerId, user.id),
+              inArray(table.trashedItem.itemId, itemIds)
+            )
+          );
+
+        return;
+      });
+
+      if (txErr) return { error: txErr };
 
       const refreshPromises: Array<Promise<unknown>> = [
         getTrashedItems().refresh(),
@@ -612,44 +688,80 @@ export const permanentDeleteItems = command(
     }
 
     try {
-      const trashedItems = await db
-        .select()
-        .from(table.trashedItem)
-        .where(
-          and(
-            eq(table.trashedItem.ownerId, user.id),
-            inArray(table.trashedItem.itemId, itemIds)
-          )
-        );
+      const txErr = await db.transaction(async (tx) => {
+        const trashedItems = await tx
+          .select()
+          .from(table.trashedItem)
+          .where(
+            and(
+              eq(table.trashedItem.ownerId, user.id),
+              inArray(table.trashedItem.itemId, itemIds)
+            )
+          );
 
-      if (trashedItems.length !== itemIds.length) {
-        return { error: "One or more items not found in trash" };
-      }
+        if (trashedItems.length !== itemIds.length) {
+          return "One or more items not found in trash" as const;
+        }
 
-      const fileIds = trashedItems
-        .filter((t) => t.itemType === "file")
-        .map((t) => t.itemId);
-      const folderIds = trashedItems
-        .filter((t) => t.itemType === "folder")
-        .map((t) => t.itemId);
+        const fileIds = trashedItems
+          .filter((t) => t.itemType === "file")
+          .map((t) => t.itemId);
+        const folderIds = trashedItems
+          .filter((t) => t.itemType === "folder")
+          .map((t) => t.itemId);
 
-      if (fileIds.length > 0) {
-        await db.delete(table.file).where(inArray(table.file.id, fileIds));
-      }
-      if (folderIds.length > 0) {
-        await db
-          .delete(table.folder)
-          .where(inArray(table.folder.id, folderIds));
-      }
+        if (fileIds.length > 0) {
+          const fileRecords = await tx
+            .select({ id: table.file.id, storageKey: table.file.storageKey })
+            .from(table.file)
+            .where(
+              and(
+                inArray(table.file.id, fileIds),
+                eq(table.file.ownerId, user.id)
+              )
+            );
 
-      await db
-        .delete(table.trashedItem)
-        .where(
-          and(
-            eq(table.trashedItem.ownerId, user.id),
-            inArray(table.trashedItem.itemId, itemIds)
-          )
-        );
+          await Promise.allSettled(
+            fileRecords.map((r) => deleteFromStorage(r.storageKey))
+          );
+
+          await tx.delete(table.file).where(inArray(table.file.id, fileIds));
+        }
+        if (folderIds.length > 0) {
+          const allFolderIds = await collectDescendantFolderIds(
+            user.id,
+            folderIds
+          );
+          const fileRecordsUnderFolders = await getFileRecordsForFolderIds(
+            user.id,
+            allFolderIds
+          );
+
+          const folderStorageKeys = Array.from(
+            new Set(fileRecordsUnderFolders.map((r) => r.storageKey))
+          );
+          await Promise.allSettled(
+            folderStorageKeys.map((k) => deleteFromStorage(k))
+          );
+
+          await tx
+            .delete(table.folder)
+            .where(inArray(table.folder.id, folderIds));
+        }
+
+        await tx
+          .delete(table.trashedItem)
+          .where(
+            and(
+              eq(table.trashedItem.ownerId, user.id),
+              inArray(table.trashedItem.itemId, itemIds)
+            )
+          );
+
+        return;
+      });
+
+      if (txErr) return { error: txErr };
 
       await getTrashedItems().refresh();
 
@@ -660,48 +772,3 @@ export const permanentDeleteItems = command(
     }
   }
 );
-
-export const emptyTrash = command(async () => {
-  const {
-    locals: { user },
-  } = getRequestEvent();
-  if (!user) {
-    return {
-      error: "User not authenticated",
-    };
-  }
-
-  try {
-    const trashedItems = await db
-      .select()
-      .from(table.trashedItem)
-      .where(eq(table.trashedItem.ownerId, user.id));
-
-    for (const trashedItem of trashedItems) {
-      if (trashedItem.itemType === "file") {
-        await db
-          .delete(table.file)
-          .where(eq(table.file.id, trashedItem.itemId));
-      } else if (trashedItem.itemType === "folder") {
-        await db
-          .delete(table.folder)
-          .where(eq(table.folder.id, trashedItem.itemId));
-      }
-    }
-
-    await db
-      .delete(table.trashedItem)
-      .where(eq(table.trashedItem.ownerId, user.id));
-
-    await getTrashedItems().refresh();
-
-    return {
-      data: { success: true, message: "Trash emptied successfully" },
-    };
-  } catch (err) {
-    console.error("Error emptying trash:", err);
-    return {
-      error: "Failed to empty trash",
-    };
-  }
-});

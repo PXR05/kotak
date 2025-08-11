@@ -38,7 +38,6 @@ import {
   restoreFolder,
   permanentDeleteFile,
   permanentDeleteFolder,
-  emptyTrash,
   trashItems,
   restoreItems,
   permanentDeleteItems,

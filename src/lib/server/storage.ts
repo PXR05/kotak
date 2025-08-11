@@ -20,35 +20,10 @@ mkdir(STORAGE_PATH, { recursive: true }).catch((e) => {
 });
 
 /**
- * Creates a file in the storage.
- */
-export async function createFile(file: File) {
-  const storageKey = randomUUID();
-  const filePath = path.join(STORAGE_PATH, storageKey);
-  await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
-
-  if (file.type.startsWith("image/")) {
-    const placeholder = await lqipModern(filePath, {
-      outputFormat: "webp",
-      resize: 32,
-    });
-    const placeholderFilePath = path.join(STORAGE_PATH, `${storageKey}.webp`);
-    await writeFile(placeholderFilePath, placeholder.content);
-  }
-
-  return {
-    storageKey,
-    size: file.size,
-    mimeType: file.type || "application/octet-stream",
-    name: file.name,
-  };
-}
-
-/**
  * Creates a file from a stream that's already been written to storage.
  * This is used when files are processed via streaming multipart parsing.
  */
-export async function createFileFromStream(
+export async function createFile(
   storageKey: string,
   filename: string,
   mimeType: string,
@@ -143,21 +118,4 @@ export async function getStorageStatus(userId?: string): Promise<{
     free: diskStats.free,
     used: Number(used),
   };
-}
-
-/**
- * Copies a file in storage and returns the new storage key.
- */
-export async function copyFile(sourceStorageKey: string): Promise<string> {
-  const newStorageKey = randomUUID();
-  const sourcePath = path.join(STORAGE_PATH, sourceStorageKey);
-  const destPath = path.join(STORAGE_PATH, newStorageKey);
-
-  try {
-    await fsCopyFile(sourcePath, destPath);
-    return newStorageKey;
-  } catch (error) {
-    console.error("Failed to copy file:", error);
-    throw new Error("Failed to copy file in storage");
-  }
 }

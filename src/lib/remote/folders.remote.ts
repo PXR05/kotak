@@ -161,47 +161,52 @@ export const createFolder = command(
       parentId = rootFolder.id;
     }
 
-    const [parentFolder] = await db
-      .select()
-      .from(table.folder)
-      .where(
-        and(eq(table.folder.id, parentId), eq(table.folder.ownerId, user.id))
-      );
+    let newFolder: any;
+    const txErr = await db.transaction(async (tx) => {
+      const [parentFolder] = await tx
+        .select()
+        .from(table.folder)
+        .where(
+          and(eq(table.folder.id, parentId), eq(table.folder.ownerId, user.id))
+        );
 
-    if (!parentFolder) {
-      return {
-        error: "Parent folder not found or access denied",
-      };
+      if (!parentFolder) {
+        return "Parent folder not found or access denied" as const;
+      }
+
+      const [existingFolder] = await tx
+        .select()
+        .from(table.folder)
+        .where(
+          and(
+            eq(table.folder.parentId, parentId),
+            eq(table.folder.name, name.trim()),
+            eq(table.folder.ownerId, user.id)
+          )
+        );
+
+      if (existingFolder) {
+        return "A folder with this name already exists in this location" as const;
+      }
+
+      [newFolder] = await tx
+        .insert(table.folder)
+        .values({
+          id: `folder-${Date.now()}-${Math.random()
+            .toString(36)
+            .substring(2, 9)}`,
+          name: name.trim(),
+          ownerId: user.id,
+          parentId: parentId,
+        })
+        .returning();
+
+      return;
+    });
+
+    if (txErr) {
+      return { error: txErr };
     }
-
-    const [existingFolder] = await db
-      .select()
-      .from(table.folder)
-      .where(
-        and(
-          eq(table.folder.parentId, parentId),
-          eq(table.folder.name, name.trim()),
-          eq(table.folder.ownerId, user.id)
-        )
-      );
-
-    if (existingFolder) {
-      return {
-        error: "A folder with this name already exists in this location",
-      };
-    }
-
-    const [newFolder] = await db
-      .insert(table.folder)
-      .values({
-        id: `folder-${Date.now()}-${Math.random()
-          .toString(36)
-          .substring(2, 9)}`,
-        name: name.trim(),
-        ownerId: user.id,
-        parentId: parentId,
-      })
-      .returning();
 
     if (parentId.startsWith("root-")) {
       await getRootItems().refresh();
@@ -251,33 +256,40 @@ export const renameFolder = command(
 
     const trimmedName = newName.trim();
 
-    const [existingFolder] = await db
-      .select()
-      .from(table.folder)
-      .where(
-        and(
-          folder.parentId === null
-            ? isNull(table.folder.parentId)
-            : eq(table.folder.parentId, folder.parentId),
-          eq(table.folder.name, trimmedName),
-          eq(table.folder.ownerId, user.id)
-        )
-      );
+    let updatedFolder: any;
+    const txErr = await db.transaction(async (tx) => {
+      const [existingFolder] = await tx
+        .select()
+        .from(table.folder)
+        .where(
+          and(
+            folder.parentId === null
+              ? isNull(table.folder.parentId)
+              : eq(table.folder.parentId, folder.parentId),
+            eq(table.folder.name, trimmedName),
+            eq(table.folder.ownerId, user.id)
+          )
+        );
 
-    if (existingFolder && existingFolder.id !== folder.id) {
-      return {
-        error: "A folder with this name already exists in this location",
-      };
+      if (existingFolder && existingFolder.id !== folder.id) {
+        return "A folder with this name already exists in this location" as const;
+      }
+
+      [updatedFolder] = await tx
+        .update(table.folder)
+        .set({
+          name: trimmedName,
+          updatedAt: new Date(),
+        })
+        .where(eq(table.folder.id, folderId))
+        .returning();
+
+      return;
+    });
+
+    if (txErr) {
+      return { error: txErr };
     }
-
-    const [updatedFolder] = await db
-      .update(table.folder)
-      .set({
-        name: trimmedName,
-        updatedAt: new Date(),
-      })
-      .where(eq(table.folder.id, folderId))
-      .returning();
 
     if (!folder.parentId) {
       await getRootItems().refresh();
@@ -353,68 +365,80 @@ export const moveFolder = command(
       };
     }
 
-    const results: Array<{ skipped: boolean; item: any }> = [];
-    const affectedSourceParentIds = new Set<string | null>();
+    const results: Array<{
+      skipped: boolean;
+      item: any;
+      sourceParentId?: string | null;
+    }> = [];
+    await db.transaction(async (tx) => {
+      for (const folder of foldersToMove) {
+        if (folder.name === "__root__" || folder.name === "__trash__") {
+          results.push({ skipped: true, item: folder });
+          continue;
+        }
 
-    for (const folder of foldersToMove) {
-      if (folder.name === "__root__" || folder.name === "__trash__") {
-        results.push({ skipped: true, item: folder });
-        continue;
-      }
+        if (resolvedTargetParentId === folder.id) {
+          results.push({ skipped: true, item: folder });
+          continue;
+        }
 
-      if (resolvedTargetParentId === folder.id) {
-        results.push({ skipped: true, item: folder });
-        continue;
-      }
+        if (resolvedTargetParentId) {
+          const [targetFolder] = await tx
+            .select()
+            .from(table.folder)
+            .where(
+              and(
+                eq(table.folder.id, resolvedTargetParentId),
+                eq(table.folder.ownerId, user.id)
+              )
+            );
+          if (targetFolder && targetFolder.parentId === folder.id) {
+            results.push({ skipped: true, item: folder });
+            continue;
+          }
+        }
 
-      if (resolvedTargetParentId) {
-        const [targetFolder] = await db
+        const [conflict] = await tx
           .select()
           .from(table.folder)
           .where(
             and(
-              eq(table.folder.id, resolvedTargetParentId),
+              resolvedTargetParentId === null
+                ? isNull(table.folder.parentId)
+                : eq(table.folder.parentId, resolvedTargetParentId),
+              eq(table.folder.name, folder.name),
               eq(table.folder.ownerId, user.id)
             )
           );
-        if (targetFolder && targetFolder.parentId === folder.id) {
-          results.push({ skipped: true, item: folder });
+
+        if (conflict && conflict.id !== folder.id) {
+          results.push({ skipped: true, item: conflict });
           continue;
         }
+
+        const [updatedFolder] = await tx
+          .update(table.folder)
+          .set({
+            parentId: resolvedTargetParentId,
+            updatedAt: new Date(),
+          })
+          .where(eq(table.folder.id, folder.id))
+          .returning();
+
+        results.push({
+          skipped: false,
+          item: updatedFolder,
+          sourceParentId: folder.parentId,
+        });
       }
-
-      const [conflict] = await db
-        .select()
-        .from(table.folder)
-        .where(
-          and(
-            resolvedTargetParentId === null
-              ? isNull(table.folder.parentId)
-              : eq(table.folder.parentId, resolvedTargetParentId),
-            eq(table.folder.name, folder.name),
-            eq(table.folder.ownerId, user.id)
-          )
-        );
-
-      if (conflict && conflict.id !== folder.id) {
-        results.push({ skipped: true, item: conflict });
-        continue;
-      }
-
-      const [updatedFolder] = await db
-        .update(table.folder)
-        .set({
-          parentId: resolvedTargetParentId,
-          updatedAt: new Date(),
-        })
-        .where(eq(table.folder.id, folder.id))
-        .returning();
-
-      results.push({ skipped: false, item: updatedFolder });
-      affectedSourceParentIds.add(folder.parentId);
-    }
+    });
 
     const refreshPromises: Array<Promise<unknown>> = [];
+
+    const affectedSourceParentIds = new Set<string | null>();
+    for (const r of results) {
+      if (!r.skipped) affectedSourceParentIds.add(r.sourceParentId ?? null);
+    }
 
     for (const sourceParentId of affectedSourceParentIds) {
       if (!sourceParentId || String(sourceParentId).startsWith("root-")) {

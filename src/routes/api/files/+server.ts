@@ -1,5 +1,5 @@
 import { json, error } from "@sveltejs/kit";
-import { createFileFromStream } from "$lib/server/storage";
+import { createFile } from "$lib/server/storage";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -110,7 +110,7 @@ export const POST = async ({ request, locals }) => {
           locals.user.id
         );
 
-        const fileMetadata = await createFileFromStream(
+        const fileMetadata = await createFile(
           file.storageKey,
           file.filename,
           file.mimeType,

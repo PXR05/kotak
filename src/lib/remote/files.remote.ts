@@ -36,31 +36,38 @@ export const renameFile = command(
 
     const trimmedName = newName.trim();
 
-    const [existingFile] = await db
-      .select()
-      .from(table.file)
-      .where(
-        and(
-          eq(table.file.folderId, file.folderId),
-          eq(table.file.name, trimmedName),
-          eq(table.file.ownerId, user.id)
-        )
-      );
+    let updatedFile: any;
+    const txErr = await db.transaction(async (tx) => {
+      const [conflict] = await tx
+        .select()
+        .from(table.file)
+        .where(
+          and(
+            eq(table.file.folderId, file.folderId),
+            eq(table.file.name, trimmedName),
+            eq(table.file.ownerId, user.id)
+          )
+        );
 
-    if (existingFile && existingFile.id !== file.id) {
-      return {
-        error: "A file with this name already exists in this folder",
-      };
+      if (conflict && conflict.id !== file.id) {
+        return "A file with this name already exists in this folder" as const;
+      }
+
+      [updatedFile] = await tx
+        .update(table.file)
+        .set({
+          name: trimmedName,
+          updatedAt: new Date(),
+        })
+        .where(eq(table.file.id, file.id))
+        .returning();
+
+      return;
+    });
+
+    if (txErr) {
+      return { error: txErr };
     }
-
-    const [updatedFile] = await db
-      .update(table.file)
-      .set({
-        name: trimmedName,
-        updatedAt: new Date(),
-      })
-      .where(eq(table.file.id, file.id))
-      .returning();
 
     if (file.folderId.startsWith("root-")) {
       await getRootItems().refresh();
@@ -132,41 +139,54 @@ export const moveFile = command(
       };
     }
 
-    const results: Array<{ skipped: boolean; item: any }> = [];
-    const affectedSourceFolderIds = new Set<string>();
+    const results: Array<{
+      skipped: boolean;
+      item: any;
+      sourceFolderId?: string;
+    }> = [];
+    await db.transaction(async (tx) => {
+      for (const file of filesToMove) {
+        const [conflict] = await tx
+          .select()
+          .from(table.file)
+          .where(
+            and(
+              eq(table.file.folderId, resolvedTargetFolderId),
+              eq(table.file.name, file.name),
+              eq(table.file.ownerId, user.id)
+            )
+          );
 
-    for (const file of filesToMove) {
-      const [conflict] = await db
-        .select()
-        .from(table.file)
-        .where(
-          and(
-            eq(table.file.folderId, resolvedTargetFolderId),
-            eq(table.file.name, file.name),
-            eq(table.file.ownerId, user.id)
-          )
-        );
+        if (conflict && conflict.id !== file.id) {
+          results.push({ skipped: true, item: conflict });
+          continue;
+        }
 
-      if (conflict && conflict.id !== file.id) {
-        results.push({ skipped: true, item: conflict });
-        continue;
+        const [updated] = await tx
+          .update(table.file)
+          .set({
+            folderId: resolvedTargetFolderId,
+            updatedAt: new Date(),
+          })
+          .where(eq(table.file.id, file.id))
+          .returning();
+
+        results.push({
+          skipped: false,
+          item: updated,
+          sourceFolderId: file.folderId,
+        });
       }
-
-      const [updated] = await db
-        .update(table.file)
-        .set({
-          folderId: resolvedTargetFolderId,
-          updatedAt: new Date(),
-        })
-        .where(eq(table.file.id, file.id))
-        .returning();
-
-      results.push({ skipped: false, item: updated });
-      affectedSourceFolderIds.add(file.folderId);
-    }
+    });
 
     const refreshPromises: Array<Promise<unknown>> = [];
     const targetIsRoot = resolvedTargetFolderId.startsWith("root-");
+
+    const affectedSourceFolderIds = new Set<string>();
+    for (const r of results) {
+      if (!r.skipped && r.sourceFolderId)
+        affectedSourceFolderIds.add(r.sourceFolderId);
+    }
 
     for (const sourceFolderId of affectedSourceFolderIds) {
       if (sourceFolderId.startsWith("root-")) {

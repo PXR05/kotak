@@ -4,8 +4,6 @@ import * as table from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import * as z from "zod/mini";
-import { getFolderChildren } from "./folders.remote";
-import { getRootItems } from "./load.remote";
 
 export const shareFile = command(
   z.object({
