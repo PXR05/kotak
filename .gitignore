@@ -1,12 +1,14 @@
 node_modules
 
 # Output
+.cursor
 .output
 .vercel
 .netlify
 .wrangler
 /.svelte-kit
 /build
+/dist
 
 # OS
 .DS_Store
