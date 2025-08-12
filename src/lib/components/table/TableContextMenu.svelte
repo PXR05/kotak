@@ -7,34 +7,12 @@
   import { LoaderIcon } from "@lucide/svelte";
   import type { FileItem } from "$lib/types/file";
   import { getCurrentFolder } from "$lib/remote/load.remote";
-  import { toast } from "svelte-sonner";
 
   const {
     children,
   }: {
     children: Snippet<[{ props: Record<string, any> }]>;
   } = $props();
-
-  let currentFolder = $state<FileItem>();
-  let loading = $state(true);
-
-  $effect(() => {
-    loading = true;
-    try {
-      getCurrentFolder(page.data.currentFolderId).then(({ data, error }) => {
-        if (error) {
-          toast.error(error);
-        } else {
-          currentFolder = data;
-        }
-        loading = false;
-      });
-    } catch (error) {
-      console.error("Error fetching current folder:", error);
-      toast.error("Failed to load current folder");
-      loading = false;
-    }
-  });
 </script>
 
 <ContextMenu.Root>
@@ -44,11 +22,11 @@
     {/snippet}
   </ContextMenu.Trigger>
   <ContextMenu.Content class="w-52">
-    {#if loading}
+    {#await getCurrentFolder(page.data.currentFolderId)}
       <ContextMenu.Item>
         <LoaderIcon class="size-4 animate-spin m-auto" />
       </ContextMenu.Item>
-    {:else if currentFolder}
+    {:then currentFolder}
       {#each tableActions() as action, index}
         {#if action.separator && index > 0}
           <ContextMenu.Separator />
@@ -63,6 +41,10 @@
           {action.label}
         </ContextMenu.Item>
       {/each}
-    {/if}
+    {:catch error}
+      <ContextMenu.Item>
+        <p class="text-sm text-destructive">{error}</p>
+      </ContextMenu.Item>
+    {/await}
   </ContextMenu.Content>
 </ContextMenu.Root>

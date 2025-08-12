@@ -1,12 +1,6 @@
-import {
-  mkdir,
-  writeFile,
-  unlink,
-  copyFile as fsCopyFile,
-} from "node:fs/promises";
+import { mkdir, writeFile, unlink } from "node:fs/promises";
 import { createReadStream, statfs } from "node:fs";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
 import { db } from "./db/index.js";
 import { file } from "./db/schema.js";

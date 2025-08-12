@@ -70,18 +70,14 @@ export const getCurrentFolder = query(
   z.nullable(z.optional(z.string())),
   async (folderId) => {
     if (!folderId) {
-      return {
-        data: {} as FileItem,
-      };
+      return null;
     }
 
     const {
       locals: { user },
     } = getRequestEvent();
     if (!user) {
-      return {
-        error: "User not authenticated",
-      };
+      throw new Error("User not authenticated");
     }
 
     const [folder] = await db
@@ -92,14 +88,10 @@ export const getCurrentFolder = query(
       );
 
     if (!folder) {
-      return {
-        data: {} as FileItem,
-      };
+      return null;
     }
 
-    return {
-      data: { ...folder, type: "folder" as const },
-    };
+    return { ...folder, type: "folder" as const };
   }
 );
 

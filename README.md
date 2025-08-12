@@ -2,6 +2,9 @@
 
 Kotak is a modern, self-hosted file management system built with SvelteKit that provides secure file storage, organization, and sharing capabilities. This web-based application allows you to upload, organize, preview, and share files through an intuitive interface, essentially giving you your own personal cloud storage solution that you control completely.
 
+| ![Home](./static/ss_1.webp) | ![File](./static/ss_2.webp) |
+| --------------------------- | --------------------------- |
+
 ## Core Features
 
 **File Management**: Upload files through drag-and-drop, organize them in folders, and manage everything through a clean, responsive interface. The system supports bulk operations for efficient file handling.

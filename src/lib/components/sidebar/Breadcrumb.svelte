@@ -4,7 +4,7 @@
   import * as Drawer from "$lib/components/ui/drawer/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import { page } from "$app/state";
-  import { HomeIcon, LoaderIcon } from "@lucide/svelte";
+  import { HouseIcon, LoaderIcon } from "@lucide/svelte";
   import { IsMobile } from "$lib/hooks/is-mobile.svelte.js";
   import { getBreadcrumbs } from "$lib/remote/load.remote";
   import { toast } from "svelte-sonner";
@@ -47,7 +47,7 @@
   <Breadcrumb.List>
     <Breadcrumb.Item>
       <Breadcrumb.Link href="/">
-        <HomeIcon class="size-4" />
+        <HouseIcon class="size-4" />
       </Breadcrumb.Link>
     </Breadcrumb.Item>
 

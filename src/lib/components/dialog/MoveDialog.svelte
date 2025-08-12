@@ -13,7 +13,7 @@
   import {
     FolderIcon,
     MoveIcon,
-    HomeIcon,
+    HouseIcon,
     SearchIcon,
     LoaderIcon,
   } from "@lucide/svelte";
@@ -192,7 +192,7 @@
                 class="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm hover:bg-accent
                        {selectedFolderId === null ? 'bg-accent' : ''}"
               >
-                <HomeIcon class="size-4 text-muted-foreground" />
+                <HouseIcon class="size-4 text-muted-foreground" />
                 <span>Root folder</span>
               </button>
 
