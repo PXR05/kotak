@@ -322,7 +322,7 @@
   {#if searchOpen && (searchResults.length > 0 || isSearching || (hasSearched && searchValue.trim()))}
     <div
       bind:this={searchResultsContainer}
-      class="absolute top-9 left-0 right-0 bg-background shadow-md rounded-b-lg border border-input border-t-0 max-h-80 overflow-y-auto z-60 max-md:top-12"
+      class="absolute top-9 left-0 right-0 bg-sidebar shadow-md rounded-b-lg border border-input border-t-0 max-h-80 overflow-y-auto z-60 max-md:top-12"
       transition:slide={{ axis: "y", duration: 150, easing: quintOut }}
     >
       {#if isSearching}
@@ -343,7 +343,7 @@
                 {index === selectedIndex ? 'bg-accent dark:bg-input/50 ' : ''}"
                 onclick={() => handleResultClick(result)}
               >
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 truncate">
                   <div class="flex-shrink-0">
                     {#if result.type === "file"}
                       <FileIcon class="size-4" />

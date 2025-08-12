@@ -11,7 +11,7 @@
   const inRoot = $derived(browser && page.url.pathname === "/");
 
   const backgroundClass =
-    "bg-sidebar rounded-lg border border-sidebar-border shadow-sm";
+    "bg-sidebar rounded-lg border border-border shadow-sm";
 </script>
 
 {#if isMobile}

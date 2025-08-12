@@ -91,12 +91,9 @@
     if (node.item.type !== "folder") return;
     await dropHandler(dragState, node.item.id, e);
   }
-  
+
   $effect(() => {
-    if (
-      node.item.type === "folder" &&
-      node.expanded 
-    ) {
+    if (node.item.type === "folder" && node.expanded) {
       fileTree.loadFolderChildren(node);
     }
   });
@@ -169,7 +166,7 @@
                     class="flex items-center gap-2 flex-1 min-w-0 hover:bg-accent rounded-md px-2 h-8 duration-150 group/name border border-transparent
                     {dragState.isDragging ? 'opacity-50' : ''} 
                       {dragState.isDropTarget
-                      ? 'transition-none bg-sidebar-primary/10 !border-sidebar-primary'
+                      ? 'transition-none bg-primary/10 !border-primary'
                       : ''}"
                     type="button"
                     draggable="true"
@@ -192,6 +189,18 @@
               <Sidebar.MenuSub>
                 {#each node.children || [] as childNode, j (childNode.item.id)}
                   <FileTreeItem i={j} nodeList={node.children ?? []} />
+                {:else}
+                  <Sidebar.MenuButton
+                    class="relative overflow-visible w-full justify-start text-muted-foreground pointer-events-none"
+                  >
+                    <span class="h-4 w-2 absolute -left-[10px] top-0 border-b"
+                    ></span>
+                    {#if node.loading}
+                      <span class="truncate"> Loading... </span>
+                    {:else}
+                      <span class="truncate"> Empty folder </span>
+                    {/if}
+                  </Sidebar.MenuButton>
                 {/each}
               </Sidebar.MenuSub>
             </Collapsible.Content>

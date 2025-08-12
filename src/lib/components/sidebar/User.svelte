@@ -36,7 +36,7 @@
         >
           <Avatar.Root class="size-9 rounded-md">
             <Avatar.Fallback
-              class="bg-sidebar-primary text-sidebar-primary-foreground font-serif rounded-md"
+              class="bg-primary text-primary-foreground font-serif rounded-md"
             >
               {user?.email.charAt(0).toUpperCase()}
             </Avatar.Fallback>
@@ -62,7 +62,7 @@
       <div class="flex items-center gap-2 p-1 text-left text-sm">
         <Avatar.Root class="size-9 rounded-md">
           <Avatar.Fallback
-            class="bg-sidebar-primary text-sidebar-primary-foreground font-serif rounded-md"
+            class="bg-primary text-primary-foreground font-serif rounded-md"
           >
             {user?.email.charAt(0).toUpperCase()}
           </Avatar.Fallback>

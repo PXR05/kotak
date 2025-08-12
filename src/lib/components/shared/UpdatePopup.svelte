@@ -83,7 +83,7 @@
 {#if updateAvailable}
   <Sidebar.Separator class="mb-3" />
   <div
-    class="overflow-hidden rounded-lg border border-sidebar-border bg-background dark:bg-input/30 text-sm"
+    class="overflow-hidden rounded-lg border border-border bg-background dark:bg-input/30 text-sm"
     transition:slide={{ axis: "y", duration: 150 }}
   >
     <div class="flex items-center justify-between pl-4 pr-2 py-2">

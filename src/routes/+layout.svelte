@@ -32,7 +32,7 @@
     >
       <InsetHeader />
       <div
-        class="flex flex-1 flex-col overflow-clip bg-sidebar rounded-lg border border-sidebar-border shadow-sm"
+        class="flex flex-1 flex-col overflow-clip bg-sidebar rounded-lg border border-border shadow-sm"
       >
         {@render children()}
       </div>

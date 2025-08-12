@@ -84,7 +84,7 @@
                   {...props}
                   data-active={page.url.pathname === "/"}
                   class="font-medium border border-transparent {dragState.isDropTarget
-                    ? 'transition-none !bg-sidebar-primary/10 border-sidebar-primary'
+                    ? 'transition-none !bg-primary/10 border-primary'
                     : ''}"
                   ondragenter={handleDropZoneDragEnter}
                   ondragover={handleDropZoneDragOver}

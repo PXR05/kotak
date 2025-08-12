@@ -99,7 +99,7 @@ export const fileOperations = {
     }
     toast.success(`"${item.name}" moved to trash successfully`);
     invalidateAll();
-    this.clearSelection();
+    fileOperations.clearSelection();
   },
 
   async handleCreateFolder(name: string) {
@@ -129,23 +129,23 @@ export const fileOperations = {
   ) {
     switch (action) {
       case "open":
-        this.handleItemClick(item);
+        fileOperations.handleItemClick(item);
         break;
       case "info":
         openInfoDialog(item);
         break;
       case "download":
-        this.downloadFile(item);
+        fileOperations.downloadFile(item);
         break;
       case "move":
         openMoveDialog([item], async (targetFolderId: string | null) => {
-          await this.moveItems([item], targetFolderId);
+          await fileOperations.moveItems([item], targetFolderId);
           callback?.();
         });
         break;
       case "rename":
         openRenameDialog(item, async (newName: string) => {
-          await this.handleRename(item, newName);
+          await fileOperations.handleRename(item, newName);
           callback?.();
         });
         break;
@@ -159,14 +159,14 @@ export const fileOperations = {
             variant: "destructive",
           },
           async () => {
-            await this.handleTrash(item);
+            await fileOperations.handleTrash(item);
             callback?.();
           }
         );
         break;
       case "share":
         openShareDialog(item, async (shareData) => {
-          const result = await this.handleShare(item, shareData);
+          const result = await fileOperations.handleShare(item, shareData);
           callback?.();
           return result || { shareId: "", publicUrl: undefined };
         });
@@ -225,7 +225,7 @@ export const fileOperations = {
         );
       }
 
-      this.clearSelection();
+      fileOperations.clearSelection();
     } catch (error) {
       console.error("Failed to move items:", error);
       const errorMessage =
@@ -239,7 +239,7 @@ export const fileOperations = {
     if (selectedItems.length === 0) return;
 
     openMoveDialog(selectedItems, async (targetFolderId: string | null) => {
-      await this.moveItems(selectedItems, targetFolderId);
+      await fileOperations.moveItems(selectedItems, targetFolderId);
     });
   },
 
@@ -270,7 +270,7 @@ export const fileOperations = {
             throw new Error(error || "Failed to move items to trash");
           }
           toast.success(`Moved ${data.count} item(s) to trash`);
-          this.clearSelection();
+          fileOperations.clearSelection();
         } catch (error) {
           console.error("Failed to trash items:", error);
           const errorMessage =
@@ -329,11 +329,13 @@ export const fileOperations = {
         invalidateAll();
         break;
       case "create-folder":
-        openCreateFolderDialog((name: string) => this.handleCreateFolder(name));
+        openCreateFolderDialog((name: string) =>
+          fileOperations.handleCreateFolder(name)
+        );
         break;
       default:
         if (item && action) {
-          this.handleAction(action as FileAction, item);
+          fileOperations.handleAction(action as FileAction, item);
         }
         break;
     }

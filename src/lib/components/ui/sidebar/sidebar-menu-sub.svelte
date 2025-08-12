@@ -6,8 +6,9 @@
     ref = $bindable(null),
     class: className,
     children,
+    coverLine = true,
     ...restProps
-  }: WithElementRef<HTMLAttributes<HTMLUListElement>> = $props();
+  }: WithElementRef<HTMLAttributes<HTMLUListElement> & { coverLine?: boolean }> = $props();
 </script>
 
 <ul
@@ -21,9 +22,11 @@
   )}
   {...restProps}
 >
-  <span class="h-4.5 w-1 absolute -left-0.5 bottom-0 bg-sidebar"></span>
-  <span
-    class="group-not-last/ctx-trigger:hidden h-[calc(100%+1rem)] w-1 absolute -left-6.5 -top-4 bg-sidebar"
-  ></span>
+  {#if coverLine}
+    <span class="h-4.5 w-1 absolute -left-0.5 bottom-0 bg-sidebar"></span>
+    <span
+      class="group-not-last/ctx-trigger:hidden h-[calc(100%+1rem)] w-1 absolute -left-6.5 -top-4 bg-sidebar"
+    ></span>
+  {/if}
   {@render children?.()}
 </ul>

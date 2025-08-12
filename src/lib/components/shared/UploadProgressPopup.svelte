@@ -29,7 +29,7 @@
     class="fixed bottom-4 right-4 z-50 md:w-96 w-full max-w-[calc(100dvw-2rem)]"
   >
     <div
-      class="flex flex-col bg-sidebar rounded-lg border border-sidebar-border shadow-sm overflow-clip"
+      class="flex flex-col bg-sidebar rounded-lg border border-border shadow-sm overflow-clip"
     >
       <!-- Header -->
       <div class="flex items-center justify-between p-3 bg-muted/50">

@@ -87,6 +87,7 @@
   let containerRef = $state<HTMLDivElement | null>(null);
 
   function handleResize({ ref }: { ref: HTMLDivElement }) {
+    if (!ref) return;
     const clientHeight = ref.clientHeight;
     const visibleRows = Math.ceil(clientHeight / ROW_HEIGHT);
     pagination.pageSize = visibleRows;

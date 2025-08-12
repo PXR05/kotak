@@ -6,11 +6,15 @@
   import { Copy, Check } from "@lucide/svelte";
   import AppIcon from "$lib/components/shared/AppIcon.svelte";
 
-const { messages = [], status, statusMessage }: {
+  const {
+    messages = [],
+    status,
+    statusMessage,
+  }: {
     messages: string[];
     status: number;
     statusMessage?: string;
-} = $props()
+  } = $props();
 
   const errorString = $derived({
     status: status,
@@ -51,14 +55,16 @@ const { messages = [], status, statusMessage }: {
 </script>
 
 <div
-  class="w-full flex flex-col justify-center items-center relative isolate overflow-hidden p-2 {page.data.user ? 'h-full' : 'h-dvh'}"
+  class="w-full flex flex-col justify-center items-center relative isolate overflow-hidden p-2 {page
+    .data.user
+    ? 'h-full'
+    : 'h-dvh'}"
 >
   <div
-    class="z-10 w-full h-full p-8 relative flex flex-col items-center justify-center bg-sidebar rounded-lg border border-sidebar-border"
+    class="z-10 w-full h-full p-8 relative flex flex-col items-center justify-center bg-sidebar rounded-lg border border-border"
   >
     <!-- Status code -->
-    <div
-    >
+    <div>
       <h1
         class="font-serif text-7xl sm:text-8xl font-light tracking-tight mb-6"
       >
@@ -67,16 +73,12 @@ const { messages = [], status, statusMessage }: {
     </div>
 
     <p
-      
       class="font-serif text-lg md:text-xl text-muted-foreground mx-auto leading-relaxed"
     >
       {statusMessage || defaultStatusMessage}
     </p>
 
-    <div
-      
-      class="mt-2 text-sm font-serif text-muted-foreground"
-    >
+    <div class="mt-2 text-sm font-serif text-muted-foreground">
       <Button
         variant="ghost"
         size="sm"
@@ -118,9 +120,7 @@ const { messages = [], status, statusMessage }: {
       </div>
     {/if}
 
-    <div
-      class="mt-4 opacity-80"
-    >
+    <div class="mt-4 opacity-80">
       <a href="/">
         <AppIcon
           class="mx-auto text-muted-foreground"

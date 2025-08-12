@@ -185,7 +185,7 @@
     {loading ? 'pointer-events-none animate-pulse' : ''}
     {dragState.isDragging ? 'opacity-50' : ''} 
     {dragState.isDropTarget
-    ? 'bg-sidebar-primary/10 -outline-offset-1 outline outline-sidebar-primary'
+    ? 'bg-primary/10 -outline-offset-1 outline outline-primary'
     : ''}"
   draggable="true"
   ondragstart={handleDragStart}

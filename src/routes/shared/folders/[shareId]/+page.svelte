@@ -78,7 +78,7 @@
 
 <div class="w-full">
   <Card class="bg-transparent p-2 gap-2">
-    <CardHeader class="bg-sidebar border border-sidebar-border rounded-lg p-4">
+    <CardHeader class="bg-sidebar border border-border rounded-lg p-4">
       <CardTitle class="flex items-center gap-3">
         <FolderIcon class="size-6" />
         {data.folder.name}
@@ -90,7 +90,7 @@
         {/if}
       </div>
     </CardHeader>
-    <CardContent class="bg-sidebar border border-sidebar-border rounded-lg p-4">
+    <CardContent class="bg-sidebar border border-border rounded-lg p-4">
       {#if data.items.length === 0}
         <div class="text-center py-8 text-muted-foreground">
           This folder is empty
