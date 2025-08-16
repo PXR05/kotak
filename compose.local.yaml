@@ -33,7 +33,7 @@ services:
     restart: always
     environment:
       BODY_SIZE_LIMIT: Infinity
-      ORIGIN: http://localhost:4321
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
       DATABASE_URL: ${DATABASE_URL}
       LIMITER_SECRET: ${LIMITER_SECRET}
     ports:
