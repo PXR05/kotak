@@ -22,7 +22,7 @@ export const load = async (event) => {
   if (event.locals.user) {
     return redirect(302, "/");
   }
-  if (event.url.protocol === "https:") {
+  if (process.env.PROTOCOL === 'https') {
     await limiter.cookieLimiter?.preflight(event);
   }
   return {};
@@ -30,7 +30,7 @@ export const load = async (event) => {
 
 export const actions = {
   default: async (event) => {
-    if (event.url.protocol === "https:") {
+    if (process.env.PROTOCOL === 'https') {
       const status = await limiter.check(event);
       if (status.limited) {
         return fail(429, {

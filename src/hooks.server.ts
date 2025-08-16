@@ -18,8 +18,6 @@ function isFormMethod(method: string) {
 }
 
 const csrf: Handle = async ({ event, resolve }) => {
-  console.log(event.url);
-
   if (import.meta.env.DEV) return resolve(event);
 
   const { request } = event;

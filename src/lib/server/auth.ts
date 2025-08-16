@@ -87,7 +87,7 @@ export function setSessionTokenCookie(
     expires: expiresAt,
     path: "/",
     httpOnly: true,
-    secure: event.url.protocol === "https:",
+    secure: process.env.PROTOCOL === 'https',
     sameSite: "lax",
   });
 }
@@ -96,7 +96,7 @@ export function deleteSessionTokenCookie(event: RequestEvent) {
   event.cookies.delete(sessionCookieName, {
     path: "/",
     httpOnly: true,
-    secure: event.url.protocol === "https:",
+    secure: process.env.PROTOCOL === 'https',
     sameSite: "lax",
   });
 }
