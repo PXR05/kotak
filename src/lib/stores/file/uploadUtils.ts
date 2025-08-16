@@ -23,6 +23,8 @@ export interface UploadOptions {
   folderId?: string;
   onProgress?: (progress: UploadProgress) => void;
   onFileProgress?: (fileProgress: number, fileName: string) => void;
+  onFileStart?: () => void;
+  onFileComplete?: (success: boolean) => void;
   onError?: (error: string) => void;
   onSuccess?: () => void;
 }
@@ -35,30 +37,24 @@ interface QueuedUpload {
 const uploadQueue: QueuedUpload[] = [];
 let isProcessingQueue = false;
 
-/**
- * Upload a single file with detailed progress tracking
- */
 async function uploadSingleFile(
   uploadFile: UploadableFile,
-  options: UploadOptions & {
-    folderId?: string;
-    onFileStart?: () => void;
-    onFileComplete?: (success: boolean) => void;
-  }
+  options: UploadOptions
 ): Promise<boolean> {
   return new Promise((resolve) => {
     options.onFileStart?.();
 
     const formData = new FormData();
-    formData.append("files", uploadFile.file);
     formData.append(
       "relativePaths",
       uploadFile.relativePath || uploadFile.name
     );
-
+    
     if (options.folderId) {
       formData.append("folderId", options.folderId);
     }
+    
+    formData.append("files", uploadFile.file);
 
     const xhr = new XMLHttpRequest();
 
@@ -108,9 +104,6 @@ async function uploadSingleFile(
   });
 }
 
-/**
- * Process the upload queue sequentially
- */
 async function processUploadQueue() {
   if (isProcessingQueue || uploadQueue.length === 0) {
     return;
@@ -126,9 +119,6 @@ async function processUploadQueue() {
   isProcessingQueue = false;
 }
 
-/**
- * Internal upload function that actually processes files
- */
 async function uploadFilesInternal(
   files: UploadableFile[],
   options: UploadOptions = {}
@@ -231,9 +221,6 @@ async function uploadFilesInternal(
   }
 }
 
-/**
- * Get current queue status for UI display
- */
 function getQueueStatus(): {
   queuedFiles: UploadableFile[];
   totalQueued: number;
@@ -245,14 +232,7 @@ function getQueueStatus(): {
   };
 }
 
-/**
- * File upload utilities
- */
 export const uploadUtils = {
-  /**
-   * Upload multiple files one by one
-   * If upload is in progress, files are added to queue
-   */
   async uploadFiles(
     files: UploadableFile[],
     options: UploadOptions = {}
@@ -290,15 +270,12 @@ export const uploadUtils = {
     return uploadFilesInternal(files, options);
   },
 
-  /**
-   * Handle file upload from file input with detailed progress tracking
-   */
   async handleFilesUpload(
     uploadableFiles: UploadableFile[],
     folderId?: string | null
   ): Promise<void> {
     try {
-      const success = await this.uploadFiles(uploadableFiles, {
+      await this.uploadFiles(uploadableFiles, {
         folderId: folderId || undefined,
         onError: (error) => toast.error(error),
         onSuccess: () => toast.success("Files uploaded successfully!"),
@@ -311,16 +288,10 @@ export const uploadUtils = {
     }
   },
 
-  /**
-   * Get current queue information
-   */
   getQueueInfo() {
     return getQueueStatus();
   },
 
-  /**
-   * Clear the upload queue
-   */
   clearQueue() {
     uploadQueue.length = 0;
   },

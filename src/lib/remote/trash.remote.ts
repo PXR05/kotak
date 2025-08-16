@@ -594,8 +594,8 @@ export const restoreItems = command(
             )
           );
 
-        if (trashedItems.length !== itemIds.length) {
-          return "One or more items not found in trash" as const;
+        if (trashedItems.length < itemIds.length) {
+          return "One or more items not found in trash";
         }
 
         filesToRestore = trashedItems.filter((t) => t.itemType === "file");
@@ -699,8 +699,8 @@ export const permanentDeleteItems = command(
             )
           );
 
-        if (trashedItems.length !== itemIds.length) {
-          return "One or more items not found in trash" as const;
+        if (trashedItems.length < itemIds.length) {
+          return "One or more items not found in trash";
         }
 
         const fileIds = trashedItems

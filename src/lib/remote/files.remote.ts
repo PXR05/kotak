@@ -133,7 +133,7 @@ export const moveFile = command(
         and(eq(table.file.ownerId, user.id), inArray(table.file.id, fileIds))
       );
 
-    if (filesToMove.length !== fileIds.length) {
+    if (filesToMove.length < fileIds.length) {
       return {
         error: "One or more files not found or access denied",
       };

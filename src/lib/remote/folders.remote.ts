@@ -359,7 +359,7 @@ export const moveFolder = command(
         )
       );
 
-    if (foldersToMove.length !== folderIds.length) {
+    if (foldersToMove.length < folderIds.length) {
       return {
         error: "One or more folders not found or access denied",
       };

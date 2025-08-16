@@ -59,6 +59,7 @@ export async function parseMultipartStream(
 
   let state: "boundary" | "headers" | "data" = "boundary";
   let headerBuffer = "";
+  let finished = false;
 
   try {
     while (true) {
@@ -71,22 +72,37 @@ export async function parseMultipartStream(
 
       while (buffer.length > 0) {
         if (state === "boundary") {
-          const boundaryIndex = findBoundary(buffer, boundaryBytes);
-          if (boundaryIndex === -1) break;
+          while (buffer.length >= 2 && buffer[0] === 13 && buffer[1] === 10) {
+            buffer = buffer.slice(2);
+          }
 
-          const endBoundaryIndex = findBoundary(buffer, endBoundaryBytes);
-          if (endBoundaryIndex !== -1) {
-            buffer = buffer.slice(endBoundaryIndex + endBoundaryBytes.length);
+          if (buffer.length < boundaryBytes.length) break;
+
+          const startsWithEnd = startsWith(buffer, endBoundaryBytes);
+          if (startsWithEnd) {
+            buffer = buffer.slice(endBoundaryBytes.length);
+            finished = true;
             break;
           }
 
-          buffer = buffer.slice(boundaryIndex + boundaryBytes.length);
-          // skip \r\n
-          if (buffer.length >= 2 && buffer[0] === 13 && buffer[1] === 10) {
-            buffer = buffer.slice(2);
+          const startsWithBoundary = startsWith(buffer, boundaryBytes);
+          if (startsWithBoundary) {
+            buffer = buffer.slice(boundaryBytes.length);
+            if (buffer.length >= 2 && buffer[0] === 13 && buffer[1] === 10) {
+              buffer = buffer.slice(2); // skip \r\n
+            }
+            state = "headers";
+            headerBuffer = "";
+            continue;
           }
-          state = "headers";
-          headerBuffer = "";
+
+          const boundaryIndex = indexOfSequence(buffer, boundaryBytes, 0);
+          if (boundaryIndex === -1) {
+            break;
+          } else {
+            buffer = buffer.slice(boundaryIndex);
+            continue;
+          }
         } else if (state === "headers") {
           const headerEndIndex = findHeaderEnd(buffer);
           if (headerEndIndex === -1) break;
@@ -131,7 +147,7 @@ export async function parseMultipartStream(
 
           state = "data";
         } else if (state === "data") {
-          const nextBoundaryIndex = findBoundary(buffer, boundaryBytes);
+          const nextBoundaryIndex = indexOfSequence(buffer, boundaryBytes, 0);
 
           if (nextBoundaryIndex === -1) {
             if (currentFile) {
@@ -189,7 +205,9 @@ export async function parseMultipartStream(
             state = "boundary";
           }
         }
+        if (finished) break;
       }
+      if (finished) break;
     }
   } finally {
     if (currentFile?.writeStream) {
@@ -214,25 +232,29 @@ function concatUint8Arrays(a: Uint8Array, b: Uint8Array): Uint8Array {
   return result;
 }
 
-function findBoundary(buffer: Uint8Array, boundary: Uint8Array): number {
-  if (buffer.length < boundary.length) return -1;
-
-  const lastChar = boundary[boundary.length - 1];
-  const maxIndex = buffer.length - boundary.length;
-
-  for (let i = 0; i <= maxIndex; i++) {
-    if (buffer[i + boundary.length - 1] === lastChar) {
-      let match = true;
-      for (let j = 0; j < boundary.length - 1; j++) {
-        if (buffer[i + j] !== boundary[j]) {
-          match = false;
-          break;
-        }
-      }
-      if (match) return i;
+function indexOfSequence(
+  buffer: Uint8Array,
+  seq: Uint8Array,
+  from = 0
+): number {
+  if (seq.length === 0) return -1;
+  const max = buffer.length - seq.length;
+  for (let i = from; i <= max; i++) {
+    let j = 0;
+    for (; j < seq.length; j++) {
+      if (buffer[i + j] !== seq[j]) break;
     }
+    if (j === seq.length) return i;
   }
   return -1;
+}
+
+function startsWith(buffer: Uint8Array, seq: Uint8Array): boolean {
+  if (buffer.length < seq.length) return false;
+  for (let i = 0; i < seq.length; i++) {
+    if (buffer[i] !== seq[i]) return false;
+  }
+  return true;
 }
 
 function findHeaderEnd(buffer: Uint8Array): number {

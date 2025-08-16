@@ -1,4 +1,4 @@
-import { selectedItems, currentFolderId, fileOperations } from "$lib/stores";
+import { selectedItems, fileOperations } from "$lib/stores";
 import type { FileItem } from "$lib/types/file.js";
 
 export function createDragState() {

@@ -50,17 +50,13 @@ export const POST = async ({ request, locals }) => {
   if (!contentType?.includes("multipart/form-data"))
     return error(400, "Invalid content type");
 
-  let folderId: string | undefined;
   const uploadedFiles = [];
 
   try {
     const { files, fields } = await parseMultipartStream(request);
 
-    const folderIds = fields.get("folderId");
-    if (folderIds && folderIds.length > 0) {
-      folderId = folderIds[0];
-    }
-
+    let folderId = fields.get("folderId")?.[0];
+    
     if (!folderId) {
       const rootFolder = await ensureRootFolder(locals.user.id);
       folderId = rootFolder.id;
