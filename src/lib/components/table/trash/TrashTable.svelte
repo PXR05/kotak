@@ -56,7 +56,6 @@
   const handleRestore = async (item: TrashedItem) => {
     try {
       await fileOperations.restoreItem(item);
-      invalidateAll();
     } catch (error) {
       console.error("Failed to restore item:", error);
     }
@@ -74,7 +73,6 @@
       async () => {
         try {
           await fileOperations.permanentlyDeleteItem(item);
-          invalidateAll();
         } catch (error) {
           console.error("Failed to permanently delete item:", error);
         }
@@ -102,7 +100,6 @@
   const handleBulkRestore = async (selected: TrashedItem[]) => {
     try {
       await fileOperations.bulkRestore(selected);
-      invalidateAll();
     } catch (error) {
       console.error("Failed to bulk restore:", error);
       toast.error("Failed to restore some items");
@@ -121,7 +118,6 @@
       async () => {
         try {
           await fileOperations.bulkPermanentDelete(selected);
-          invalidateAll();
         } catch (error) {
           console.error("Failed to bulk delete:", error);
           toast.error("Failed to delete some items");

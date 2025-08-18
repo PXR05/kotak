@@ -26,13 +26,13 @@
 {#if uploadProgressStore.isVisible && uploadProgressStore.uploadProgress}
   <div
     transition:slide={{ duration: 150, axis: "y" }}
-    class="fixed bottom-4 right-4 z-50 md:w-96 w-full max-w-[calc(100dvw-2rem)]"
+    class="fixed bottom-4 max-md:left-4 md:right-4 z-50 md:w-96 w-full max-w-[calc(100dvw-6rem)]"
   >
     <div
       class="flex flex-col bg-sidebar rounded-lg border border-border shadow-sm overflow-clip"
     >
       <!-- Header -->
-      <div class="flex items-center justify-between p-3 bg-muted/50">
+      <div class="flex items-center justify-between p-4 bg-muted/50">
         <div class="flex items-center gap-2 flex-1 text-sm font-medium">
           {#if uploadProgressStore.uploadProgress.overallProgress >= 100}
             Upload complete ({uploadProgressStore.uploadProgress

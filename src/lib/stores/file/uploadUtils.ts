@@ -3,6 +3,8 @@ import type { UploadableFile } from "$lib/types/file.js";
 import { isUploading } from "./fileState.svelte.js";
 import { uploadProgressStore } from "./uploadProgress.svelte.js";
 import { toast } from "svelte-sonner";
+import { getFolderChildren } from "$lib/remote/folders.remote";
+import { getRootItems } from "$lib/remote/load.remote";
 
 export interface FileProgress {
   fileName: string;
@@ -49,11 +51,11 @@ async function uploadSingleFile(
       "relativePaths",
       uploadFile.relativePath || uploadFile.name
     );
-    
+
     if (options.folderId) {
       formData.append("folderId", options.folderId);
     }
-    
+
     formData.append("files", uploadFile.file);
 
     const xhr = new XMLHttpRequest();
@@ -127,6 +129,8 @@ async function uploadFilesInternal(
   let successCount = 0;
   const totalFiles = files.length;
 
+  const { folderId } = options;
+
   const fileProgresses = new Map<string, FileProgress>();
   files.forEach((file) => {
     fileProgresses.set(file.name, {
@@ -136,7 +140,15 @@ async function uploadFilesInternal(
     });
   });
 
-  const updateProgress = (overallProgress: number, currentFile?: string) => {
+  function refreshFolder(folderId: string | undefined) {
+    if (!folderId || folderId.startsWith("root-")) {
+      getRootItems().refresh();
+    } else {
+      getFolderChildren(folderId).refresh();
+    }
+  }
+
+  function updateProgress(overallProgress: number, currentFile?: string) {
     const progressData: UploadProgress = {
       overallProgress,
       currentFile,
@@ -152,7 +164,7 @@ async function uploadFilesInternal(
     }
 
     options.onProgress?.(progressData);
-  };
+  }
 
   try {
     updateProgress(0);
@@ -197,15 +209,15 @@ async function uploadFilesInternal(
         i + 1 < files.length ? files[i + 1].name : undefined
       );
 
-      invalidateAll();
+      refreshFolder(folderId);
     }
 
     updateProgress(100);
 
     if (successCount > 0) {
-      await invalidateAll();
       if (successCount === totalFiles) {
         options.onSuccess?.();
+        refreshFolder(folderId);
       }
       return successCount === totalFiles;
     } else {

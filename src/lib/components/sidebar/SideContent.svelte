@@ -1,22 +1,37 @@
 <script lang="ts">
-  import { page } from "$app/state";
   import { LoaderIcon } from "@lucide/svelte";
   import FileTree from "./FileTree.svelte";
   import { getRootItems } from "$lib/remote/load.remote";
-  
-  const rootItems = $derived(getRootItems());
+  import type { FileItem } from "$lib/types/file";
+
+  let isLoading = $state(true);
+  let isInitialLoad = $state(true);
+  let rootItems: FileItem[] = $state([]);
+  let error: string | null = $state(null);
+
+  $effect(() => {
+    getRootItems().then(({ data, error }) => {
+      if (error) {
+        error = error;
+      } else {
+        rootItems = data ?? [];
+      }
+      isLoading = false;
+      isInitialLoad = false;
+    });
+  });
 </script>
 
-{#await rootItems}
+{#if isInitialLoad}
   <div class="p-4 text-sm text-muted-foreground">
     <LoaderIcon class="animate-spin size-4 text-primary m-auto" />
   </div>
-{:then {data: items, error}}
-  {#if error}
-    <div class="p-4 text-sm">Failed to load root items: {error}</div>
-  {:else}
-    <FileTree rootItems={items!} />
-  {/if}
-{:catch}
-  <div class="p-4 text-sm">Failed to load files</div>
-{/await}
+{:else if error}
+  <div class="p-4 text-sm text-muted-foreground">
+    Failed to load files: {error}
+  </div>
+{:else}
+  <div class={isLoading ? "opacity-50 pointer-events-none" : ""}>
+    <FileTree {rootItems} />
+  </div>
+{/if}

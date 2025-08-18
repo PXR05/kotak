@@ -15,11 +15,12 @@
     CardHeader,
     CardTitle,
   } from "$lib/components/ui/card/index.js";
-  import { afterNavigate, invalidateAll } from "$app/navigation";
+  import { afterNavigate } from "$app/navigation";
   import { getTrashedItems } from "$lib/remote/load.remote.js";
   import type { FileItem, TrashedItem } from "$lib/types/file.js";
 
   let isLoading = $state(false);
+  let isInitialLoad = $state(true);
   let error = $state<string | null>(null);
   let trashedItems: (FileItem & TrashedItem)[] = $state([]);
 
@@ -40,6 +41,7 @@
         initPreviewFromUrl(trashedItems);
       }
       isLoading = false;
+      isInitialLoad = false;
     }
 
     loadItems();
@@ -77,7 +79,6 @@
       async () => {
         try {
           await fileOperations.bulkPermanentDelete(trashedItems);
-          invalidateAll();
         } catch (error) {
           console.error("Failed to empty trash:", error);
           toast.error("Failed to empty trash");
@@ -109,7 +110,7 @@
     </div>
   </div>
 
-  {#if isLoading}
+  {#if isInitialLoad}
     <div class="text-center m-auto">
       <LoaderIcon class="animate-spin size-6 text-primary mx-auto mb-4" />
       <p class="text-muted-foreground">Loading files and folders...</p>
@@ -129,7 +130,7 @@
       </CardContent>
     </Card>
   {:else}
-    <div class="flex-1 overflow-hidden">
+    <div class={isLoading ? "opacity-50 pointer-events-none" : ""}>
       <TrashTable items={trashedItems} />
     </div>
   {/if}

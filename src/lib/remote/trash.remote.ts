@@ -55,7 +55,8 @@ async function getFileRecordsForFolderIds(
     );
 }
 
-export const restoreFile = command(
+export const 
+restoreFile = command(
   z.object({
     itemId: z.string(),
   }),

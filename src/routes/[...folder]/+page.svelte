@@ -17,6 +17,7 @@
   const { data } = $props();
   const { user, currentFolderId } = $derived(data);
   let currentItems: FileItem[] = $state([]);
+  let isInitialLoad = $state(true);
   let isLoading = $state(true);
   let error = $state<string | null>(null);
 
@@ -30,7 +31,9 @@
     async function load() {
       error = null;
       const hasCurrentFolder = currentFolderId && currentFolderId.length > 0;
-      const { data, error: err } = await (hasCurrentFolder ? getFolderChildren(currentFolderId) : getRootItems());
+      const { data, error: err } = await (hasCurrentFolder
+        ? getFolderChildren(currentFolderId)
+        : getRootItems());
       if (err) {
         error = err;
         toast.error(err);
@@ -38,7 +41,8 @@
         currentItems = data ?? [];
         initAllDialogsFromUrl(data ?? []);
       }
-      isLoading = false; 
+      isLoading = false;
+      isInitialLoad = false;
     }
     load();
   });
@@ -51,7 +55,7 @@
 <svelte:window onpopstate={() => handleAllUrlChanges(currentItems)} />
 
 {#if data.user}
-  {#if isLoading}
+  {#if isInitialLoad}
     <div class="text-center m-auto">
       <LoaderIcon class="animate-spin size-6 text-primary mx-auto mb-4" />
       <p class="text-muted-foreground">Loading files and folders...</p>
@@ -59,7 +63,9 @@
   {:else if error}
     <Error messages={[error]} status={500} statusMessage={error} />
   {:else}
-    <FileTable items={currentItems} currentFolderId={data.currentFolderId} />
+    <div class={isLoading ? "opacity-50 pointer-events-none" : ""}>
+      <FileTable items={currentItems} currentFolderId={data.currentFolderId} />
+    </div>
     <div class="fixed bottom-4 right-4 md:hidden">
       <UploadButton />
     </div>

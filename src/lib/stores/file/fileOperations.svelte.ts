@@ -98,7 +98,6 @@ export const fileOperations = {
       return;
     }
     toast.success(`"${item.name}" moved to trash successfully`);
-    invalidateAll();
     fileOperations.clearSelection();
   },
 
