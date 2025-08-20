@@ -15,14 +15,13 @@
   import TrashTableHeader from "./TrashTableHeader.svelte";
   import TrashTableRow from "./TrashTableRow.svelte";
   import { openConfirmationDialog } from "$lib/stores/dialogs/confirmationDialog.svelte.js";
-  import { openFilePreviewDialog } from "$lib/stores/dialogs/filePreviewDialog.svelte.js";
   import { fileOperations, selectedItems } from "$lib/stores";
   import { toast } from "svelte-sonner";
   import { TrashIcon } from "@lucide/svelte";
   import TrashTableContextMenu from "./TrashTableContextMenu.svelte";
   import { invalidateAll } from "$app/navigation";
   import { IsMobile } from "$lib/hooks/is-mobile.svelte";
-  import FileContextMenu from "../file/FileContextMenu.svelte";
+  import TrashItemContextMenu from "./TrashItemContextMenu.svelte";
   import { onMount } from "svelte";
 
   let {
@@ -80,23 +79,6 @@
     );
   };
 
-  const handlePreview = (item: TrashedItem) => {
-    if (item.type === "file") {
-      const fileItem = {
-        id: item.itemId,
-        name: item.name,
-        type: "file" as const,
-        ownerId: "",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        folderId: item.originalFolderId || "",
-      };
-      openFilePreviewDialog(fileItem);
-    } else {
-      toast.info("Folder preview not available in trash");
-    }
-  };
-
   const handleBulkRestore = async (selected: TrashedItem[]) => {
     try {
       await fileOperations.bulkRestore(selected);
@@ -126,11 +108,7 @@
     );
   };
 
-  const columns = createTrashTableColumns(
-    handleRestore,
-    handlePermanentDelete,
-    handlePreview
-  );
+  const columns = createTrashTableColumns(handleRestore, handlePermanentDelete);
 
   const table = createSvelteTable({
     get data() {
@@ -277,20 +255,11 @@
 
   <Table.Root bind:containerRef>
     <TrashTableHeader {table} onContextAction={handleContextAction} />
-    <FileContextMenu
-      item={activeRow
-        ? {
-            id: activeRow.original.itemId,
-            name: activeRow.original.name,
-            type: activeRow.original.type,
-            ownerId: "",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            folderId: activeRow.original.originalFolderId || undefined,
-            parentId: activeRow.original.originalParentId || undefined,
-          }
-        : undefined}
-      rowItem={activeRow as unknown as Row<FileItem>}
+    <TrashItemContextMenu
+      item={activeRow?.original}
+      rowItem={activeRow}
+      onRestore={handleRestore}
+      onPermanentDelete={handlePermanentDelete}
     >
       {#snippet children({ props, open })}
         <Table.Body {...props}>
@@ -301,9 +270,6 @@
               <TrashTableRow
                 {row}
                 {table}
-                onRestore={handleRestore}
-                onPermanentDelete={handlePermanentDelete}
-                onPreview={handlePreview}
                 onHover={(r) => {
                   if (!lockRow) {
                     activeRow = r;
@@ -316,7 +282,7 @@
           {/each}
         </Table.Body>
       {/snippet}
-    </FileContextMenu>
+    </TrashItemContextMenu>
   </Table.Root>
 
   <TrashTableContextMenu onAction={handleContextAction}>

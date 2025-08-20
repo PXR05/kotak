@@ -12,6 +12,9 @@
     InfoIcon,
     FileIcon,
     HardDriveIcon,
+    LockIcon,
+    LockOpenIcon,
+    ShieldIcon,
   } from "@lucide/svelte";
   import { closeInfoDialog, infoDialogData } from "$lib/stores";
 
@@ -73,6 +76,23 @@
                 >
                   {file.mimeType}
                 </span>
+              </div>
+            {/if}
+
+            {#if file.type === "file"}
+              <div class="grid grid-cols-[80px_1fr] gap-3 items-center">
+                <span class="text-xs text-muted-foreground font-medium"
+                  >Security</span
+                >
+                <div class="flex items-center gap-2">
+                  {#if file.isEncrypted}
+                    <LockIcon class="size-3 text-muted-foreground" />
+                    <span class="text-sm font-medium">Encrypted</span>
+                  {:else}
+                    <LockOpenIcon class="size-3 text-muted-foreground" />
+                    <span class="text-sm font-medium">Unencrypted</span>
+                  {/if}
+                </div>
               </div>
             {/if}
           </div>

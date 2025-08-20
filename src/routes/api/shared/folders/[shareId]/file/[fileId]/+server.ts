@@ -1,8 +1,12 @@
 import { json, error } from "@sveltejs/kit";
-import { getFileStream } from "$lib/server/storage";
+import {
+  getFileStream,
+  getDecryptedFileStreamWithDEK,
+} from "$lib/server/storage";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
+import { CryptoUtils } from "$lib/server/crypto";
 
 async function validateFolderShareFileAccess(
   shareId: string,
@@ -52,7 +56,15 @@ async function validateFolderShareFileAccess(
   }
 
   const [file] = await db
-    .select()
+    .select({
+      id: table.file.id,
+      name: table.file.name,
+      storageKey: table.file.storageKey,
+      mimeType: table.file.mimeType,
+      folderId: table.file.folderId,
+      ownerId: table.file.ownerId,
+      encryptedDek: table.file.encryptedDek,
+    })
     .from(table.file)
     .where(eq(table.file.id, fileId));
 
@@ -119,10 +131,30 @@ export const GET = async ({ params, url, locals }) => {
     error(404, "Shared file not found or access denied");
   }
 
-  const { file } = shareData;
+  const { file, folderShare } = shareData;
 
   try {
-    const fileStream = getFileStream(file.storageKey);
+    let fileStream: ReadableStream;
+
+    if (file.encryptedDek) {
+      const isOwner = locals.user?.id === file.ownerId;
+
+      if (isOwner) {
+        if (!locals.umk) {
+          error(401, "Session expired - please log in again");
+        }
+
+        const dek = CryptoUtils.decryptDEK(file.encryptedDek, locals.umk);
+        fileStream = await getDecryptedFileStreamWithDEK(file.storageKey, dek);
+      } else {
+        error(
+          403,
+          "Cannot access encrypted files in shared folders unless you are the owner"
+        );
+      }
+    } else {
+      fileStream = getFileStream(file.storageKey);
+    }
 
     const encodedFilename = encodeURIComponent(file.name);
     const asciiFilename = file.name.replace(/[^\x20-\x7E]/g, "");

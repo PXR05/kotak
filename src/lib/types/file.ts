@@ -10,6 +10,7 @@ export type FileItem = {
   mimeType?: string;
   storageKey?: string;
   folderId?: string;
+  isEncrypted?: boolean;
   // Folder
   parentId?: string | null;
 };
@@ -39,4 +40,6 @@ export interface TrashedItem {
   originalParentId?: string | null;
   trashedAt: Date;
   name: string;
+  encryptedDek?: string | null;
+  isEncrypted?: boolean;
 }

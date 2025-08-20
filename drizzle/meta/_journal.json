@@ -15,6 +15,20 @@
       "when": 1752837209410,
       "tag": "0001_purple_living_mummy",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1755608704972,
+      "tag": "0002_slim_ender_wiggin",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1755668571491,
+      "tag": "0003_wealthy_starhawk",
+      "breakpoints": true
     }
   ]
 }

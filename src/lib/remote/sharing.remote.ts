@@ -4,6 +4,7 @@ import * as table from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import * as z from "zod/mini";
+import { CryptoUtils } from "$lib/server/crypto";
 
 export const shareFile = command(
   z.object({
@@ -14,7 +15,7 @@ export const shareFile = command(
   }),
   async ({ itemId, isPublic, emails, expiresAt }) => {
     const {
-      locals: { user },
+      locals: { user, umk },
     } = getRequestEvent();
     if (!user) {
       return {
@@ -35,7 +36,13 @@ export const shareFile = command(
     }
 
     const [file] = await db
-      .select()
+      .select({
+        id: table.file.id,
+        name: table.file.name,
+        storageKey: table.file.storageKey,
+        ownerId: table.file.ownerId,
+        encryptedDek: table.file.encryptedDek,
+      })
       .from(table.file)
       .where(
         and(eq(table.file.storageKey, itemId), eq(table.file.ownerId, user.id))
@@ -45,6 +52,25 @@ export const shareFile = command(
       return {
         error: "File not found or access denied",
       };
+    }
+
+    let decryptedDek: string | undefined;
+    if (file.encryptedDek) {
+      if (!umk) {
+        return {
+          error:
+            "Session expired - please log in again to share encrypted files",
+        };
+      }
+
+      try {
+        decryptedDek = CryptoUtils.decryptDEK(file.encryptedDek, umk);
+      } catch (error) {
+        console.error("Failed to decrypt DEK for sharing:", error);
+        return {
+          error: "Failed to decrypt file for sharing",
+        };
+      }
     }
 
     try {
@@ -69,6 +95,7 @@ export const shareFile = command(
             .set({
               isPublic,
               expiresAt: expirationDate,
+              decryptedDek,
             })
             .where(eq(table.fileShare.id, shareId));
 
@@ -84,6 +111,7 @@ export const shareFile = command(
             permissions: "read",
             isPublic,
             expiresAt: expirationDate,
+            decryptedDek,
           });
         }
 
@@ -272,7 +300,11 @@ export const deleteFileShare = command(
     }
 
     const [file] = await db
-      .select()
+      .select({
+        id: table.file.id,
+        storageKey: table.file.storageKey,
+        ownerId: table.file.ownerId,
+      })
       .from(table.file)
       .where(
         and(eq(table.file.storageKey, itemId), eq(table.file.ownerId, user.id))
@@ -438,7 +470,11 @@ export const getFileShare = query(
     }
 
     const [file] = await db
-      .select()
+      .select({
+        id: table.file.id,
+        storageKey: table.file.storageKey,
+        ownerId: table.file.ownerId,
+      })
       .from(table.file)
       .where(
         and(eq(table.file.storageKey, itemId), eq(table.file.ownerId, user.id))

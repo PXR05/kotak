@@ -8,7 +8,6 @@ import FileTableSortableHeader from "../file/FileTableSortableHeader.svelte";
 export function createTrashTableColumns(
   onRestore: (item: TrashedItem) => void,
   onPermanentDelete: (item: TrashedItem) => void,
-  onPreview: (item: TrashedItem) => void
 ): ColumnDef<TrashedItem>[] {
   return [
     {
@@ -34,6 +33,7 @@ export function createTrashTableColumns(
           mimeType: undefined,
           size: undefined,
           storageKey: undefined,
+          isEncrypted: item.type === "file" ? !!item.encryptedDek : undefined,
         };
         return renderComponent(FileTableName, {
           item: fileItem,
@@ -101,7 +101,6 @@ export function createTrashTableColumns(
           item,
           onRestore,
           onPermanentDelete,
-          onPreview,
         });
       },
     },

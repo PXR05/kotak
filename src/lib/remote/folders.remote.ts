@@ -110,6 +110,7 @@ export const getFolderChildren = query(z.string(), async (folderId) => {
         folderId: table.file.folderId,
         size: table.file.size,
         mimeType: table.file.mimeType,
+        isEncrypted: table.file.encryptedDek,
         createdAt: table.file.createdAt,
         updatedAt: table.file.updatedAt,
       })
@@ -127,6 +128,7 @@ export const getFolderChildren = query(z.string(), async (folderId) => {
       ...childFiles.map((f) => ({
         ...f,
         type: "file" as const,
+        isEncrypted: f.isEncrypted !== null,
       })),
     ];
 

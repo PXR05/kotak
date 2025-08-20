@@ -5,9 +5,8 @@
   import { CloudIcon, TrashIcon } from "@lucide/svelte";
   import Progress from "../ui/progress/progress.svelte";
   import { Tween } from "svelte/motion";
-  import { quintInOut } from "svelte/easing";
-  import { onMount } from "svelte";
   import UpdatePopup from "../shared/UpdatePopup.svelte";
+  import UMKRestorePopup from "../shared/UMKRestorePopup.svelte";
 
   let loading = $state(true);
   let status = $state<{ total: number; free: number; used: number } | null>(
@@ -28,7 +27,7 @@
 
 <Sidebar.Group class="p-0">
   <Sidebar.GroupContent>
-    <Sidebar.Menu class="flex flex-col gap-2">
+    <Sidebar.Menu class="flex flex-col">
       <Sidebar.MenuItem>
         <Sidebar.MenuButton data-active={page.url.pathname === "/trash"}>
           {#snippet child({ props })}
@@ -40,9 +39,9 @@
         </Sidebar.MenuButton>
       </Sidebar.MenuItem>
 
-      <Sidebar.Separator />
+      <Sidebar.Separator class="mt-2" />
 
-      <Sidebar.MenuItem>
+      <Sidebar.MenuItem class="mt-2">
         <div class="flex flex-col gap-2 my-1 px-2">
           <div class="flex items-center gap-2">
             <CloudIcon class="size-4" />
@@ -74,6 +73,10 @@
 
       <Sidebar.MenuItem>
         <UpdatePopup />
+      </Sidebar.MenuItem>
+
+      <Sidebar.MenuItem>
+        <UMKRestorePopup />
       </Sidebar.MenuItem>
     </Sidebar.Menu>
   </Sidebar.GroupContent>

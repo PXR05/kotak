@@ -6,6 +6,7 @@ import { db } from "./db/index.js";
 import { file } from "./db/schema.js";
 import { eq, sum } from "drizzle-orm";
 import lqipModern from "lqip-modern";
+import { CryptoUtils } from "./crypto.js";
 
 const STORAGE_PATH = path.resolve(process.cwd(), "storage");
 
@@ -13,19 +14,41 @@ mkdir(STORAGE_PATH, { recursive: true }).catch((e) => {
   console.error("Failed to create storage directory on startup.", e);
 });
 
-/**
- * Creates a file from a stream that's already been written to storage.
- * This is used when files are processed via streaming multipart parsing.
- */
 export async function createFile(
   storageKey: string,
   filename: string,
   mimeType: string,
-  size: number
-) {
+  fileData: Buffer,
+  umk?: string
+): Promise<{
+  storageKey: string;
+  size: number;
+  mimeType: string;
+  name: string;
+  encryptedDek?: string;
+}> {  
   const filePath = path.join(STORAGE_PATH, storageKey);
 
-  if (mimeType.startsWith("image/")) {
+  let encryptedDek: string | undefined;
+  let finalFileData = fileData;
+
+  if (umk) {
+    const dek = CryptoUtils.generateDEK();
+    const encryptionResult = CryptoUtils.encryptBuffer(fileData, dek);
+    encryptedDek = CryptoUtils.encryptDEK(dek, umk);
+
+    const encryptedFileBuffer = Buffer.concat([
+      Buffer.from(encryptionResult.iv, "base64"),
+      Buffer.from(encryptionResult.tag, "base64"),
+      Buffer.from(encryptionResult.encrypted, "base64"),
+    ]);
+
+    finalFileData = encryptedFileBuffer;
+  }
+
+  await writeFile(filePath, finalFileData);
+
+  if (mimeType.startsWith("image/") && !umk) {
     try {
       const placeholder = await lqipModern(filePath, {
         outputFormat: "webp",
@@ -40,26 +63,86 @@ export async function createFile(
 
   return {
     storageKey,
-    size,
+    size: finalFileData.length,
     mimeType: mimeType || "application/octet-stream",
     name: filename,
+    encryptedDek,
   };
 }
 
-/**
- * Gets a readable stream for a file from storage.
- * This is for streaming file contents in a response.
- */
 export function getFileStream(storageKey: string): ReadableStream {
   const filePath = path.join(STORAGE_PATH, storageKey);
   const fileStream = createReadStream(filePath);
   return Readable.toWeb(fileStream) as ReadableStream;
 }
 
-/**
- * Deletes a file from storage.
- * It will not throw an error if the file does not exist.
- */
+export async function getDecryptedFileStream(
+  storageKey: string,
+  encryptedDek: string,
+  umk: string
+): Promise<ReadableStream> {
+  const filePath = path.join(STORAGE_PATH, storageKey);
+  const encryptedData = await import("node:fs/promises").then((fs) =>
+    fs.readFile(filePath)
+  );
+
+  const dek = CryptoUtils.decryptDEK(encryptedDek, umk);
+
+  const ivLength = 16;
+  const tagLength = 16;
+
+  const iv = encryptedData.subarray(0, ivLength).toString("base64");
+  const tag = encryptedData
+    .subarray(ivLength, ivLength + tagLength)
+    .toString("base64");
+  const encrypted = encryptedData
+    .subarray(ivLength + tagLength)
+    .toString("base64");
+
+  const decryptedData = CryptoUtils.decryptBuffer({ iv, tag, encrypted }, dek);
+
+  const readable = new ReadableStream({
+    start(controller) {
+      controller.enqueue(decryptedData);
+      controller.close();
+    },
+  });
+
+  return readable;
+}
+
+export async function getDecryptedFileStreamWithDEK(
+  storageKey: string,
+  dek: string
+): Promise<ReadableStream> {
+  const filePath = path.join(STORAGE_PATH, storageKey);
+  const encryptedData = await import("node:fs/promises").then((fs) =>
+    fs.readFile(filePath)
+  );
+
+  const ivLength = 16;
+  const tagLength = 16;
+
+  const iv = encryptedData.subarray(0, ivLength).toString("base64");
+  const tag = encryptedData
+    .subarray(ivLength, ivLength + tagLength)
+    .toString("base64");
+  const encrypted = encryptedData
+    .subarray(ivLength + tagLength)
+    .toString("base64");
+
+  const decryptedData = CryptoUtils.decryptBuffer({ iv, tag, encrypted }, dek);
+
+  const readable = new ReadableStream({
+    start(controller) {
+      controller.enqueue(decryptedData);
+      controller.close();
+    },
+  });
+
+  return readable;
+}
+
 export async function deleteFile(storageKey: string): Promise<void> {
   const filePath = path.join(STORAGE_PATH, storageKey);
   try {
@@ -72,9 +155,6 @@ export async function deleteFile(storageKey: string): Promise<void> {
   }
 }
 
-/**
- * Gets the server's storage status.
- */
 export async function getStorageStatus(userId?: string): Promise<{
   total: number;
   free: number;

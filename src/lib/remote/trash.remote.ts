@@ -55,8 +55,7 @@ async function getFileRecordsForFolderIds(
     );
 }
 
-export const 
-restoreFile = command(
+export const restoreFile = command(
   z.object({
     itemId: z.string(),
   }),
@@ -245,6 +244,17 @@ export const trashItem = command(
     try {
       let trashRecord: any;
       await db.transaction(async (tx) => {
+        let encryptedDek: string | null = null;
+
+        if (itemType === "file") {
+          const [fileRecord] = await tx
+            .select({ encryptedDek: table.file.encryptedDek })
+            .from(table.file)
+            .where(eq(table.file.id, itemId));
+
+          encryptedDek = fileRecord?.encryptedDek || null;
+        }
+
         [trashRecord] = await tx
           .insert(table.trashedItem)
           .values({
@@ -258,6 +268,7 @@ export const trashItem = command(
             ownerId: user.id,
             trashedAt: new Date(),
             name,
+            encryptedDek,
           })
           .returning();
 
@@ -488,6 +499,26 @@ export const trashItems = command(
       await db.transaction(async (tx) => {
         const trashFolder = await ensureTrashFolder(user.id);
 
+        const fileIds = items
+          .filter((i) => i.itemType === "file")
+          .map((i) => i.itemId);
+
+        const fileEncryptionMap = new Map<string, string | null>();
+
+        if (fileIds.length > 0) {
+          const fileRecords = await tx
+            .select({
+              id: table.file.id,
+              encryptedDek: table.file.encryptedDek,
+            })
+            .from(table.file)
+            .where(inArray(table.file.id, fileIds));
+
+          fileRecords.forEach((record) => {
+            fileEncryptionMap.set(record.id, record.encryptedDek);
+          });
+        }
+
         await tx.insert(table.trashedItem).values(
           items.map((i) => ({
             id: `trash-${Date.now()}-${Math.random()
@@ -500,12 +531,13 @@ export const trashItems = command(
             ownerId: user.id,
             trashedAt: new Date(),
             name: i.name,
+            encryptedDek:
+              i.itemType === "file"
+                ? fileEncryptionMap.get(i.itemId) || null
+                : null,
           }))
         );
 
-        const fileIds = items
-          .filter((i) => i.itemType === "file")
-          .map((i) => i.itemId);
         const folderIds = items
           .filter((i) => i.itemType === "folder")
           .map((i) => i.itemId);

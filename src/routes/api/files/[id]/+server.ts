@@ -2,7 +2,7 @@ import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
-import { getFileStream } from "$lib/server/storage";
+import { getFileStream, getDecryptedFileStream } from "$lib/server/storage";
 
 export const GET = async ({ params, url, locals }) => {
   if (!locals.user) {
@@ -24,6 +24,7 @@ export const GET = async ({ params, url, locals }) => {
       storageKey: table.file.storageKey,
       name: table.file.name,
       mimeType: table.file.mimeType,
+      encryptedDek: table.file.encryptedDek,
     })
     .from(table.file)
     .where(
@@ -38,9 +39,23 @@ export const GET = async ({ params, url, locals }) => {
   }
 
   try {
-    const fileStream = getFileStream(
-      file.storageKey + (placeholder === "true" ? ".webp" : "")
-    );
+    let fileStream: ReadableStream;
+
+    if (file.encryptedDek) {
+      if (!locals.umk) {
+        error(401, "Session expired - please log in again");
+      }
+
+      fileStream = await getDecryptedFileStream(
+        file.storageKey,
+        file.encryptedDek,
+        locals.umk
+      );
+    } else {
+      fileStream = getFileStream(
+        file.storageKey + (placeholder === "true" ? ".webp" : "")
+      );
+    }
 
     const encodedFilename = encodeURIComponent(file.name);
     const asciiFilename = file.name.replace(/[^\x20-\x7E]/g, "");

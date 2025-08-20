@@ -5,9 +5,11 @@
     FileIcon,
     FileTextIcon,
     ImageIcon,
-    FileVideoIcon,
+    FileVideoCameraIcon,
     FileAudioIcon,
     ArchiveIcon,
+    LockIcon,
+    LockOpenIcon,
   } from "@lucide/svelte";
 
   let {
@@ -19,7 +21,7 @@
 
   function getIconFromMimeType(mimeType: string) {
     if (mimeType.startsWith("image/")) return ImageIcon;
-    if (mimeType.startsWith("video/")) return FileVideoIcon;
+    if (mimeType.startsWith("video/")) return FileVideoCameraIcon;
     if (mimeType.startsWith("audio/")) return FileAudioIcon;
     if (
       mimeType === "application/zip" ||
@@ -54,7 +56,21 @@
     strokeWidth={1.5}
   />
   <span
-    class="w-full max-w-[calc(100dvw-8.5rem)] md:max-w-[calc(100dvw-42rem)] truncate"
-    >{item.name}</span
+    class="w-full max-w-[calc(100dvw-7.75rem)] md:max-w-[calc(100dvw-43rem)] truncate"
   >
+    {item.name}
+  </span>
+  {#if item.isEncrypted}
+    <LockIcon
+      class="size-4 text-muted-foreground max-md:hidden"
+      absoluteStrokeWidth
+      strokeWidth={1.5}
+    />
+  {:else if item.type === "file"}
+    <LockOpenIcon
+      class="size-4 text-muted-foreground max-md:hidden"
+      absoluteStrokeWidth
+      strokeWidth={1.5}
+    />
+  {/if}
 </div>

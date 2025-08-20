@@ -56,7 +56,7 @@ export const POST = async ({ request, locals }) => {
     const { files, fields } = await parseMultipartStream(request);
 
     let folderId = fields.get("folderId")?.[0];
-    
+
     if (!folderId) {
       const rootFolder = await ensureRootFolder(locals.user.id);
       folderId = rootFolder.id;
@@ -106,11 +106,17 @@ export const POST = async ({ request, locals }) => {
           locals.user.id
         );
 
+        const filePath = `storage/${file.storageKey}`;
+        const fileData = await import("node:fs/promises").then((fs) =>
+          fs.readFile(filePath)
+        );
+
         const fileMetadata = await createFile(
           file.storageKey,
           file.filename,
           file.mimeType,
-          file.size
+          fileData,
+          locals.umk || undefined
         );
 
         const [dbFile] = await db
@@ -123,6 +129,7 @@ export const POST = async ({ request, locals }) => {
             id: fileMetadata.storageKey,
             ownerId: locals.user.id,
             folderId: targetFolderId,
+            encryptedDek: fileMetadata.encryptedDek,
           })
           .returning();
 

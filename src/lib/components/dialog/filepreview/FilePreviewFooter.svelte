@@ -9,6 +9,9 @@
     UserIcon,
     FileIcon,
     HardDriveIcon,
+    LockIcon,
+    LockOpenIcon,
+    XIcon,
   } from "@lucide/svelte";
   import styles from "./styles";
   import { slide } from "svelte/transition";
@@ -23,8 +26,7 @@
 </script>
 
 <div
-  class="absolute bottom-0 left-0 right-0 p-2 flex items-end gap-2 w-full z-50
-  {expanded ? 'max-sm:flex-col-reverse max-sm:items-start' : ''}"
+  class="absolute bottom-0 left-0 right-0 p-2 flex items-end gap-2 w-full z-50"
 >
   <Button
     variant="ghost"
@@ -34,7 +36,11 @@
       expanded = !expanded;
     }}
   >
-    <InfoIcon class="size-4" />
+    {#if expanded}
+      <XIcon class="size-4" />
+    {:else}
+      <InfoIcon class="size-4" />
+    {/if}
   </Button>
 
   {#if expanded}
@@ -89,6 +95,22 @@
                 </span>
               </div>
             {/if}
+
+            <!-- Encryption Status -->
+            <div class="grid grid-cols-[80px_1fr] gap-3 items-center">
+              <span class="text-xs text-muted-foreground font-medium"
+                >Security</span
+              >
+              <div class="flex items-center gap-2">
+                {#if file.isEncrypted}
+                  <LockIcon class="size-3 text-muted-foreground" />
+                  <span class="text-sm font-medium">Encrypted</span>
+                {:else}
+                  <LockOpenIcon class="size-3 text-muted-foreground" />
+                  <span class="text-sm font-medium">Unencrypted</span>
+                {/if}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -113,14 +135,15 @@
             </div>
 
             <!-- Owner -->
-            <div class="grid grid-cols-[80px_1fr] gap-3 items-center">
+            <div class="grid grid-cols-[80px_1fr] gap-3 items-start">
               <span class="text-xs text-muted-foreground font-medium"
                 >Owner</span
               >
-              <div class="flex items-center gap-2">
-                <UserIcon class="size-3 text-muted-foreground" />
-                <span class="text-sm">{file.ownerId}</span>
-              </div>
+              <span
+                class="text-xs font-mono text-muted-foreground break-all bg-muted/50 px-2 py-1 rounded"
+              >
+                {file.ownerId}
+              </span>
             </div>
           </div>
         </div>

@@ -8,16 +8,10 @@
   let {
     row,
     table,
-    onRestore,
-    onPermanentDelete,
-    onPreview,
     onHover,
   }: {
     row: Row<TrashedItem>;
     table: TanStackTable<TrashedItem>;
-    onRestore: (item: TrashedItem) => void;
-    onPermanentDelete: (item: TrashedItem) => void;
-    onPreview: (item: TrashedItem) => void;
     onHover: (row: Row<TrashedItem>) => void;
   } = $props();
 
@@ -67,11 +61,6 @@
       target.closest("button")
     ) {
       return;
-    }
-
-    const item = row.original;
-    if (item.type === "file") {
-      onPreview(item);
     }
   }
 </script>

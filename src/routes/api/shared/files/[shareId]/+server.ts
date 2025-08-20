@@ -1,5 +1,8 @@
 import { error } from "@sveltejs/kit";
-import { getFileStream } from "$lib/server/storage";
+import {
+  getFileStream,
+  getDecryptedFileStreamWithDEK,
+} from "$lib/server/storage";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -54,10 +57,20 @@ export const GET = async ({ params, url, locals }) => {
     error(404, "Shared file not found or access denied");
   }
 
-  const { file } = shareData;
+  const { file, share } = shareData;
 
   try {
-    const fileStream = getFileStream(file.storageKey);
+    let fileStream: ReadableStream;
+
+    if (file.encryptedDek && share.decryptedDek) {
+      fileStream = await getDecryptedFileStreamWithDEK(
+        file.storageKey,
+        share.decryptedDek
+      );
+    } else {
+      fileStream = getFileStream(file.storageKey);
+    }
+
     const encodedFilename = encodeURIComponent(file.name);
     const asciiFilename = file.name.replace(/[^\x20-\x7E]/g, "");
 

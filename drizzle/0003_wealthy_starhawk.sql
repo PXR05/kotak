@@ -1,0 +1,1 @@
+ALTER TABLE "trashed_item" ADD COLUMN "encrypted_dek" text;

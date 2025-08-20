@@ -123,6 +123,8 @@ export const getTrashedItems = query(async () => {
       trashedAt: item.trashedAt,
       updatedAt: item.trashedAt,
       createdAt: item.trashedAt,
+      encryptedDek: item.encryptedDek,
+      isEncrypted: item.itemType === "file" ? !!item.encryptedDek : undefined,
     }));
 
     return {
@@ -207,6 +209,7 @@ export const getRootItems = query(async () => {
           folderId: file.folderId,
           size: file.size,
           mimeType: file.mimeType,
+          isEncrypted: file.encryptedDek !== null,
           createdAt: file.createdAt,
           updatedAt: file.updatedAt,
         })),

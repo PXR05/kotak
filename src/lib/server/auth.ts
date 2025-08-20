@@ -7,6 +7,8 @@ import * as table from "$lib/server/db/schema";
 
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
 
+const sessionUMKStore = new Map<string, string>();
+
 export const sessionCookieName = "auth-session";
 
 export function generateSessionToken() {
@@ -45,7 +47,7 @@ export async function validateSessionToken(token: string) {
     .where(eq(table.session.id, sessionId));
 
   if (!result) {
-    return { session: null, user: null };
+    return { session: null, user: null, umk: null };
   }
 
   const { session, user } = result;
@@ -53,7 +55,8 @@ export async function validateSessionToken(token: string) {
 
   if (sessionExpired) {
     await db.delete(table.session).where(eq(table.session.id, session.id));
-    return { session: null, user: null };
+    sessionUMKStore.delete(session.id);
+    return { session: null, user: null, umk: null };
   }
 
   const renewSession =
@@ -67,7 +70,9 @@ export async function validateSessionToken(token: string) {
       .where(eq(table.session.id, session.id));
   }
 
-  return { session, user };
+  const umk = sessionUMKStore.get(session.id) || null;
+
+  return { session, user, umk };
 }
 
 export type SessionValidationResult = Awaited<
@@ -76,6 +81,7 @@ export type SessionValidationResult = Awaited<
 
 export async function invalidateSession(sessionId: string) {
   await db.delete(table.session).where(eq(table.session.id, sessionId));
+  sessionUMKStore.delete(sessionId);
 }
 
 export function setSessionTokenCookie(
@@ -87,7 +93,7 @@ export function setSessionTokenCookie(
     expires: expiresAt,
     path: "/",
     httpOnly: true,
-    secure: process.env.PROTOCOL === 'https',
+    secure: process.env.PROTOCOL === "https",
     sameSite: "lax",
   });
 }
@@ -96,7 +102,11 @@ export function deleteSessionTokenCookie(event: RequestEvent) {
   event.cookies.delete(sessionCookieName, {
     path: "/",
     httpOnly: true,
-    secure: process.env.PROTOCOL === 'https',
+    secure: process.env.PROTOCOL === "https",
     sameSite: "lax",
   });
+}
+
+export function setSessionUMK(sessionId: string, umk: string) {
+  sessionUMKStore.set(sessionId, umk);
 }

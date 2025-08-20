@@ -12,6 +12,8 @@ export const user = pgTable("user", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  encryptedUmk: text("encrypted_umk"),
+  keySalt: text("key_salt"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -92,6 +94,7 @@ export const file = pgTable(
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     storageKey: text("storage_key").notNull().unique(),
+    encryptedDek: text("encrypted_dek"),
     ownerId: text("owner_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -182,6 +185,7 @@ export const fileShare = pgTable(
     isPublic: boolean("is_public").notNull().default(false),
     expiresAt: timestamp("expires_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    decryptedDek: text("decrypted_dek"),
   },
   (table) => [
     index("file_share_file_id_idx").on(table.fileId),
@@ -281,6 +285,7 @@ export const trashedItem = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     trashedAt: timestamp("trashed_at").notNull().defaultNow(),
     name: text("name").notNull(),
+    encryptedDek: text("encrypted_dek"),
   },
   (table) => [
     index("trashed_item_owner_id_idx").on(table.ownerId),

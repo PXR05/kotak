@@ -3,7 +3,7 @@
   import { Button } from "$lib/components/ui/button";
   import { LoaderIcon, RotateCwIcon } from "@lucide/svelte";
   import { onMount } from "svelte";
-  import { fade, slide } from "svelte/transition";
+  import { slide } from "svelte/transition";
 
   let updateAvailable = $state(false);
   let loadingUpdate = $state(false);
@@ -81,9 +81,8 @@
 </script>
 
 {#if updateAvailable}
-  <Sidebar.Separator class="mb-3" />
   <div
-    class="overflow-hidden rounded-lg border border-border bg-background dark:bg-input/30 text-sm"
+    class="mt-2 overflow-hidden rounded-lg border border-border bg-background dark:bg-input/30 text-sm"
     transition:slide={{ axis: "y", duration: 150 }}
   >
     <div class="flex items-center justify-between pl-4 pr-2 py-2">
