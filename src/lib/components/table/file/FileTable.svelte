@@ -16,7 +16,6 @@
   import FileTableEmptyState from "./FileTableEmptyState.svelte";
   import FileTableHeader from "./FileTableHeader.svelte";
   import FileTableRow from "./FileTableRow.svelte";
-  import { IsMobile } from "$lib/hooks/is-mobile.svelte";
 
   import {
     confirmationDialogData,
@@ -30,6 +29,7 @@
   import { lastSelectedIndex } from "$lib/stores";
   import FileContextMenu from "./FileContextMenu.svelte";
   import { onMount } from "svelte";
+  import { innerWidth } from "svelte/reactivity/window";
 
   let {
     items,
@@ -40,27 +40,10 @@
   } = $props();
 
   const columns = createFileTableColumns(fileOperations.handleAction);
-  const isMobile = new IsMobile();
 
   let sorting = $state<SortingState>([]);
   let rowSelection = $state<RowSelectionState>({});
   let columnVisibility = $state<VisibilityState>({});
-
-  $effect(() => {
-    if (isMobile.current) {
-      columnVisibility = {
-        type: false,
-        size: false,
-        updatedAt: false,
-      };
-    } else {
-      columnVisibility = {
-        type: true,
-        size: true,
-        updatedAt: true,
-      };
-    }
-  });
 
   $effect(() => {
     currentFolderId;
@@ -91,6 +74,18 @@
     const clientHeight = ref.clientHeight;
     const visibleRows = Math.ceil(clientHeight / ROW_HEIGHT);
     pagination.pageSize = visibleRows;
+
+    if ((innerWidth.current ?? 0) < 768) {
+      setTimeout(() => {
+        columnVisibility = {
+          type: false,
+          size: false,
+          updatedAt: false,
+        };
+      }, 0);
+    } else {
+      columnVisibility = {};
+    }
   }
 
   function handleScroll(e: Event) {
@@ -157,7 +152,6 @@
       }
     },
     enableRowSelection: true,
-    enableHiding: true,
   });
 
   function handleFileInputChange(e: Event) {

@@ -115,8 +115,6 @@ export function createFileTableColumns(
     },
     {
       id: "actions",
-      enableHiding: false,
-      enableSorting: false,
       size: 52,
       cell: ({ row }) => {
         const item = row.original;

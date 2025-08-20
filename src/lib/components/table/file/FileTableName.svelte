@@ -8,8 +8,6 @@
     FileVideoIcon,
     FileAudioIcon,
     ArchiveIcon,
-    LockIcon,
-    LockOpenIcon,
   } from "@lucide/svelte";
 
   let {
@@ -56,21 +54,7 @@
     strokeWidth={1.5}
   />
   <span
-    class="w-full max-w-[calc(100dvw-7.75rem)] md:max-w-[calc(100dvw-43rem)] truncate"
+    class="w-full max-w-[calc(100dvw-8.5rem)] md:max-w-[calc(100dvw-42rem)] truncate"
+    >{item.name}</span
   >
-    {item.name}
-  </span>
-  {#if item.isEncrypted}
-    <LockIcon
-      class="size-4 text-muted-foreground max-md:hidden"
-      absoluteStrokeWidth
-      strokeWidth={1.5}
-    />
-  {:else if item.type === "file"}
-    <LockOpenIcon
-      class="size-4 text-muted-foreground max-md:hidden"
-      absoluteStrokeWidth
-      strokeWidth={1.5}
-    />
-  {/if}
 </div>

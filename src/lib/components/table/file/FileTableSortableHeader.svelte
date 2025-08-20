@@ -1,8 +1,6 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button/index.js";
-  import ChevronUpIcon from "@lucide/svelte/icons/chevron-up";
-  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
-  import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
+  import { ChevronUpIcon, ChevronDownIcon, ChevronsUpDownIcon } from "@lucide/svelte";
 
   let {
     column,

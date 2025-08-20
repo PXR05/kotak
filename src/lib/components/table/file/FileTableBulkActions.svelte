@@ -82,7 +82,7 @@
         disabled={action.isLoading}
       >
         {#if action.isLoading && action.loadingIcon}
-          <action.loadingIcon class="size-4 mr-2 animate-spin" />
+          <action.loadingIcon class="size-4 lg:mr-2 animate-spin" />
         {:else}
           <action.icon class="size-4 lg:mr-2" />
         {/if}
