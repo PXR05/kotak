@@ -4,12 +4,18 @@
   import { slide } from "svelte/transition";
   import { page } from "$app/state";
   import UMKRestoreDialog from "./UMKRestoreDialog.svelte";
+  import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+
+  const sidebar = Sidebar.useSidebar();
+
+  let needsUMKRestore = $state(false);
+  $effect(() => {
+    needsUMKRestore = !!page.data.user && page.data.umk === null;
+  });
 
   let showDialog = $state(false);
-
-  const needsUMKRestore = $derived(page.data.user && !page.data.umk);
-
   function openDialog() {
+    sidebar.setOpenMobile(false);
     showDialog = true;
   }
 </script>

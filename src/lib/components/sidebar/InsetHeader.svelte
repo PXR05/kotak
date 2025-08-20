@@ -9,7 +9,10 @@
   import { slide } from "svelte/transition";
   import { KeyRoundIcon } from "@lucide/svelte";
 
-  const needsUMKRestore = $derived(page.data.user && !page.data.umk);
+  let needsUMKRestore = $state(false);
+  $effect(() => {
+    needsUMKRestore = !!page.data.user && page.data.umk === null;
+  });
 
   const isMobile = $derived(new IsMobile().current);
   const inRoot = $derived(browser && page.url.pathname === "/");

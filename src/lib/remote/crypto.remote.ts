@@ -67,33 +67,41 @@ export const restoreUMK = command(
         };
       }
 
+      let umk: string;
+
       if (!userData.encryptedUmk || !userData.keySalt) {
-        return {
-          data: {
-            success: true,
-            message: "No encrypted files to restore access for",
-          },
-        };
+        umk = CryptoUtils.generateUMK();
+        const salt = CryptoUtils.generateSalt();
+        const pdk = await CryptoUtils.derivePDK(password, salt);
+        const encryptedUmk = CryptoUtils.encryptUMK(umk, pdk);
+
+        await db
+          .update(table.user)
+          .set({
+            encryptedUmk,
+            keySalt: salt,
+          })
+          .where(eq(table.user.id, user.id));
+      } else {
+        try {
+          const pdk = await CryptoUtils.derivePDK(password, userData.keySalt);
+          umk = CryptoUtils.decryptUMK(userData.encryptedUmk, pdk);
+        } catch (decryptError) {
+          console.error("Failed to decrypt UMK:", decryptError);
+          return {
+            error: "Failed to restore access - incorrect password",
+          };
+        }
       }
 
-      try {
-        const pdk = await CryptoUtils.derivePDK(password, userData.keySalt);
-        const decryptedUmk = CryptoUtils.decryptUMK(userData.encryptedUmk, pdk);
+      setSessionUMK(session.id, umk);
 
-        setSessionUMK(session.id, decryptedUmk);
-
-        return {
-          data: {
-            success: true,
-            message: "File access restored successfully",
-          },
-        };
-      } catch (decryptError) {
-        console.error("Failed to decrypt UMK:", decryptError);
-        return {
-          error: "Failed to restore access - incorrect password",
-        };
-      }
+      return {
+        data: {
+          success: true,
+          message: "File access restored successfully",
+        },
+      };
     } catch (err) {
       console.error("UMK restore error:", err);
       return {

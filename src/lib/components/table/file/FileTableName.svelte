@@ -5,7 +5,7 @@
     FileIcon,
     FileTextIcon,
     ImageIcon,
-    FileVideoCameraIcon,
+    FileVideoIcon,
     FileAudioIcon,
     ArchiveIcon,
     LockIcon,
@@ -21,7 +21,7 @@
 
   function getIconFromMimeType(mimeType: string) {
     if (mimeType.startsWith("image/")) return ImageIcon;
-    if (mimeType.startsWith("video/")) return FileVideoCameraIcon;
+    if (mimeType.startsWith("video/")) return FileVideoIcon;
     if (mimeType.startsWith("audio/")) return FileAudioIcon;
     if (
       mimeType === "application/zip" ||
