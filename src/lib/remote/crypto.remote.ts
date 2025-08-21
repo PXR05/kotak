@@ -22,7 +22,8 @@ export const restoreUMK = command(
       };
     }
 
-    if (!password || !password.trim()) {
+    const normalizedPassword = password.trim();
+    if (!normalizedPassword) {
       return {
         error: "Password is required",
       };
@@ -54,12 +55,16 @@ export const restoreUMK = command(
         };
       }
 
-      const validPassword = await verify(userData.passwordHash, password, {
-        memoryCost: 19456,
-        timeCost: 2,
-        outputLen: 32,
-        parallelism: 1,
-      });
+      const validPassword = await verify(
+        userData.passwordHash,
+        normalizedPassword,
+        {
+          memoryCost: 19456,
+          timeCost: 2,
+          outputLen: 32,
+          parallelism: 1,
+        }
+      );
 
       if (!validPassword) {
         return {
@@ -72,7 +77,7 @@ export const restoreUMK = command(
       if (!userData.encryptedUmk || !userData.keySalt) {
         umk = CryptoUtils.generateUMK();
         const salt = CryptoUtils.generateSalt();
-        const pdk = await CryptoUtils.derivePDK(password, salt);
+        const pdk = await CryptoUtils.derivePDK(normalizedPassword, salt);
         const encryptedUmk = CryptoUtils.encryptUMK(umk, pdk);
 
         await db
@@ -84,7 +89,10 @@ export const restoreUMK = command(
           .where(eq(table.user.id, user.id));
       } else {
         try {
-          const pdk = await CryptoUtils.derivePDK(password, userData.keySalt);
+          const pdk = await CryptoUtils.derivePDK(
+            normalizedPassword,
+            userData.keySalt
+          );
           umk = CryptoUtils.decryptUMK(userData.encryptedUmk, pdk);
         } catch (decryptError) {
           console.error("Failed to decrypt UMK:", decryptError);

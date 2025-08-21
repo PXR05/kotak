@@ -43,9 +43,10 @@ export class CryptoUtils {
   }
 
   static async derivePDK(password: string, salt: string): Promise<string> {
+    const normalizedPassword = password.trim();
     const saltBuffer = Buffer.from(salt, "base64");
     const key = (await scryptAsync(
-      password,
+      normalizedPassword,
       saltBuffer,
       this.KEY_LENGTH
     )) as Buffer;
@@ -71,7 +72,6 @@ export class CryptoUtils {
 
   static decryptWithKey(params: DecryptionParams, key: string): string {
     try {
-      // Validate input parameters
       if (!params.encrypted || !params.iv || !params.tag) {
         throw new Error("Missing encryption parameters");
       }
@@ -80,7 +80,6 @@ export class CryptoUtils {
       const iv = Buffer.from(params.iv, "base64");
       const tag = Buffer.from(params.tag, "base64");
 
-      // Validate buffer lengths
       if (keyBuffer.length !== this.KEY_LENGTH) {
         throw new Error(
           `Invalid key length: expected ${this.KEY_LENGTH}, got ${keyBuffer.length}`

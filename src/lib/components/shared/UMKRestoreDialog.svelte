@@ -57,13 +57,6 @@
     await handleSubmitInternal();
   }
 
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === "Enter" && !isLoading) {
-      event.preventDefault();
-      handleSubmitInternal();
-    }
-  }
-
   $effect(() => {
     if (!open) {
       password = "";
@@ -93,7 +86,6 @@
             type={showPassword ? "text" : "password"}
             placeholder="Enter your password"
             bind:value={password}
-            onkeydown={handleKeydown}
             disabled={isLoading}
             class="pr-10"
             autocomplete="current-password"
