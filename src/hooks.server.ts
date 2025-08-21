@@ -1,65 +1,65 @@
 import { error, type Handle, type HandleValidationError } from "@sveltejs/kit";
-import * as auth from "$lib/server/auth";
 import { sequence } from "@sveltejs/kit/hooks";
+import * as auth from "$lib/server/auth";
 
-function isFormContentType(contentType?: string) {
-  const types = [
-    "application/x-www-form-urlencoded",
-    "multipart/form-data",
-    "text/plain",
-  ];
-  const type = contentType?.split(";", 1)[0].trim() ?? "";
-  return types.includes(type.toLowerCase());
-}
+// function isFormContentType(contentType?: string) {
+//   const types = [
+//     "application/x-www-form-urlencoded",
+//     "multipart/form-data",
+//     "text/plain",
+//   ];
+//   const type = contentType?.split(";", 1)[0].trim() ?? "";
+//   return types.includes(type.toLowerCase());
+// }
 
-function isFormMethod(method: string) {
-  const methods = ["POST", "PUT", "PATCH", "DELETE"];
-  return methods.includes(method);
-}
+// function isFormMethod(method: string) {
+//   const methods = ["POST", "PUT", "PATCH", "DELETE"];
+//   return methods.includes(method);
+// }
 
-const csrf: Handle = async ({ event, resolve }) => {
-  if (import.meta.env.DEV) return resolve(event);
+// const csrf: Handle = async ({ event, resolve }) => {
+//   if (import.meta.env.DEV) return resolve(event);
 
-  const { request } = event;
-  const reqMethod = request.method;
-  const reqOrigin = request.headers.get("origin")?.toLowerCase();
-  const reqContentType = request.headers.get("content-type")?.toLowerCase();
+//   const { request } = event;
+//   const reqMethod = request.method;
+//   const reqOrigin = request.headers.get("origin")?.toLowerCase();
+//   const reqContentType = request.headers.get("content-type")?.toLowerCase();
 
-  console.log({
-    reqMethod,
-    reqOrigin,
-    reqContentType,
-  });
+//   console.log({
+//     reqMethod,
+//     reqOrigin,
+//     reqContentType,
+//   });
 
-  let validOrigin = false;
-  if (reqOrigin) {
-    const allowedOrigins: string[] =
-      process.env.ALLOWED_ORIGINS?.split(",") || [];
-    for (const origin of allowedOrigins) {
-      if (origin.startsWith("/") && origin.endsWith("/")) {
-        const matches = reqOrigin?.match(
-          origin.substring(1, origin.length - 1)
-        );
-        validOrigin =
-          matches !== null && matches.length > 0 && reqOrigin === matches[0];
-      } else {
-        validOrigin = reqOrigin === origin.toLowerCase();
-      }
-      if (validOrigin) break;
-    }
-  }
+//   let validOrigin = false;
+//   if (reqOrigin) {
+//     const allowedOrigins: string[] =
+//       process.env.ALLOWED_ORIGINS?.split(",") || [];
+//     for (const origin of allowedOrigins) {
+//       if (origin.startsWith("/") && origin.endsWith("/")) {
+//         const matches = reqOrigin?.match(
+//           origin.substring(1, origin.length - 1)
+//         );
+//         validOrigin =
+//           matches !== null && matches.length > 0 && reqOrigin === matches[0];
+//       } else {
+//         validOrigin = reqOrigin === origin.toLowerCase();
+//       }
+//       if (validOrigin) break;
+//     }
+//   }
 
-  const forbidden =
-    isFormContentType(reqContentType) &&
-    isFormMethod(reqMethod) &&
-    !validOrigin;
+//   const forbidden =
+//     isFormContentType(reqContentType) &&
+//     isFormMethod(reqMethod) &&
+//     !validOrigin;
 
-  if (forbidden) {
-    error(403, `Cross-site ${request.method} form submissions are forbidden`);
-  }
+//   if (forbidden) {
+//     error(403, `Cross-site ${request.method} form submissions are forbidden`);
+//   }
 
-  return resolve(event);
-};
+//   return resolve(event);
+// };
 
 const handleAuth: Handle = async ({ event, resolve }) => {
   const sessionToken = event.cookies.get(auth.sessionCookieName);
@@ -85,7 +85,10 @@ const handleAuth: Handle = async ({ event, resolve }) => {
   return resolve(event);
 };
 
-export const handle: Handle = sequence(csrf, handleAuth);
+export const handle: Handle = sequence(
+  // csrf,
+  handleAuth
+);
 
 export const handleValidationError: HandleValidationError = ({
   event,

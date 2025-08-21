@@ -34,7 +34,7 @@ services:
     environment:
       BODY_SIZE_LIMIT: Infinity
       PROTOCOL: ${PROTOCOL}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      ORIGIN: ${PROTOCOL}://${DOMAIN}
       DATABASE_URL: ${DATABASE_URL}
       LIMITER_SECRET: ${LIMITER_SECRET}
     ports:
