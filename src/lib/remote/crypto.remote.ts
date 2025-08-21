@@ -88,6 +88,8 @@ export const restoreUMK = command(
           umk = CryptoUtils.decryptUMK(userData.encryptedUmk, pdk);
         } catch (decryptError) {
           console.error("Failed to decrypt UMK:", decryptError);
+          console.error("Encrypted UMK data:", userData.encryptedUmk);
+          console.error("Key salt:", userData.keySalt);
           return {
             error: "Failed to restore access - incorrect password",
           };

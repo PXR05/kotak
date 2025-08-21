@@ -70,17 +70,58 @@ export class CryptoUtils {
   }
 
   static decryptWithKey(params: DecryptionParams, key: string): string {
-    const keyBuffer = Buffer.from(key, "base64");
-    const iv = Buffer.from(params.iv, "base64");
-    const tag = Buffer.from(params.tag, "base64");
+    try {
+      // Validate input parameters
+      if (!params.encrypted || !params.iv || !params.tag) {
+        throw new Error("Missing encryption parameters");
+      }
 
-    const decipher = createDecipheriv(this.ALGORITHM, keyBuffer, iv);
-    decipher.setAuthTag(tag);
+      const keyBuffer = Buffer.from(key, "base64");
+      const iv = Buffer.from(params.iv, "base64");
+      const tag = Buffer.from(params.tag, "base64");
 
-    let decrypted = decipher.update(params.encrypted, "base64", "utf8");
-    decrypted += decipher.final("utf8");
+      // Validate buffer lengths
+      if (keyBuffer.length !== this.KEY_LENGTH) {
+        throw new Error(
+          `Invalid key length: expected ${this.KEY_LENGTH}, got ${keyBuffer.length}`
+        );
+      }
+      if (iv.length !== this.IV_LENGTH) {
+        throw new Error(
+          `Invalid IV length: expected ${this.IV_LENGTH}, got ${iv.length}`
+        );
+      }
+      if (tag.length !== this.TAG_LENGTH) {
+        throw new Error(
+          `Invalid tag length: expected ${this.TAG_LENGTH}, got ${tag.length}`
+        );
+      }
 
-    return decrypted;
+      const decipher = createDecipheriv(this.ALGORITHM, keyBuffer, iv);
+      decipher.setAuthTag(tag);
+
+      let decrypted = decipher.update(params.encrypted, "base64", "utf8");
+      decrypted += decipher.final("utf8");
+
+      return decrypted;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error("Decryption error details:", {
+        message: errorMessage,
+        keyLength: Buffer.from(key, "base64").length,
+        ivLength: params.iv
+          ? Buffer.from(params.iv, "base64").length
+          : "undefined",
+        tagLength: params.tag
+          ? Buffer.from(params.tag, "base64").length
+          : "undefined",
+        encryptedLength: params.encrypted
+          ? params.encrypted.length
+          : "undefined",
+      });
+      throw new Error(errorMessage);
+    }
   }
 
   static encryptBuffer(data: Buffer, key: string): EncryptionResult {
@@ -121,8 +162,29 @@ export class CryptoUtils {
   }
 
   static decryptUMK(encryptedUmk: string, pdk: string): string {
-    const params = JSON.parse(encryptedUmk) as DecryptionParams;
-    return this.decryptWithKey(params, pdk);
+    try {
+      if (!encryptedUmk || typeof encryptedUmk !== "string") {
+        throw new Error("Invalid encrypted UMK data");
+      }
+
+      let params: DecryptionParams;
+      try {
+        params = JSON.parse(encryptedUmk) as DecryptionParams;
+      } catch (parseError) {
+        const parseErrorMessage =
+          parseError instanceof Error ? parseError.message : String(parseError);
+        throw new Error(
+          `Failed to parse encrypted UMK JSON: ${parseErrorMessage}`
+        );
+      }
+
+      return this.decryptWithKey(params, pdk);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error("UMK decryption error:", errorMessage);
+      throw new Error(`Failed to decrypt UMK: ${errorMessage}`);
+    }
   }
 
   static encryptDEK(dek: string, umk: string): string {
@@ -131,7 +193,28 @@ export class CryptoUtils {
   }
 
   static decryptDEK(encryptedDek: string, umk: string): string {
-    const params = JSON.parse(encryptedDek) as DecryptionParams;
-    return this.decryptWithKey(params, umk);
+    try {
+      if (!encryptedDek || typeof encryptedDek !== "string") {
+        throw new Error("Invalid encrypted DEK data");
+      }
+
+      let params: DecryptionParams;
+      try {
+        params = JSON.parse(encryptedDek) as DecryptionParams;
+      } catch (parseError) {
+        const parseErrorMessage =
+          parseError instanceof Error ? parseError.message : String(parseError);
+        throw new Error(
+          `Failed to parse encrypted DEK JSON: ${parseErrorMessage}`
+        );
+      }
+
+      return this.decryptWithKey(params, umk);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error("DEK decryption error:", errorMessage);
+      throw new Error(`Failed to decrypt DEK: ${errorMessage}`);
+    }
   }
 }
