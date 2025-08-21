@@ -140,11 +140,11 @@ async function uploadFilesInternal(
     });
   });
 
-  function refreshFolder(folderId: string | undefined) {
+  async function refreshFolder(folderId: string | undefined) {
     if (!folderId || folderId.startsWith("root-")) {
-      getRootItems().refresh();
+      await getRootItems().refresh();
     } else {
-      getFolderChildren(folderId).refresh();
+      await getFolderChildren(folderId).refresh();
     }
   }
 
@@ -209,7 +209,7 @@ async function uploadFilesInternal(
         i + 1 < files.length ? files[i + 1].name : undefined
       );
 
-      refreshFolder(folderId);
+      await refreshFolder(folderId);
     }
 
     updateProgress(100);
@@ -217,7 +217,7 @@ async function uploadFilesInternal(
     if (successCount > 0) {
       if (successCount === totalFiles) {
         options.onSuccess?.();
-        refreshFolder(folderId);
+        await refreshFolder(folderId);
       }
       return successCount === totalFiles;
     } else {

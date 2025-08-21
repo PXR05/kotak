@@ -8,6 +8,7 @@ const config = {
     adapter: adapter(),
     csrf: {
       checkOrigin: false,
+      trustedOrigins: [],
     },
     experimental: {
       remoteFunctions: true,
