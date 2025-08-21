@@ -25,6 +25,12 @@ const csrf: Handle = async ({ event, resolve }) => {
   const reqOrigin = request.headers.get("origin")?.toLowerCase();
   const reqContentType = request.headers.get("content-type")?.toLowerCase();
 
+  console.log({
+    reqMethod,
+    reqOrigin,
+    reqContentType,
+  });
+
   let validOrigin = false;
   if (reqOrigin) {
     const allowedOrigins: string[] =
