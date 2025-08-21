@@ -6,7 +6,9 @@ const config = {
   preprocess: vitePreprocess(),
   kit: {
     adapter: adapter(),
-    csrf: false,
+    csrf: {
+      checkOrigin: false,
+    },
     experimental: {
       remoteFunctions: true,
     },

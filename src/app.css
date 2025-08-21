@@ -146,3 +146,13 @@ input[type="number"] {
     margin: 0;
   }
 }
+
+.bottom-border::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: var(--border);
+}
