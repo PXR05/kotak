@@ -6,141 +6,159 @@ import { nameSchema } from "$lib/validation";
 import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import * as z from "zod/mini";
 import { getRootItems } from "./load.remote";
+import { withCache, invalidateCache } from "$lib/server/cache";
 
 export const getFolders = query(async () => {
-  const {
-    locals: { user },
-  } = getRequestEvent();
-  if (!user) {
-    return {
-      error: "User not authenticated",
-    };
-  }
+  return withCache(
+    "getFolders",
+    async () => {
+      const {
+        locals: { user },
+      } = getRequestEvent();
+      if (!user) {
+        return {
+          error: "User not authenticated",
+        };
+      }
 
-  try {
-    const folders = await db
-      .select({
-        id: table.folder.id,
-        name: table.folder.name,
-        ownerId: table.folder.ownerId,
-        parentId: table.folder.parentId,
-        createdAt: table.folder.createdAt,
-        updatedAt: table.folder.updatedAt,
-      })
-      .from(table.folder)
-      .where(
-        and(
-          eq(table.folder.ownerId, user.id),
-          ne(table.folder.name, "__root__"),
-          ne(table.folder.name, "__trash__")
-        )
-      )
-      .orderBy(table.folder.name);
+      try {
+        const folders = await db
+          .select({
+            id: table.folder.id,
+            name: table.folder.name,
+            ownerId: table.folder.ownerId,
+            parentId: table.folder.parentId,
+            createdAt: table.folder.createdAt,
+            updatedAt: table.folder.updatedAt,
+          })
+          .from(table.folder)
+          .where(
+            and(
+              eq(table.folder.ownerId, user.id),
+              ne(table.folder.name, "__root__"),
+              ne(table.folder.name, "__trash__")
+            )
+          )
+          .orderBy(table.folder.name);
 
-    const transformedFolders = folders.map((folder) => ({
-      ...folder,
-      type: "folder" as const,
-    }));
+        const transformedFolders = folders.map((folder) => ({
+          ...folder,
+          type: "folder" as const,
+        }));
 
-    return {
-      data: transformedFolders,
-    };
-  } catch (err) {
-    console.error("Error fetching folders:", err);
-    return {
-      error: "Failed to fetch folders",
-    };
-  }
+        return {
+          data: transformedFolders,
+        };
+      } catch (err) {
+        console.error("Error fetching folders:", err);
+        return {
+          error: "Failed to fetch folders",
+        };
+      }
+    }
+  );
 });
 
 export const getFolderChildren = query(z.string(), async (folderId) => {
-  const {
-    locals: { user },
-  } = getRequestEvent();
-  if (!user) {
-    return {
-      error: "User not authenticated",
-    };
-  }
+  return withCache(
+    `getFolderChildren:${folderId}`,
+    async () => {
+      const {
+        locals: { user },
+      } = getRequestEvent();
+      if (!user) {
+        return {
+          error: "User not authenticated",
+        };
+      }
 
-  if (!folderId) {
-    return {
-      error: "Missing folder ID",
-    };
-  }
+      if (!folderId) {
+        return {
+          error: "Missing folder ID",
+        };
+      }
 
-  try {
-    const [folder] = await db
-      .select()
-      .from(table.folder)
-      .where(
-        and(eq(table.folder.id, folderId), eq(table.folder.ownerId, user.id))
-      );
+      try {
+        const [folder] = await db
+          .select()
+          .from(table.folder)
+          .where(
+            and(
+              eq(table.folder.id, folderId),
+              eq(table.folder.ownerId, user.id)
+            )
+          );
 
-    if (!folder) {
-      return {
-        error: "Folder not found or access denied",
-      };
-    }
+        if (!folder) {
+          return {
+            error: "Folder not found or access denied",
+          };
+        }
 
-    const childFolders = await db
-      .select({
-        id: table.folder.id,
-        name: table.folder.name,
-        ownerId: table.folder.ownerId,
-        parentId: table.folder.parentId,
-        createdAt: table.folder.createdAt,
-        updatedAt: table.folder.updatedAt,
-      })
-      .from(table.folder)
-      .where(
-        and(
-          eq(table.folder.parentId, folderId),
-          eq(table.folder.ownerId, user.id)
-        )
-      )
-      .orderBy(table.folder.name);
+        const childFolders = await db
+          .select({
+            id: table.folder.id,
+            name: table.folder.name,
+            ownerId: table.folder.ownerId,
+            parentId: table.folder.parentId,
+            createdAt: table.folder.createdAt,
+            updatedAt: table.folder.updatedAt,
+          })
+          .from(table.folder)
+          .where(
+            and(
+              eq(table.folder.parentId, folderId),
+              eq(table.folder.ownerId, user.id)
+            )
+          )
+          .orderBy(table.folder.name);
 
-    const childFiles = await db
-      .select({
-        id: table.file.id,
-        name: table.file.name,
-        ownerId: table.file.ownerId,
-        storageKey: table.file.storageKey,
-        folderId: table.file.folderId,
-        size: table.file.size,
-        mimeType: table.file.mimeType,
-        isEncrypted: table.file.encryptedDek,
-        createdAt: table.file.createdAt,
-        updatedAt: table.file.updatedAt,
-      })
-      .from(table.file)
-      .where(
-        and(eq(table.file.folderId, folderId), eq(table.file.ownerId, user.id))
-      )
-      .orderBy(table.file.name);
+        const childFiles = await db
+          .select({
+            id: table.file.id,
+            name: table.file.name,
+            ownerId: table.file.ownerId,
+            storageKey: table.file.storageKey,
+            folderId: table.file.folderId,
+            size: table.file.size,
+            mimeType: table.file.mimeType,
+            isEncrypted: table.file.encryptedDek,
+            createdAt: table.file.createdAt,
+            updatedAt: table.file.updatedAt,
+          })
+          .from(table.file)
+          .where(
+            and(
+              eq(table.file.folderId, folderId),
+              eq(table.file.ownerId, user.id)
+            )
+          )
+          .orderBy(table.file.name);
 
-    const children = [
-      ...childFolders.map((f) => ({
-        ...f,
-        type: "folder" as const,
-      })),
-      ...childFiles.map((f) => ({
-        ...f,
-        type: "file" as const,
-        isEncrypted: f.isEncrypted !== null,
-      })),
-    ];
+        const children = [
+          ...childFolders.map((f) => ({
+            ...f,
+            type: "folder" as const,
+          })),
+          ...childFiles.map((f) => ({
+            ...f,
+            type: "file" as const,
+            isEncrypted: f.isEncrypted !== null,
+          })),
+        ];
 
-    return {
-      data: children,
-    };
-  } catch (err) {
-    console.error("Error fetching folder children:", err);
-    return {
-      error: "Failed to fetch folder children",
-    };
-  }
+        return {
+          data: children,
+        };
+      } catch (err) {
+        console.error("Error fetching folder children:", err);
+        return {
+          error: "Failed to fetch folder children",
+        };
+      }
+    },
+    { ttl: 180 }
+  );
 });
 
 export const createFolder = command(
@@ -210,10 +228,14 @@ export const createFolder = command(
       return { error: txErr };
     }
 
+    await invalidateCache(["getFolders", "getCurrentFolder", "getBreadcrumbs"]);
+
     if (parentId.startsWith("root-")) {
       await getRootItems().refresh();
+      await invalidateCache("getRootItems");
     } else {
       await getFolderChildren(parentId).refresh();
+      await invalidateCache(`getFolderChildren:${parentId}`);
     }
 
     return {
@@ -293,10 +315,15 @@ export const renameFolder = command(
       return { error: txErr };
     }
 
+    await invalidateCache(["getFolders", "getCurrentFolder", "getBreadcrumbs"]);
+    await invalidateCache(`getFolderChildren:${folderId}`);
+
     if (!folder.parentId) {
       await getRootItems().refresh();
+      await invalidateCache("getRootItems");
     } else {
       await getFolderChildren(folder.parentId).refresh();
+      await invalidateCache(`getFolderChildren:${folder.parentId}`);
     }
 
     return {
@@ -459,6 +486,22 @@ export const moveFolder = command(
     }
 
     await Promise.all(refreshPromises);
+
+    await invalidateCache(["getFolders", "getCurrentFolder", "getBreadcrumbs"]);
+
+    for (const sourceParentId of affectedSourceParentIds) {
+      if (!sourceParentId || String(sourceParentId).startsWith("root-")) {
+        await invalidateCache("getRootItems");
+      } else {
+        await invalidateCache(`getFolderChildren:${String(sourceParentId)}`);
+      }
+    }
+
+    if (!resolvedTargetParentId || resolvedTargetParentId.startsWith("root-")) {
+      await invalidateCache("getRootItems");
+    } else {
+      await invalidateCache(`getFolderChildren:${resolvedTargetParentId}`);
+    }
 
     return {
       data: {

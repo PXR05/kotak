@@ -7,6 +7,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import * as z from "zod/mini";
 import { getRootItems } from "./load.remote";
 import { getFolderChildren } from "./folders.remote";
+import { invalidateCache } from "$lib/server/cache";
 
 export const renameFile = command(
   z.object({
@@ -69,10 +70,14 @@ export const renameFile = command(
       return { error: txErr };
     }
 
+    await invalidateCache(["searchDrive"]);
+
     if (file.folderId.startsWith("root-")) {
       await getRootItems().refresh();
+      await invalidateCache("getRootItems");
     } else {
       await getFolderChildren(file.folderId).refresh();
+      await invalidateCache(`getFolderChildren:${file.folderId}`);
     }
 
     return {
@@ -203,6 +208,22 @@ export const moveFile = command(
     }
 
     await Promise.all(refreshPromises);
+
+    await invalidateCache(["searchDrive"]);
+
+    for (const sourceFolderId of affectedSourceFolderIds) {
+      if (sourceFolderId.startsWith("root-")) {
+        await invalidateCache("getRootItems");
+      } else {
+        await invalidateCache(`getFolderChildren:${sourceFolderId}`);
+      }
+    }
+
+    if (targetIsRoot) {
+      await invalidateCache("getRootItems");
+    } else {
+      await invalidateCache(`getFolderChildren:${resolvedTargetFolderId}`);
+    }
 
     return {
       data: {

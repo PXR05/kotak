@@ -6,10 +6,25 @@ services:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: kotak
+    ports:
+      - "5432:5432"
     volumes:
       - ./database:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U root -d kotak"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  valkey:
+    image: valkey/valkey
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./valkey:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping"]
       interval: 5s
       timeout: 5s
       retries: 5

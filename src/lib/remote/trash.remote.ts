@@ -7,6 +7,7 @@ import * as z from "zod/mini";
 import { getFolderChildren } from "./folders.remote";
 import { getRootItems, getTrashedItems } from "./load.remote";
 import { deleteFile as deleteFromStorage } from "$lib/server/storage";
+import { invalidateCache } from "$lib/server/cache";
 
 async function collectDescendantFolderIds(
   userId: string,
@@ -121,6 +122,16 @@ export const restoreFile = command(
 
       await Promise.all(refreshPromises);
 
+      await invalidateCache(["searchDrive", "getTrashedItems"]);
+
+      if (trashedItem.originalFolderId?.startsWith("root-")) {
+        await invalidateCache("getRootItems");
+      } else if (trashedItem.originalFolderId) {
+        await invalidateCache(
+          `getFolderChildren:${trashedItem.originalFolderId}`
+        );
+      }
+
       return {
         data: { success: true, message: "File restored successfully" },
       };
@@ -198,6 +209,22 @@ export const restoreFolder = command(
       }
 
       await Promise.all(refreshPromises);
+
+      await invalidateCache([
+        "searchDrive",
+        "getTrashedItems",
+        "getFolders",
+        "getCurrentFolder",
+        "getBreadcrumbs",
+      ]);
+
+      if (trashedItem.originalParentId?.startsWith("root-")) {
+        await invalidateCache("getRootItems");
+      } else if (trashedItem.originalParentId) {
+        await invalidateCache(
+          `getFolderChildren:${trashedItem.originalParentId}`
+        );
+      }
 
       return {
         data: { success: true, message: "Folder restored successfully" },
@@ -311,6 +338,29 @@ export const trashItem = command(
 
       await Promise.all(refreshPromises);
 
+      await invalidateCache(["searchDrive", "getTrashedItems"]);
+
+      if (itemType === "folder") {
+        await invalidateCache([
+          "getFolders",
+          "getCurrentFolder",
+          "getBreadcrumbs",
+        ]);
+      }
+
+      if (itemType === "file" && originalFolderId?.startsWith("root-")) {
+        await invalidateCache("getRootItems");
+      } else if (itemType === "file" && originalFolderId) {
+        await invalidateCache(`getFolderChildren:${originalFolderId}`);
+      } else if (
+        itemType === "folder" &&
+        originalParentId?.startsWith("root-")
+      ) {
+        await invalidateCache("getRootItems");
+      } else if (itemType === "folder" && originalParentId) {
+        await invalidateCache(`getFolderChildren:${originalParentId}`);
+      }
+
       return {
         data: trashRecord,
       };
@@ -380,6 +430,7 @@ export const permanentDeleteFile = command(
       if (txErr) return { error: txErr };
 
       await getTrashedItems().refresh();
+      await invalidateCache("getTrashedItems");
 
       return {
         data: { success: true, message: "File permanently deleted" },
@@ -454,6 +505,7 @@ export const permanentDeleteFolder = command(
       if (txErr) return { error: txErr };
 
       await getTrashedItems().refresh();
+      await invalidateCache(["getTrashedItems", "getFolders"]);
 
       return {
         data: { success: true, message: "Folder permanently deleted" },
@@ -585,6 +637,32 @@ export const trashItems = command(
 
       await Promise.all(refreshPromises);
 
+      await invalidateCache(["searchDrive", "getTrashedItems"]);
+
+      const hasFolders = items.some((i) => i.itemType === "folder");
+      if (hasFolders) {
+        await invalidateCache([
+          "getFolders",
+          "getCurrentFolder",
+          "getBreadcrumbs",
+        ]);
+      }
+
+      for (const fid of originalFolderIds) {
+        if (fid.startsWith("root-")) {
+          await invalidateCache("getRootItems");
+        } else {
+          await invalidateCache(`getFolderChildren:${fid}`);
+        }
+      }
+      for (const pid of originalParentIds) {
+        if (pid.startsWith("root-")) {
+          await invalidateCache("getRootItems");
+        } else {
+          await invalidateCache(`getFolderChildren:${pid}`);
+        }
+      }
+
       return {
         data: { success: true, count: items.length },
       };
@@ -696,6 +774,25 @@ export const restoreItems = command(
 
       await Promise.all(refreshPromises);
 
+      await invalidateCache(["searchDrive", "getTrashedItems"]);
+
+      if (foldersToRestore.length > 0) {
+        await invalidateCache([
+          "getFolders",
+          "getCurrentFolder",
+          "getBreadcrumbs",
+        ]);
+      }
+
+      for (const fid of destFolderIds) {
+        if (fid.startsWith("root-")) await invalidateCache("getRootItems");
+        else await invalidateCache(`getFolderChildren:${fid}`);
+      }
+      for (const pid of destParentIds) {
+        if (pid.startsWith("root-")) await invalidateCache("getRootItems");
+        else await invalidateCache(`getFolderChildren:${pid}`);
+      }
+
       return { data: { success: true, count: itemIds.length } };
     } catch (err) {
       console.error("Error bulk restoring items:", err);
@@ -721,6 +818,7 @@ export const permanentDeleteItems = command(
     }
 
     try {
+      let folderIds: string[] = [];
       const txErr = await db.transaction(async (tx) => {
         const trashedItems = await tx
           .select()
@@ -739,7 +837,7 @@ export const permanentDeleteItems = command(
         const fileIds = trashedItems
           .filter((t) => t.itemType === "file")
           .map((t) => t.itemId);
-        const folderIds = trashedItems
+        folderIds = trashedItems
           .filter((t) => t.itemType === "folder")
           .map((t) => t.itemId);
 
@@ -797,6 +895,12 @@ export const permanentDeleteItems = command(
       if (txErr) return { error: txErr };
 
       await getTrashedItems().refresh();
+
+      await invalidateCache(["getTrashedItems"]);
+
+      if (folderIds.length > 0) {
+        await invalidateCache(["getFolders"]);
+      }
 
       return { data: { success: true, count: itemIds.length } };
     } catch (err) {

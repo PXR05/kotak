@@ -30,6 +30,7 @@ vite.config.ts.timestamp-*
 # Storage
 /storage/
 /database/
+/valkey/
 
 # Lock
 bun.lock
