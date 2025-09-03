@@ -26,7 +26,7 @@ export async function createFile(
   mimeType: string;
   name: string;
   encryptedDek?: string;
-}> {  
+}> {
   const filePath = path.join(STORAGE_PATH, storageKey);
 
   let encryptedDek: string | undefined;
@@ -34,13 +34,14 @@ export async function createFile(
 
   if (umk) {
     const dek = CryptoUtils.generateDEK();
+
     const encryptionResult = CryptoUtils.encryptBuffer(fileData, dek);
     encryptedDek = CryptoUtils.encryptDEK(dek, umk);
 
     const encryptedFileBuffer = Buffer.concat([
-      Buffer.from(encryptionResult.iv, "base64"),
-      Buffer.from(encryptionResult.tag, "base64"),
-      Buffer.from(encryptionResult.encrypted, "base64"),
+      encryptionResult.iv,
+      encryptionResult.tag,
+      encryptionResult.encrypted,
     ]);
 
     finalFileData = encryptedFileBuffer;
@@ -91,15 +92,11 @@ export async function getDecryptedFileStream(
   const ivLength = 16;
   const tagLength = 16;
 
-  const iv = encryptedData.subarray(0, ivLength).toString("base64");
-  const tag = encryptedData
-    .subarray(ivLength, ivLength + tagLength)
-    .toString("base64");
-  const encrypted = encryptedData
-    .subarray(ivLength + tagLength)
-    .toString("base64");
+  const iv = encryptedData.subarray(0, ivLength);
+  const tag = encryptedData.subarray(ivLength, ivLength + tagLength);
+  const encrypted = encryptedData.subarray(ivLength + tagLength);
 
-  const decryptedData = CryptoUtils.decryptBuffer({ iv, tag, encrypted }, dek);
+  const decryptedData = CryptoUtils.decryptBuffer(encrypted, iv, tag, dek);
 
   const readable = new ReadableStream({
     start(controller) {
@@ -123,15 +120,11 @@ export async function getDecryptedFileStreamWithDEK(
   const ivLength = 16;
   const tagLength = 16;
 
-  const iv = encryptedData.subarray(0, ivLength).toString("base64");
-  const tag = encryptedData
-    .subarray(ivLength, ivLength + tagLength)
-    .toString("base64");
-  const encrypted = encryptedData
-    .subarray(ivLength + tagLength)
-    .toString("base64");
+  const iv = encryptedData.subarray(0, ivLength);
+  const tag = encryptedData.subarray(ivLength, ivLength + tagLength);
+  const encrypted = encryptedData.subarray(ivLength + tagLength);
 
-  const decryptedData = CryptoUtils.decryptBuffer({ iv, tag, encrypted }, dek);
+  const decryptedData = CryptoUtils.decryptBuffer(encrypted, iv, tag, dek);
 
   const readable = new ReadableStream({
     start(controller) {

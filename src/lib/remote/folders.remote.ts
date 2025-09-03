@@ -5,58 +5,55 @@ import { ensureRootFolder } from "$lib/server/folderUtils";
 import { nameSchema } from "$lib/validation";
 import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import * as z from "zod/mini";
-import { getRootItems } from "./load.remote";
+import { getBreadcrumbs, getRootItems } from "./load.remote";
 import { withCache, invalidateCache } from "$lib/server/cache";
 
 export const getFolders = query(async () => {
-  return withCache(
-    "getFolders",
-    async () => {
-      const {
-        locals: { user },
-      } = getRequestEvent();
-      if (!user) {
-        return {
-          error: "User not authenticated",
-        };
-      }
-
-      try {
-        const folders = await db
-          .select({
-            id: table.folder.id,
-            name: table.folder.name,
-            ownerId: table.folder.ownerId,
-            parentId: table.folder.parentId,
-            createdAt: table.folder.createdAt,
-            updatedAt: table.folder.updatedAt,
-          })
-          .from(table.folder)
-          .where(
-            and(
-              eq(table.folder.ownerId, user.id),
-              ne(table.folder.name, "__root__"),
-              ne(table.folder.name, "__trash__")
-            )
-          )
-          .orderBy(table.folder.name);
-
-        const transformedFolders = folders.map((folder) => ({
-          ...folder,
-          type: "folder" as const,
-        }));
-
-        return {
-          data: transformedFolders,
-        };
-      } catch (err) {
-        console.error("Error fetching folders:", err);
-        return {
-          error: "Failed to fetch folders",
-        };
-      }
+  return withCache("getFolders", async () => {
+    const {
+      locals: { user },
+    } = getRequestEvent();
+    if (!user) {
+      return {
+        error: "User not authenticated",
+      };
     }
-  );
+
+    try {
+      const folders = await db
+        .select({
+          id: table.folder.id,
+          name: table.folder.name,
+          ownerId: table.folder.ownerId,
+          parentId: table.folder.parentId,
+          createdAt: table.folder.createdAt,
+          updatedAt: table.folder.updatedAt,
+        })
+        .from(table.folder)
+        .where(
+          and(
+            eq(table.folder.ownerId, user.id),
+            ne(table.folder.name, "__root__"),
+            ne(table.folder.name, "__trash__")
+          )
+        )
+        .orderBy(table.folder.name);
+
+      const transformedFolders = folders.map((folder) => ({
+        ...folder,
+        type: "folder" as const,
+      }));
+
+      return {
+        data: transformedFolders,
+      };
+    } catch (err) {
+      console.error("Error fetching folders:", err);
+      return {
+        error: "Failed to fetch folders",
+      };
+    }
+  });
 });
 
 export const getFolderChildren = query(z.string(), async (folderId) => {
@@ -318,7 +315,7 @@ export const renameFolder = command(
     await invalidateCache(["getFolders", "getCurrentFolder", "getBreadcrumbs"]);
     await invalidateCache(`getFolderChildren:${folderId}`);
 
-    if (!folder.parentId) {
+    if (!folder.parentId || folder.parentId?.startsWith("root-")) {
       await getRootItems().refresh();
       await invalidateCache("getRootItems");
     } else {

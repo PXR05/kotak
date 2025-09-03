@@ -59,18 +59,6 @@ export const fileTree = {
   },
 
   setRootItems(items: FileItem[]) {
-    const currentItemIds = fileTreeState.nodes
-      .map((node) => node.item.id)
-      .sort();
-    const newItemIds = items.map((item) => item.id).sort();
-
-    if (
-      currentItemIds.length === newItemIds.length &&
-      currentItemIds.every((id, index) => id === newItemIds[index])
-    ) {
-      return;
-    }
-
     fileTreeState.nodes = items.map((item) => ({
       item,
       expanded: fileTreeState.expandedFolders.has(item.id),

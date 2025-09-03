@@ -103,110 +103,110 @@
   ondragend={handleGlobalDragEnd}
   ondragleave={handleGlobalDragLeave}
 />
-
-<FileContextMenu item={node.item}>
-  {#snippet children({ props })}
-    <div {...props}>
-      {#if node.item.type === "file"}
-        <Sidebar.MenuButton
-          onclick={handleFileClick}
-          class="relative overflow-visible w-full justify-start {dragState.isDragging
-            ? 'opacity-50'
-            : ''}"
-          draggable="true"
-          ondragstart={handleDragStart}
-          ondragend={handleDragEnd}
-        >
-          <span class="h-4 w-2 absolute -left-[10px] top-0 border-b"></span>
-          <FileIcon class="size-4" />
-          <span class="truncate">
-            {node.item.name}
-          </span>
-        </Sidebar.MenuButton>
-      {:else}
-        <Sidebar.MenuItem>
-          <Collapsible.Root class="group/collapsible" open={node.expanded}>
-            <Collapsible.Trigger>
-              {#snippet child({ props })}
-                <Sidebar.MenuButton
-                  {...props}
-                  data-active={page.url.pathname === `/${node.item.id}`}
-                  class="group w-full items-center justify-center p-0 gap-0 data-[active=false]:!bg-transparent"
-                  onclick={() => {}}
-                >
-                  <span
-                    class="h-4 w-2 group-data-[active=false]:w-3 absolute -left-[10px] top-0 border-b"
-                  ></span>
-
-                  <button
-                    onclick={handleFolderToggle}
-                    class="flex items-center justify-center h-8 w-4 ml-1.25 hover:bg-accent rounded-md duration-150 group/arrow"
-                    type="button"
+{#if node}
+  <FileContextMenu item={node.item}>
+    {#snippet children({ props })}
+      <div {...props}>
+        {#if node.item.type === "file"}
+          <Sidebar.MenuButton
+            onclick={handleFileClick}
+            class="relative overflow-visible w-full justify-start 
+            {dragState.isDragging ? 'opacity-50' : ''}"
+            draggable="true"
+            ondragstart={handleDragStart}
+            ondragend={handleDragEnd}
+          >
+            <span class="h-4 w-2 absolute -left-[10px] top-0 border-b"></span>
+            <FileIcon class="size-4" />
+            <span class="truncate">
+              {node.item.name}
+            </span>
+          </Sidebar.MenuButton>
+        {:else}
+          <Sidebar.MenuItem>
+            <Collapsible.Root class="group/collapsible" open={node.expanded}>
+              <Collapsible.Trigger>
+                {#snippet child({ props })}
+                  <Sidebar.MenuButton
+                    {...props}
+                    data-active={page.url.pathname === `/${node.item.id}`}
+                    class="group w-full items-center justify-center p-0 gap-0 data-[active=false]:!bg-transparent"
+                    onclick={() => {}}
                   >
-                    {#if node.loading}
-                      <LoaderIcon class="size-3 animate-spin" />
-                    {:else}
-                      <ChevronRightIcon
-                        class="size-3 transition-transform duration-200 {node.expanded
-                          ? 'rotate-90'
-                          : 'rotate-0'}"
-                      />
-                    {/if}
-                  </button>
+                    <span
+                      class="h-4 w-2 group-data-[active=false]:w-3 absolute -left-[10px] top-0 border-b"
+                    ></span>
 
-                  <button
-                    onclick={handleFolderNameClick}
-                    onmouseenter={handleFolderPreload}
-                    onmouseleave={() => {
-                      if (preloadTimeout) {
-                        clearTimeout(preloadTimeout);
-                        preloadTimeout = null;
-                      }
-                    }}
-                    class="flex items-center gap-2 flex-1 min-w-0 hover:bg-accent rounded-md px-2 h-8 duration-150 group/name border border-transparent
+                    <button
+                      onclick={handleFolderToggle}
+                      class="flex items-center justify-center h-8 w-4 ml-1.25 hover:bg-accent rounded-md duration-150 group/arrow"
+                      type="button"
+                    >
+                      {#if node.loading}
+                        <LoaderIcon class="size-3 animate-spin" />
+                      {:else}
+                        <ChevronRightIcon
+                          class="size-3 transition-transform duration-200 {node.expanded
+                            ? 'rotate-90'
+                            : 'rotate-0'}"
+                        />
+                      {/if}
+                    </button>
+
+                    <button
+                      onclick={handleFolderNameClick}
+                      onmouseenter={handleFolderPreload}
+                      onmouseleave={() => {
+                        if (preloadTimeout) {
+                          clearTimeout(preloadTimeout);
+                          preloadTimeout = null;
+                        }
+                      }}
+                      class="flex items-center gap-2 flex-1 min-w-0 hover:bg-accent rounded-md px-2 h-8 duration-150 group/name border border-transparent
                     {dragState.isDragging ? 'opacity-50' : ''} 
                       {dragState.isDropTarget
-                      ? 'transition-none bg-primary/10 !border-primary'
-                      : ''}"
-                    type="button"
-                    draggable="true"
-                    ondragstart={handleDragStart}
-                    ondragend={handleDragEnd}
-                    ondragenter={handleDropZoneDragEnter}
-                    ondragover={handleDropZoneDragOver}
-                    ondragleave={handleDropZoneDragLeave}
-                    ondrop={handleDropZoneDrop}
-                  >
-                    <FolderIcon class="size-4 flex-shrink-0" />
-                    <span class="truncate text-left">
-                      {node.item.name}
-                    </span>
-                  </button>
-                </Sidebar.MenuButton>
-              {/snippet}
-            </Collapsible.Trigger>
-            <Collapsible.Content>
-              <Sidebar.MenuSub>
-                {#each node.children || [] as childNode, j (childNode.item.id)}
-                  <FileTreeItem i={j} nodeList={node.children ?? []} />
-                {:else}
-                  <Sidebar.MenuButton
-                    class="relative overflow-visible w-full justify-start text-muted-foreground pointer-events-none"
-                  >
-                    <span class="h-4 w-2 absolute -left-[10px] top-0 border-b"
-                    ></span>
-                    {#if node.loading}
-                      <span class="truncate"> Loading... </span>
-                    {:else}
-                      <span class="truncate"> Empty folder </span>
-                    {/if}
+                        ? 'transition-none bg-primary/10 !border-primary'
+                        : ''}"
+                      type="button"
+                      draggable="true"
+                      ondragstart={handleDragStart}
+                      ondragend={handleDragEnd}
+                      ondragenter={handleDropZoneDragEnter}
+                      ondragover={handleDropZoneDragOver}
+                      ondragleave={handleDropZoneDragLeave}
+                      ondrop={handleDropZoneDrop}
+                    >
+                      <FolderIcon class="size-4 flex-shrink-0" />
+                      <span class="truncate text-left">
+                        {node.item.name}
+                      </span>
+                    </button>
                   </Sidebar.MenuButton>
-                {/each}
-              </Sidebar.MenuSub>
-            </Collapsible.Content>
-          </Collapsible.Root>
-        </Sidebar.MenuItem>
-      {/if}
-    </div>
-  {/snippet}
-</FileContextMenu>
+                {/snippet}
+              </Collapsible.Trigger>
+              <Collapsible.Content>
+                <Sidebar.MenuSub>
+                  {#each node.children || [] as childNode, j (childNode.item.id)}
+                    <FileTreeItem i={j} nodeList={node.children ?? []} />
+                  {:else}
+                    <Sidebar.MenuButton
+                      class="relative overflow-visible w-full justify-start text-muted-foreground pointer-events-none"
+                    >
+                      <span class="h-4 w-2 absolute -left-[10px] top-0 border-b"
+                      ></span>
+                      {#if node.loading}
+                        <span class="truncate"> Loading... </span>
+                      {:else}
+                        <span class="truncate"> Empty folder </span>
+                      {/if}
+                    </Sidebar.MenuButton>
+                  {/each}
+                </Sidebar.MenuSub>
+              </Collapsible.Content>
+            </Collapsible.Root>
+          </Sidebar.MenuItem>
+        {/if}
+      </div>
+    {/snippet}
+  </FileContextMenu>
+{/if}

@@ -15,7 +15,9 @@
     createGlobalDragHandlers,
   } from "$lib/stores/ui/drag-drop.svelte.js";
 
-  let { rootItems }: { rootItems: FileItem[] } = $props();
+  let {
+    rootItems,
+  }: { rootItems: FileItem[] } = $props();
 
   const sidebar = Sidebar.useSidebar();
 
@@ -111,7 +113,7 @@
         <Sidebar.Menu class="h-full">
           <div class="h-full overflow-y-auto">
             <Sidebar.MenuSub>
-              {#each fileTree.nodes as node, i (node.item.id)}
+              {#each fileTree.nodes as _, i}
                 <FileTreeItem {i} nodeList={fileTree.nodes} />
               {/each}
             </Sidebar.MenuSub>

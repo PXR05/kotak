@@ -1,4 +1,3 @@
-import { invalidateAll } from "$app/navigation";
 import type { UploadableFile } from "$lib/types/file.js";
 import { isUploading } from "./fileState.svelte.js";
 import { uploadProgressStore } from "./uploadProgress.svelte.js";
@@ -23,6 +22,7 @@ export interface UploadProgress {
 
 export interface UploadOptions {
   folderId?: string;
+  batchSize?: number;
   onProgress?: (progress: UploadProgress) => void;
   onFileProgress?: (fileProgress: number, fileName: string) => void;
   onFileStart?: () => void;
@@ -127,7 +127,9 @@ async function uploadFilesInternal(
 ): Promise<boolean> {
   isUploading.value = true;
   let successCount = 0;
+  let completedCount = 0;
   const totalFiles = files.length;
+  const batchSize = options.batchSize || 3;
 
   const { folderId } = options;
 
@@ -148,7 +150,9 @@ async function uploadFilesInternal(
     }
   }
 
-  function updateProgress(overallProgress: number, currentFile?: string) {
+  function updateProgress(currentFile?: string) {
+    const overallProgress =
+      totalFiles > 0 ? (completedCount / totalFiles) * 100 : 0;
     const progressData: UploadProgress = {
       overallProgress,
       currentFile,
@@ -157,7 +161,7 @@ async function uploadFilesInternal(
       fileProgresses: new Map(fileProgresses),
     };
 
-    if (overallProgress === 0) {
+    if (completedCount === 0) {
       uploadProgressStore.show(progressData);
     } else {
       uploadProgressStore.update(progressData);
@@ -167,52 +171,57 @@ async function uploadFilesInternal(
   }
 
   try {
-    updateProgress(0);
+    updateProgress();
 
-    for (let i = 0; i < files.length; i++) {
-      const uploadFile = files[i];
+    for (let i = 0; i < files.length; i += batchSize) {
+      const batch = files.slice(i, i + batchSize);
 
-      const fileProgress = fileProgresses.get(uploadFile.name)!;
-      fileProgress.status = "uploading";
-      updateProgress((i / totalFiles) * 100, uploadFile.name);
+      const batchPromises = batch.map(async (uploadFile) => {
+        const fileProgress = fileProgresses.get(uploadFile.name)!;
+        fileProgress.status = "uploading";
+        updateProgress(uploadFile.name);
 
-      await uploadSingleFile(uploadFile, {
-        folderId: options.folderId,
-        onFileProgress: (progress, fileName) => {
-          const fileProgress = fileProgresses.get(fileName)!;
-          fileProgress.progress = progress;
-          updateProgress((i / totalFiles) * 100, fileName);
-          options.onFileProgress?.(progress, fileName);
-        },
-        onFileStart: () => {
-          const fileProgress = fileProgresses.get(uploadFile.name)!;
-          fileProgress.status = "uploading";
-          fileProgress.progress = 0;
-        },
-        onFileComplete: (success) => {
-          const fileProgress = fileProgresses.get(uploadFile.name)!;
-          fileProgress.status = success ? "completed" : "error";
-          fileProgress.progress = success ? 100 : 0;
-          if (success) successCount++;
-        },
-        onError: (error) => {
-          const fileProgress = fileProgresses.get(uploadFile.name)!;
-          fileProgress.status = "error";
-          fileProgress.error = error;
-          options.onError?.(error);
-        },
+        const success = await uploadSingleFile(uploadFile, {
+          folderId: options.folderId,
+          onFileProgress: (progress, fileName) => {
+            const fileProgress = fileProgresses.get(fileName)!;
+            fileProgress.progress = progress;
+            updateProgress(fileName);
+            options.onFileProgress?.(progress, fileName);
+          },
+          onFileStart: () => {
+            const fileProgress = fileProgresses.get(uploadFile.name)!;
+            fileProgress.status = "uploading";
+            fileProgress.progress = 0;
+            options.onFileStart?.();
+          },
+          onFileComplete: (success) => {
+            const fileProgress = fileProgresses.get(uploadFile.name)!;
+            fileProgress.status = success ? "completed" : "error";
+            fileProgress.progress = success ? 100 : 0;
+            if (success) successCount++;
+            completedCount++;
+            options.onFileComplete?.(success);
+          },
+          onError: (error) => {
+            const fileProgress = fileProgresses.get(uploadFile.name)!;
+            fileProgress.status = "error";
+            fileProgress.error = error;
+            options.onError?.(error);
+          },
+        });
+
+        return success;
       });
 
-      const progressAfter = ((i + 1) / totalFiles) * 100;
-      updateProgress(
-        progressAfter,
-        i + 1 < files.length ? files[i + 1].name : undefined
-      );
+      await Promise.all(batchPromises);
+
+      updateProgress();
 
       await refreshFolder(folderId);
     }
 
-    updateProgress(100);
+    updateProgress();
 
     if (successCount > 0) {
       if (successCount === totalFiles) {
@@ -284,11 +293,13 @@ export const uploadUtils = {
 
   async handleFilesUpload(
     uploadableFiles: UploadableFile[],
-    folderId?: string | null
+    folderId?: string | null,
+    batchSize?: number
   ): Promise<void> {
     try {
       await this.uploadFiles(uploadableFiles, {
         folderId: folderId || undefined,
+        batchSize: batchSize || 3, // Default to 3 concurrent uploads
         onError: (error) => toast.error(error),
         onSuccess: () => toast.success("Files uploaded successfully!"),
       });

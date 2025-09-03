@@ -123,7 +123,14 @@ export class CryptoUtils {
     }
   }
 
-  static encryptBuffer(data: Buffer, key: string): EncryptionResult {
+  static encryptBuffer(
+    data: Buffer,
+    key: string
+  ): {
+    encrypted: Buffer;
+    iv: Buffer;
+    tag: Buffer;
+  } {
     const keyBuffer = Buffer.from(key, "base64");
     const iv = randomBytes(this.IV_LENGTH);
     const cipher = createCipheriv(this.ALGORITHM, keyBuffer, iv);
@@ -132,17 +139,19 @@ export class CryptoUtils {
     const tag = cipher.getAuthTag();
 
     return {
-      encrypted: encrypted.toString("base64"),
-      iv: iv.toString("base64"),
-      tag: tag.toString("base64"),
+      encrypted,
+      iv,
+      tag,
     };
   }
 
-  static decryptBuffer(params: DecryptionParams, key: string): Buffer {
+  static decryptBuffer(
+    encryptedData: Buffer,
+    iv: Buffer,
+    tag: Buffer,
+    key: string
+  ): Buffer {
     const keyBuffer = Buffer.from(key, "base64");
-    const iv = Buffer.from(params.iv, "base64");
-    const tag = Buffer.from(params.tag, "base64");
-    const encryptedData = Buffer.from(params.encrypted, "base64");
 
     const decipher = createDecipheriv(this.ALGORITHM, keyBuffer, iv);
     decipher.setAuthTag(tag);

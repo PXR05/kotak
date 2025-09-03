@@ -1,4 +1,4 @@
-import { getValkeyClient } from "./redis";
+import { getValkeyClient } from "./valkey";
 import { getRequestEvent } from "$app/server";
 
 export interface CacheOptions {

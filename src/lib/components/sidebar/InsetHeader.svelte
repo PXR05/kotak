@@ -7,7 +7,6 @@
   import { page } from "$app/state";
   import { browser } from "$app/environment";
   import { slide } from "svelte/transition";
-  import { KeyRoundIcon } from "@lucide/svelte";
 
   let needsUMKRestore = $state(false);
   $effect(() => {
@@ -22,17 +21,14 @@
 </script>
 
 {#if isMobile}
-  {#if needsUMKRestore}
+  {#if !needsUMKRestore}
     <div
       class="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center justify-between gap-2"
       transition:slide={{ axis: "y", duration: 200 }}
     >
-      <div class="flex items-center gap-2 text-sm">
-        <KeyRoundIcon class="size-4 text-amber-600 dark:text-amber-400" />
-        <span class="text-amber-800 dark:text-amber-200">
-          Open sidebar and tap "Unlock" to access encrypted files
-        </span>
-      </div>
+      <span class="text-sm text-amber-800 dark:text-amber-200">
+        Open sidebar and tap "Unlock" to access encrypted files
+      </span>
     </div>
   {/if}
 
