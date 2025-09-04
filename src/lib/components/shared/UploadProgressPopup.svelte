@@ -1,5 +1,6 @@
 <script lang="ts">
   import { uploadProgressStore } from "$lib/stores/file/uploadProgress.svelte.js";
+  import { uploadUtils } from "$lib/stores/file/uploadUtils.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Progress } from "$lib/components/ui/progress/index.js";
   import { Badge } from "$lib/components/ui/badge/index.js";
@@ -17,9 +18,15 @@
         return "border-blue-500 dark:border-blue-400/75 bg-blue-400/10 text-blue-700 dark:text-blue-500/75";
       case "queued":
         return "border-orange-500 dark:border-orange-400/75 bg-orange-400/10 text-orange-700 dark:text-orange-500/75";
+      case "cancelled":
+        return "border-gray-500 dark:border-gray-400/75 bg-gray-400/10 text-gray-700 dark:text-gray-500/75";
       default:
         return "border-gray-500 dark:border-gray-400/75 bg-gray-400/10 text-gray-700 dark:text-gray-500/75";
     }
+  }
+
+  async function handleAbortFile(fileName: string) {
+    await uploadUtils.abortUpload(fileName);
   }
 </script>
 
@@ -88,14 +95,28 @@
                 >
                   {fileProgress.fileName}
                 </span>
-                <Badge
-                  variant="outline"
-                  class="text-xs ml-2 font-normal {getStatusColor(
-                    fileProgress.status
-                  )}"
-                >
-                  {capitalize(fileProgress.status)}
-                </Badge>
+
+                <div class="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    class="text-xs ml-2 font-normal 
+                    {getStatusColor(fileProgress.status)}"
+                  >
+                    {capitalize(fileProgress.status)}
+                  </Badge>
+
+                  {#if fileProgress.status === "uploading"}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      class="size-5 p-0 hover:text-destructive"
+                      onclick={() => handleAbortFile(fileProgress.fileName)}
+                      title="Cancel this upload"
+                    >
+                      <X class="size-4" />
+                    </Button>
+                  {/if}
+                </div>
               </div>
 
               {#if fileProgress.status === "uploading" || fileProgress.status === "completed"}

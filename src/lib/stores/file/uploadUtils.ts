@@ -8,8 +8,15 @@ import { getRootItems } from "$lib/remote/load.remote";
 export interface FileProgress {
   fileName: string;
   progress: number;
-  status: "pending" | "uploading" | "completed" | "error" | "queued";
+  status:
+    | "pending"
+    | "uploading"
+    | "completed"
+    | "error"
+    | "queued"
+    | "cancelled";
   error?: string;
+  storageKey?: string;
 }
 
 export interface UploadProgress {
@@ -39,6 +46,9 @@ interface QueuedUpload {
 const uploadQueue: QueuedUpload[] = [];
 let isProcessingQueue = false;
 
+const activeXHRUploads = new Map<string, XMLHttpRequest>();
+const fileStorageKeys = new Map<string, string>();
+
 async function uploadSingleFile(
   uploadFile: UploadableFile,
   options: UploadOptions
@@ -46,11 +56,15 @@ async function uploadSingleFile(
   return new Promise((resolve) => {
     options.onFileStart?.();
 
+    const storageKey = crypto.randomUUID();
+    fileStorageKeys.set(uploadFile.name, storageKey);
+
     const formData = new FormData();
     formData.append(
       "relativePaths",
       uploadFile.relativePath || uploadFile.name
     );
+    formData.append("storageKey", storageKey);
 
     if (options.folderId) {
       formData.append("folderId", options.folderId);
@@ -60,6 +74,8 @@ async function uploadSingleFile(
 
     const xhr = new XMLHttpRequest();
 
+    activeXHRUploads.set(uploadFile.name, xhr);
+
     xhr.upload.addEventListener("progress", (event) => {
       if (event.lengthComputable) {
         const fileProgress = (event.loaded / event.total) * 100;
@@ -68,8 +84,10 @@ async function uploadSingleFile(
     });
 
     xhr.addEventListener("load", () => {
+      activeXHRUploads.delete(uploadFile.name);
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
+          fileStorageKeys.delete(uploadFile.name);
           options.onFileComplete?.(true);
           resolve(true);
         } catch (error) {
@@ -86,6 +104,7 @@ async function uploadSingleFile(
     });
 
     xhr.addEventListener("error", () => {
+      activeXHRUploads.delete(uploadFile.name);
       const error = `Network error uploading ${uploadFile.name}`;
       options.onError?.(error);
       options.onFileComplete?.(false);
@@ -93,17 +112,55 @@ async function uploadSingleFile(
     });
 
     xhr.addEventListener("timeout", () => {
+      activeXHRUploads.delete(uploadFile.name);
       const error = `Timeout uploading ${uploadFile.name}`;
       options.onError?.(error);
       options.onFileComplete?.(false);
       resolve(false);
     });
 
+    xhr.addEventListener("abort", () => {
+      activeXHRUploads.delete(uploadFile.name);
+      options.onFileComplete?.(false);
+      resolve(false);
+    });
+
     xhr.timeout = 300000; // 5 minutes
 
-    xhr.open("POST", "/api/files");
+    xhr.open("POST", "/api/files/upload");
     xhr.send(formData);
   });
+}
+
+async function cleanupAbortedFiles(fileNames: string[]) {
+  const storageKeysToClean = fileNames
+    .map((fileName) => fileStorageKeys.get(fileName))
+    .filter(Boolean);
+
+  if (storageKeysToClean.length === 0) return;
+
+  try {
+    const response = await fetch("/api/files/abort", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        storageKeys: storageKeysToClean,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Failed to cleanup aborted files:", await response.text());
+    } else {
+      const result = await response.json();
+      console.log("Cleanup completed:", result);
+    }
+  } catch (error) {
+    console.error("Error during cleanup:", error);
+  }
+
+  fileNames.forEach((fileName) => fileStorageKeys.delete(fileName));
 }
 
 async function processUploadQueue() {
@@ -173,55 +230,72 @@ async function uploadFilesInternal(
   try {
     updateProgress();
 
-    for (let i = 0; i < files.length; i += batchSize) {
-      const batch = files.slice(i, i + batchSize);
+    const pendingFiles = [...files];
+    const activeUploads = new Set<Promise<boolean>>();
 
-      const batchPromises = batch.map(async (uploadFile) => {
-        const fileProgress = fileProgresses.get(uploadFile.name)!;
-        fileProgress.status = "uploading";
-        updateProgress(uploadFile.name);
+    async function processFile(uploadFile: UploadableFile): Promise<boolean> {
+      const fileProgress = fileProgresses.get(uploadFile.name)!;
+      fileProgress.status = "uploading";
+      updateProgress(uploadFile.name);
 
-        const success = await uploadSingleFile(uploadFile, {
-          folderId: options.folderId,
-          onFileProgress: (progress, fileName) => {
-            const fileProgress = fileProgresses.get(fileName)!;
-            fileProgress.progress = progress;
-            updateProgress(fileName);
-            options.onFileProgress?.(progress, fileName);
-          },
-          onFileStart: () => {
-            const fileProgress = fileProgresses.get(uploadFile.name)!;
-            fileProgress.status = "uploading";
+      const success = await uploadSingleFile(uploadFile, {
+        folderId: options.folderId,
+        onFileProgress: (progress, fileName) => {
+          const fileProgress = fileProgresses.get(fileName)!;
+          fileProgress.progress = progress;
+          updateProgress(fileName);
+          options.onFileProgress?.(progress, fileName);
+        },
+        onFileStart: () => {
+          const fileProgress = fileProgresses.get(uploadFile.name)!;
+          fileProgress.status = "uploading";
+          fileProgress.progress = 0;
+          options.onFileStart?.();
+        },
+        onFileComplete: (success) => {
+          const fileProgress = fileProgresses.get(uploadFile.name)!;
+          const wasAborted = !activeXHRUploads.has(uploadFile.name) && !success;
+          if (wasAborted && fileProgress.status === "uploading") {
+            fileProgress.status = "cancelled";
             fileProgress.progress = 0;
-            options.onFileStart?.();
-          },
-          onFileComplete: (success) => {
-            const fileProgress = fileProgresses.get(uploadFile.name)!;
+          } else {
             fileProgress.status = success ? "completed" : "error";
             fileProgress.progress = success ? 100 : 0;
-            if (success) successCount++;
-            completedCount++;
-            options.onFileComplete?.(success);
-          },
-          onError: (error) => {
-            const fileProgress = fileProgresses.get(uploadFile.name)!;
-            fileProgress.status = "error";
-            fileProgress.error = error;
-            options.onError?.(error);
-          },
-        });
-
-        return success;
+          }
+          if (success) successCount++;
+          completedCount++;
+          options.onFileComplete?.(success);
+        },
+        onError: (error) => {
+          const fileProgress = fileProgresses.get(uploadFile.name)!;
+          fileProgress.status = "error";
+          fileProgress.error = error;
+          options.onError?.(error);
+        },
       });
 
-      await Promise.all(batchPromises);
+      return success;
+    }
 
-      updateProgress();
+    while (pendingFiles.length > 0 || activeUploads.size > 0) {
+      while (activeUploads.size < batchSize && pendingFiles.length > 0) {
+        const file = pendingFiles.shift()!;
+        const uploadPromise = processFile(file);
+        activeUploads.add(uploadPromise);
 
-      await refreshFolder(folderId);
+        uploadPromise.finally(() => {
+          activeUploads.delete(uploadPromise);
+        });
+      }
+
+      if (activeUploads.size > 0) {
+        await Promise.race(activeUploads);
+        updateProgress();
+      }
     }
 
     updateProgress();
+    await refreshFolder(folderId);
 
     if (successCount > 0) {
       if (successCount === totalFiles) {
@@ -299,7 +373,7 @@ export const uploadUtils = {
     try {
       await this.uploadFiles(uploadableFiles, {
         folderId: folderId || undefined,
-        batchSize: batchSize || 3, // Default to 3 concurrent uploads
+        batchSize: batchSize || 3,
         onError: (error) => toast.error(error),
         onSuccess: () => toast.success("Files uploaded successfully!"),
       });
@@ -309,6 +383,22 @@ export const uploadUtils = {
           (error instanceof Error ? error.message : JSON.stringify(error))
       );
     }
+  },
+
+  async abortUpload(fileName: string) {
+    const xhr = activeXHRUploads.get(fileName);
+    if (xhr) {
+      xhr.abort();
+      activeXHRUploads.delete(fileName);
+
+      await cleanupAbortedFiles([fileName]);
+
+      toast.info(`Upload cancelled: ${fileName}`);
+    }
+  },
+
+  isFileUploading(fileName: string): boolean {
+    return activeXHRUploads.has(fileName);
   },
 
   getQueueInfo() {

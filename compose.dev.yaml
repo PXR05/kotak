@@ -17,20 +17,5 @@ services:
       timeout: 5s
       retries: 5
 
-  valkey:
-    container_name: dev_valkey
-    image: valkey/valkey
-    restart: always
-    ports:
-      - "6379:6379"
-    volumes:
-      - valkey_dev_data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
 volumes:
   pg_dev_data:
-  valkey_dev_data:

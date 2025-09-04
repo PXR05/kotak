@@ -119,7 +119,8 @@ export async function parseMultipartStream(
             const name = extractFieldName(disposition);
             const mimeType =
               headers.get("content-type") || "application/octet-stream";
-            const storageKey = randomUUID();
+            const providedKey = fields.get("storageKey")?.[0];
+            const storageKey = providedKey || randomUUID();
 
             const filePath = path.join(STORAGE_PATH, storageKey);
             const writeStream = createWriteStream(filePath, {
