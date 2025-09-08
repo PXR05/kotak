@@ -1,6 +1,8 @@
 import { selectedItems, fileOperations } from "$lib/stores";
 import type { FileItem } from "$lib/types/file.js";
 
+let currentDragData: { type: string; items: any[] } | null = null;
+
 export function createDragState() {
   let isDragging = $state(false);
   let isDropTarget = $state(false);
@@ -109,7 +111,7 @@ function createFallbackDragImage(text: string) {
   const element = document.createElement("div");
   element.textContent = text;
   element.className =
-    "px-4 py-3 bg-sidebar text-sidebar-foreground border-sidebar-border rounded-lg text-sm shadow-lg";
+    "px-4 py-3 bg-sidebar text-sidebar-foreground border-sidebar-border rounded-lg text-sm";
   element.style.cssText =
     "position: fixed; top: -200px; left: -200px; white-space: nowrap; pointer-events: none; z-index: 9999;";
   return element;
@@ -158,24 +160,15 @@ export function shouldPreventDrop(
 ): boolean {
   if (!isInternalMove(dataTransfer)) return true;
 
-  try {
-    const dragData = dataTransfer?.getData("text/plain");
-    if (!dragData) return true;
+  const dragData = currentDragData;
+  if (!dragData || dragData.type !== "file-move") return true;
 
-    const parsedData = JSON.parse(dragData);
-    if (parsedData.type !== "file-move") return true;
+  const draggedItems = dragData.items;
+  const actualDraggedItems = selectedItems.filter((item) =>
+    draggedItems.some((draggedItem: any) => draggedItem.id === item.id)
+  );
 
-    const draggedItems = parsedData.items;
-
-    const actualDraggedItems = selectedItems.filter((item) =>
-      draggedItems.some((draggedItem: any) => draggedItem.id === item.id)
-    );
-
-    return isInvalidDropTarget(targetId, actualDraggedItems);
-  } catch (error) {
-    console.error("Error parsing drag data:", error);
-    return true;
-  }
+  return isInvalidDropTarget(targetId, actualDraggedItems);
 }
 
 export function handleDragStart(
@@ -191,6 +184,8 @@ export function handleDragStart(
   }
 
   const dragData = createDragData(selectedItems);
+  currentDragData = dragData;
+  
   const text =
     selectedItems.length === 1
       ? `Moving "${selectedItems[0].name}"`
@@ -199,12 +194,13 @@ export function handleDragStart(
   if (e.dataTransfer) {
     e.dataTransfer.setData("text/plain", JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setDragImage(createDragImage(text), 10, 10);
+    e.dataTransfer.setDragImage(createDragImage(text), 5, 25);
   }
 }
 
 export function handleDragEnd(dragState: ReturnType<typeof createDragState>) {
   dragState.reset();
+  currentDragData = null;
 }
 
 export function handleDropZoneDragEnter(
@@ -261,10 +257,17 @@ export async function handleDropZoneDrop(
   dragState.reset();
 
   try {
-    const dragData = e.dataTransfer?.getData("text/plain");
-    if (!dragData) return;
+    let dragData = e.dataTransfer?.getData("text/plain");
+    let parsedData;
+    
+    if (dragData) {
+      parsedData = JSON.parse(dragData);
+    } else if (currentDragData) {
+      parsedData = currentDragData;
+    } else {
+      return;
+    }
 
-    const parsedData = JSON.parse(dragData);
     if (parsedData.type !== "file-move") return;
 
     const draggedItems = parsedData.items;
@@ -280,6 +283,8 @@ export async function handleDropZoneDrop(
     }
   } catch (error) {
     console.error("Error handling drop:", error);
+  } finally {
+    currentDragData = null;
   }
 }
 
@@ -287,7 +292,10 @@ export function createGlobalDragHandlers(
   dragState: ReturnType<typeof createDragState>
 ) {
   return {
-    handleGlobalDragEnd: () => dragState.reset(),
+    handleGlobalDragEnd: () => {
+      dragState.reset();
+      currentDragData = null;
+    },
     handleGlobalDragLeave: (e: DragEvent) => {
       if (
         e.clientX < 0 ||
@@ -296,6 +304,7 @@ export function createGlobalDragHandlers(
         e.clientY > window.innerHeight
       ) {
         dragState.reset();
+        currentDragData = null;
       }
     },
   };

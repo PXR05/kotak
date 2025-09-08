@@ -1,6 +1,6 @@
 import { verify } from "@node-rs/argon2";
 import { fail, redirect } from "@sveltejs/kit";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import * as auth from "$lib/server/auth";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
@@ -68,7 +68,7 @@ export const actions = {
         keySalt: table.user.keySalt,
       })
       .from(table.user)
-      .where(eq(table.user.email, validEmail));
+      .where(eq(sql`lower(${table.user.email})`, sql`lower(${validEmail})`));
 
     const existingUser = results.at(0);
     if (!existingUser) {

@@ -48,7 +48,7 @@
     const start = Math.min(lastSelectedIndex.value ?? 0, currentIndex);
     const end = Math.max(lastSelectedIndex.value ?? 0, currentIndex);
 
-    for (let i = start; i <= end; i++) {
+    for (let i = start + 1; i <= end; i++) {
       const targetRow = table.getRowModel().rows[i];
       if (targetRow) {
         selectedItems.push(targetRow.original);
@@ -182,7 +182,7 @@
 <Table.Row
   data-state={row.getIsSelected() && "selected"}
   class="hover:bg-muted/50 transition-none cursor-pointer
-    {loading ? 'pointer-events-none animate-pulse' : ''}
+    {loading ? 'pointer-events-none opacity-50' : ''}
     {dragState.isDragging ? 'opacity-50' : ''} 
     {dragState.isDropTarget
     ? 'bg-primary/10 -outline-offset-1 outline outline-primary'
