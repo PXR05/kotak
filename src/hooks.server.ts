@@ -1,6 +1,7 @@
 import { error, type Handle, type HandleValidationError } from "@sveltejs/kit";
 import { sequence } from "@sveltejs/kit/hooks";
 import * as auth from "$lib/server/auth";
+import { serverErrorFromEvent, validationErrorFromEvent } from "$lib/utils/log";
 
 // function isFormContentType(contentType?: string) {
 //   const types = [
@@ -94,19 +95,12 @@ export const handleValidationError: HandleValidationError = ({
   event,
   issues,
 }) => {
-  console.error(Date.now());
-  console.error("Validation error:", event);
-  console.error("Validation error:", issues);
+  validationErrorFromEvent({ event, issues });
   return {
     message: "Invalid request data",
   };
 };
 
-export const handleError = ({ event, error }) => {
-  console.error(Date.now());
-  console.error("Error:", event);
-  console.error("Error:", error);
-  return {
-    message: "Internal server error",
-  };
+export const handleError = ({ error, event, status, message }) => {
+  serverErrorFromEvent({ error, status, message, event });
 };

@@ -5,8 +5,8 @@ import * as auth from "$lib/server/auth";
 import { db } from "$lib/server/db";
 import * as table from "$lib/server/db/schema";
 import { loginSchema } from "$lib/validation";
-import { RateLimiter } from "sveltekit-rate-limiter/server";
 import { CryptoUtils } from "$lib/server/crypto";
+import { RateLimiter } from "sveltekit-rate-limiter/server";
 
 const limiter = new RateLimiter({
   IP: [150, "h"],

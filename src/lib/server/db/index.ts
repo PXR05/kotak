@@ -1,8 +1,10 @@
+import { dbError, dbLog } from "$lib/utils/log";
 import "dotenv/config";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
 let dbInstance: ReturnType<typeof drizzle> | null = null;
+let pool: Pool | null = null;
 
 export function getDb() {
   if (!dbInstance) {
@@ -13,14 +15,34 @@ export function getDb() {
 
     if (!dbUrl) throw new Error("[DB] DATABASE_URL is not set");
 
-    const pool = new Pool({
+    dbLog(
+      "Using connection:",
+      dbUrl ? dbUrl.replace(/:[^:]*@/, ":***@") : "undefined"
+    );
+
+    pool = new Pool({
       connectionString: dbUrl,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    });
+
+    pool.on("error", (err) => {
+      dbError("Unexpected error on idle client", err);
     });
 
     dbInstance = drizzle(pool);
   }
 
   return dbInstance;
+}
+
+export async function closeDb() {
+  if (pool) {
+    await pool.end();
+    pool = null;
+    dbInstance = null;
+  }
 }
 
 export const db = new Proxy({} as ReturnType<typeof drizzle>, {

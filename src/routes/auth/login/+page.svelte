@@ -51,7 +51,7 @@
 
     if (emailValidation || passwordValidation) {
       input.cancel();
-      return ({ result }) => {};
+      return () => {};
     }
 
     loading = true;

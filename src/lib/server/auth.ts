@@ -46,6 +46,8 @@ export async function validateSessionToken(token: string) {
     .innerJoin(table.user, eq(table.session.userId, table.user.id))
     .where(eq(table.session.id, sessionId));
 
+  console.log("Session validation result:", result);
+
   if (!result) {
     return { session: null, user: null, umk: null };
   }
