@@ -31,7 +31,19 @@ export function getDb() {
       dbError("Unexpected error on idle client", err);
     });
 
-    dbInstance = drizzle(pool);
+    pool.on("connect", (client) => {
+      dbLog("New client connected to database");
+    });
+
+    dbInstance = drizzle(pool, { logger: true });
+
+    pool.query("SELECT NOW()", (err, res) => {
+      if (err) {
+        dbError("Database connection test failed:", err);
+      } else {
+        dbLog("Database connected successfully at", res.rows[0].now);
+      }
+    });
   }
 
   return dbInstance;
